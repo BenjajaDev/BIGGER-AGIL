@@ -1,0 +1,37 @@
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step {
+  display: inline-grid;
+  place-items: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-muted);
+  color: var(--text-primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.step:hover {
+  background-color: var(--border-subtle);
+}
+
+.step:active {
+  transform: scale(0.94);
+}
+
+.value {
+  min-width: 2ch;
+  font-size: var(--text-button);
+  font-weight: var(--weight-semibold);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

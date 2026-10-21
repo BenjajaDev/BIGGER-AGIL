@@ -1,0 +1,39 @@
+.card {
+  display: grid;
+  gap: 0.25em;
+  padding: 1em;
+  border: var(--border-width-strong) solid var(--menu-card-border);
+  border-radius: var(--radius-md);
+  background-color: var(--menu-card-bg);
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75em;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: 1.375em;
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+}
+
+.price {
+  color: var(--menu-price);
+  font-size: 1.125em;
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+.description {
+  color: var(--menu-text-secondary);
+}
+
+.allergens {
+  color: var(--menu-text-secondary);
+  font-size: 0.875em;
+  font-weight: var(--weight-semibold);
+}

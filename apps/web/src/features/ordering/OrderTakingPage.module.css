@@ -1,0 +1,30 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24rem;
+  align-items: start;
+  gap: var(--space-6);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+.catalog {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.title {
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+}
+
+.centered {
+  max-width: 32rem;
+  margin: var(--space-10) auto;
+}
+
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

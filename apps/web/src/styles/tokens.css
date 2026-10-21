@@ -1,0 +1,104 @@
+/*
+ * BIGGER Ágil · design tokens.
+ * Paleta tomada del local (fachada terracota, interior negro, baldosa, vitrinas, logo rojo).
+ * Todos los pares texto/fondo cumplen WCAG 2.1 AA (≥ 4,5:1).
+ */
+:root {
+  /* Paleta base */
+  --color-carbon-900: #1e1e1e;
+  --color-carbon-700: #2e2b29;
+  --color-crema-50: #f7f3ec;
+  --color-crema-100: #ede5d8;
+  --color-crema-200: #e0d5c3;
+  --color-rojo-600: #c0272d;
+  --color-rojo-700: #a11f24;
+  --color-terracota-600: #a6462e;
+  --color-dorado-400: #c9a24b;
+  --color-ambar-400: #e8a33d;
+  --color-ambar-500: #d8922a;
+  --color-salvia-600: #3f6b47;
+  --color-salvia-700: #33583a;
+  --color-piedra-600: #5f5a55;
+  --color-white: #ffffff;
+
+  /* Roles semánticos */
+  --surface-page: var(--color-crema-50);
+  --surface-card: var(--color-white);
+  --surface-muted: var(--color-crema-100);
+  --surface-inverse: var(--color-carbon-900);
+  --surface-kitchen: var(--color-carbon-700);
+  --border-subtle: var(--color-crema-200);
+  --border-strong: var(--color-carbon-900);
+  --text-primary: var(--color-carbon-900);
+  --text-secondary: var(--color-piedra-600);
+  --text-inverse: var(--color-white);
+  /* Rojo: SOLO la acción principal de cada vista. */
+  --action-primary: var(--color-rojo-600);
+  --action-primary-hover: var(--color-rojo-700);
+  --accent: var(--color-terracota-600);
+  --status-success: var(--color-salvia-600);
+  --status-success-hover: var(--color-salvia-700);
+  /* Dorado y ámbar siempre con texto carbón, nunca blanco. */
+  --status-highlight: var(--color-dorado-400);
+  --status-warning: var(--color-ambar-400);
+  --status-warning-hover: var(--color-ambar-500);
+  --text-on-warm: var(--color-carbon-900);
+  --focus-ring: var(--color-carbon-900);
+  --focus-ring-inverse: var(--color-dorado-400);
+
+  /* Tipografía */
+  --font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+  --font-ui: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --text-detail: 0.875rem; /* 14 px, mínimo permitido */
+  --text-body: 1rem; /* 16 px */
+  --text-button: 1.125rem; /* 18 px */
+  --text-heading: 1.5rem; /* 24 px */
+  --text-product: 1.375rem; /* 22 px, carta */
+  --text-subtitle: 1.75rem; /* 28 px, carta */
+  --text-title: 2.5rem; /* 40 px, carta */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+
+  /* Espaciado (múltiplos de 4 px) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+
+  /* Forma */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-pill: 999px;
+  --border-width: 1px;
+  --border-width-strong: 2px;
+  --shadow-card: 0 1px 2px rgb(30 30 30 / 6%), 0 2px 8px rgb(30 30 30 / 4%);
+  --shadow-raised: 0 4px 16px rgb(30 30 30 / 12%);
+
+  /* Interacción */
+  --touch-target: 48px;
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Layout */
+  --topbar-height: 4rem;
+  --content-max-width: 80rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}

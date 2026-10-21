@@ -1,0 +1,505 @@
+openapi: 3.1.0
+info:
+  title: BIGGER Ágil API
+  version: 0.1.0
+  description: |
+    API REST del sistema de comandas, cocina y carta digital de BIGGER.
+
+    **Convenciones**
+    - Prefijo: `/api/v1`. Montos en pesos chilenos enteros (`priceClp`, `totalClp`).
+    - Éxito: `{ "data": ... }`. Error: `{ "error": { "code", "message", "issues?" } }`.
+    - Fechas en ISO 8601 (UTC).
+    - Las mutaciones van por REST; los cambios se notifican por SSE (`GET /events`).
+
+    Las operaciones marcadas `x-status: planned` forman parte del contrato acordado y se
+    implementan en la Fase 2.
+
+    **Seguridad:** el MVP corre solo en la red local del local y aún no exige autenticación
+    (`security: []`). La Fase 2 incorpora autenticación por dispositivo para las rutas
+    internas; `/menu` seguirá siendo pública.
+  license:
+    name: Propietario · uso exclusivo de BIGGER
+    identifier: LicenseRef-Proprietary
+security: []
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Desarrollo local
+tags:
+  - name: Sistema
+    description: Salud del servicio.
+  - name: Catálogo
+    description: Productos y categorías; alimenta la toma de pedidos y la carta pública.
+  - name: Mesas
+    description: Mapa del salón con estado derivado de los pedidos.
+  - name: Pedidos
+    description: Comandas de mesa, para llevar y WhatsApp.
+  - name: Tiempo real
+    description: Notificaciones de cambios por Server-Sent Events.
+paths:
+  /health:
+    get:
+      tags: [Sistema]
+      summary: Estado del servicio
+      operationId: getHealth
+      responses:
+        '200':
+          description: Servicio operativo
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [status]
+                    properties:
+                      status: { type: string, const: ok }
+
+  /categories:
+    get:
+      tags: [Catálogo]
+      summary: Lista las categorías en orden de presentación
+      operationId: listCategories
+      responses:
+        '200':
+          description: Categorías
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Category' } }
+
+  /products:
+    get:
+      tags: [Catálogo]
+      summary: Lista productos del catálogo interno
+      operationId: listProducts
+      parameters:
+        - name: categoryId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: onlyAvailable
+          in: query
+          schema: { type: string, enum: ['true', 'false'] }
+      responses:
+        '200':
+          description: Productos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Product' } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Catálogo]
+      summary: Crea un producto (prueba P01)
+      operationId: createProduct
+      x-status: planned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductInput' }
+      responses:
+        '201':
+          description: Producto creado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Product' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+
+  /products/{productId}:
+    patch:
+      tags: [Catálogo]
+      summary: Edita o desactiva un producto (prueba P01)
+      operationId: updateProduct
+      x-status: planned
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductPatch' }
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Product' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /menu:
+    get:
+      tags: [Catálogo]
+      summary: Carta pública (solo productos disponibles, agrupados por categoría)
+      description: Alimenta la carta digital accesible por QR. No requiere autenticación.
+      operationId: getPublicMenu
+      responses:
+        '200':
+          description: Carta
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Menu' }
+
+  /tables:
+    get:
+      tags: [Mesas]
+      summary: Mapa de mesas con su estado derivado de los pedidos abiertos
+      operationId: listTables
+      responses:
+        '200':
+          description: Mesas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/TableOverview' } }
+
+  /orders:
+    get:
+      tags: [Pedidos]
+      summary: Lista pedidos (más antiguos primero)
+      operationId: listOrders
+      parameters:
+        - name: status
+          in: query
+          description: Estados separados por coma, p. ej. `new,preparing,ready`.
+          schema: { type: string, example: 'new,preparing,ready' }
+        - name: channel
+          in: query
+          schema: { $ref: '#/components/schemas/OrderChannel' }
+      responses:
+        '200':
+          description: Pedidos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Order' } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Pedidos]
+      summary: Envía una comanda a cocina (prueba P02)
+      description: |
+        El servidor toma nombre y precio vigentes del catálogo (snapshot), calcula el total
+        y emite `order.created` por SSE.
+      operationId: createOrder
+      x-status: planned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOrderInput' }
+      responses:
+        '201':
+          description: Pedido creado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Order' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Producto no disponible
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+  /orders/{orderId}/status:
+    patch:
+      tags: [Pedidos]
+      summary: Avanza el estado de un pedido (prueba P03)
+      description: |
+        Transiciones válidas: `new → preparing → ready → delivered → paid`;
+        `new|preparing → cancelled`. Emite `order.updated` por SSE.
+      operationId: updateOrderStatus
+      x-status: planned
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/OrderStatus' }
+      responses:
+        '200':
+          description: Pedido actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Order' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Transición no permitida (`INVALID_STATE_TRANSITION`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+  /events:
+    get:
+      tags: [Tiempo real]
+      summary: Flujo Server-Sent Events con cambios de pedidos
+      description: |
+        Cada mensaje `data:` contiene un `RealtimeEvent` en JSON. El servidor envía un
+        comentario `: ping` cada 25 s y sugiere reconectar a los 3 s (`retry: 3000`).
+      operationId: streamEvents
+      responses:
+        '200':
+          description: Flujo abierto
+          content:
+            text/event-stream:
+              schema: { $ref: '#/components/schemas/RealtimeEvent' }
+
+components:
+  parameters:
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    ValidationError:
+      description: Datos de entrada inválidos (`VALIDATION_ERROR`)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    NotFound:
+      description: Recurso no encontrado (`NOT_FOUND`)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+
+  schemas:
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                [VALIDATION_ERROR, NOT_FOUND, CONFLICT, INVALID_STATE_TRANSITION, INTERNAL_ERROR]
+            message: { type: string }
+            issues:
+              type: array
+              items:
+                type: object
+                required: [path, message]
+                properties:
+                  path: { type: string }
+                  message: { type: string }
+
+    Allergen:
+      type: string
+      enum: [gluten, lacteos, huevo, frutos-secos, soya]
+
+    Category:
+      type: object
+      required: [id, slug, name, sortOrder]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string, pattern: '^[a-z0-9-]+$' }
+        name: { type: string, maxLength: 60 }
+        sortOrder: { type: integer, minimum: 0 }
+
+    Product:
+      type: object
+      required: [id, categoryId, name, description, priceClp, allergens, isAvailable, sortOrder]
+      properties:
+        id: { type: string, format: uuid }
+        categoryId: { type: string, format: uuid }
+        name: { type: string, maxLength: 80 }
+        description: { type: string, maxLength: 240 }
+        priceClp: { type: integer, minimum: 0 }
+        allergens: { type: array, items: { $ref: '#/components/schemas/Allergen' } }
+        isAvailable: { type: boolean }
+        sortOrder: { type: integer, minimum: 0 }
+
+    ProductInput:
+      type: object
+      required: [categoryId, name, priceClp]
+      properties:
+        categoryId: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 80 }
+        description: { type: string, maxLength: 240, default: '' }
+        priceClp: { type: integer, minimum: 0 }
+        allergens:
+          type: array
+          items: { $ref: '#/components/schemas/Allergen' }
+          default: []
+        isAvailable: { type: boolean, default: true }
+
+    ProductPatch:
+      type: object
+      minProperties: 1
+      properties:
+        categoryId: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 80 }
+        description: { type: string, maxLength: 240 }
+        priceClp: { type: integer, minimum: 0 }
+        allergens: { type: array, items: { $ref: '#/components/schemas/Allergen' } }
+        isAvailable: { type: boolean }
+
+    Menu:
+      type: object
+      required: [categories]
+      properties:
+        categories:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Category'
+              - type: object
+                required: [products]
+                properties:
+                  products: { type: array, items: { $ref: '#/components/schemas/Product' } }
+
+    TableStatus:
+      type: string
+      enum: [free, occupied, awaiting-payment]
+      description: |
+        Derivado, no almacenado: `free` sin pedidos abiertos; `awaiting-payment` si todos
+        los pedidos abiertos fueron entregados; `occupied` en otro caso.
+
+    TableOverview:
+      type: object
+      required: [id, number, label, sortOrder, status, itemCount, openTotalClp, openSince]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: integer, minimum: 1 }
+        label: { type: string }
+        sortOrder: { type: integer }
+        status: { $ref: '#/components/schemas/TableStatus' }
+        itemCount: { type: integer, minimum: 0 }
+        openTotalClp: { type: integer, minimum: 0 }
+        openSince: { type: [string, 'null'], format: date-time }
+
+    OrderStatus:
+      type: string
+      enum: [new, preparing, ready, delivered, paid, cancelled]
+
+    OrderChannel:
+      type: string
+      enum: [dine-in, takeaway, whatsapp]
+
+    QuickNote:
+      type: string
+      enum: [no-sugar, takeaway, lactose-free, sweetener]
+
+    OrderItem:
+      type: object
+      required: [id, productId, productName, unitPriceClp, quantity, quickNotes, note]
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        productName: { type: string, description: Nombre al momento de la venta }
+        unitPriceClp: { type: integer, minimum: 0, description: Precio al momento de la venta }
+        quantity: { type: integer, minimum: 1, maximum: 99 }
+        quickNotes: { type: array, items: { $ref: '#/components/schemas/QuickNote' } }
+        note: { type: [string, 'null'], maxLength: 140 }
+
+    Order:
+      type: object
+      required:
+        [
+          id,
+          channel,
+          status,
+          tableId,
+          tableLabel,
+          customerName,
+          pickupAt,
+          items,
+          totalClp,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        channel: { $ref: '#/components/schemas/OrderChannel' }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        tableId: { type: [string, 'null'], format: uuid }
+        tableLabel: { type: [string, 'null'] }
+        customerName: { type: [string, 'null'], maxLength: 60 }
+        pickupAt: { type: [string, 'null'], format: date-time }
+        items: { type: array, minItems: 1, items: { $ref: '#/components/schemas/OrderItem' } }
+        totalClp: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateOrderInput:
+      type: object
+      required: [channel, items]
+      description: '`dine-in` exige `tableId`; `whatsapp` exige `customerName`.'
+      properties:
+        channel: { $ref: '#/components/schemas/OrderChannel' }
+        tableId: { type: [string, 'null'], format: uuid }
+        customerName: { type: [string, 'null'], minLength: 1, maxLength: 60 }
+        pickupAt: { type: [string, 'null'], format: date-time }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [productId, quantity]
+            properties:
+              productId: { type: string, format: uuid }
+              quantity: { type: integer, minimum: 1, maximum: 99 }
+              quickNotes:
+                type: array
+                items: { $ref: '#/components/schemas/QuickNote' }
+                default: []
+              note: { type: [string, 'null'], maxLength: 140, default: null }
+
+    RealtimeEvent:
+      oneOf:
+        - type: object
+          required: [type, payload]
+          properties:
+            type: { const: order.created }
+            payload: { $ref: '#/components/schemas/Order' }
+        - type: object
+          required: [type, payload]
+          properties:
+            type: { const: order.updated }
+            payload: { $ref: '#/components/schemas/Order' }

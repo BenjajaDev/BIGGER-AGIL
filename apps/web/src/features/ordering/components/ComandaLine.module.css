@@ -1,0 +1,24 @@
+.line {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  animation: pop-in var(--duration-base) var(--ease-out);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-weight: var(--weight-semibold);
+}
+
+.subtotal {
+  font-variant-numeric: tabular-nums;
+}
+
+.notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

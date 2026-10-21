@@ -1,0 +1,94 @@
+.root {
+  --menu-bg: var(--surface-page);
+  --menu-card-bg: var(--surface-card);
+  --menu-card-border: var(--border-subtle);
+  --menu-text: var(--text-primary);
+  --menu-text-secondary: var(--text-secondary);
+  --menu-price: var(--accent);
+  --menu-focus: var(--focus-ring);
+
+  min-height: 100dvh;
+  max-width: 32rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background-color: var(--menu-bg);
+  color: var(--menu-text);
+  font-size: 1rem;
+}
+
+.root[data-text-size='large'] {
+  font-size: 1.25rem;
+}
+
+.root[data-contrast='high'] {
+  --menu-bg: var(--color-carbon-900);
+  --menu-card-bg: var(--color-carbon-900);
+  --menu-card-border: var(--color-white);
+  --menu-text: var(--color-white);
+  --menu-text-secondary: var(--color-white);
+  --menu-price: var(--status-highlight);
+  --menu-focus: var(--focus-ring-inverse);
+  /* Shared components (EmptyState, AsyncContent) follow the same high-contrast scheme. */
+  --text-primary: var(--color-white);
+  --text-secondary: var(--color-white);
+  --accent: var(--status-highlight);
+  --surface-card: var(--color-carbon-900);
+  --border-subtle: var(--color-white);
+}
+
+.root :focus-visible {
+  outline-color: var(--menu-focus);
+}
+
+.header {
+  padding: 1.5em 1em 1.25em;
+  border-bottom: 6px solid var(--accent);
+  background-color: var(--surface-inverse);
+  color: var(--text-inverse);
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: 2.25em;
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  text-decoration: none;
+}
+
+.tagline {
+  color: var(--status-highlight);
+  font-weight: var(--weight-medium);
+}
+
+.address {
+  font-size: 0.875em;
+}
+
+.content {
+  display: grid;
+  align-content: start;
+  gap: 1em;
+  padding: 1em;
+}
+
+.footer {
+  position: sticky;
+  bottom: 0;
+  padding: 1em;
+  background-color: var(--menu-bg);
+}
+
+.whatsapp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: var(--touch-target);
+  padding: 0.75em 1em;
+  border-radius: var(--radius-sm);
+  background-color: var(--action-primary);
+  color: var(--text-inverse);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}

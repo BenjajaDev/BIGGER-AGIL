@@ -1,0 +1,36 @@
+.toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5em;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375em;
+  min-height: var(--touch-target);
+  padding: 0.5em 0.75em;
+  border: var(--border-width-strong) solid var(--menu-text);
+  border-radius: var(--radius-sm);
+  background-color: var(--menu-card-bg);
+  color: var(--menu-text);
+  font-size: 0.9375em;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.toggle[aria-pressed='true'] {
+  background-color: var(--menu-text);
+  color: var(--menu-bg);
+}
+
+.notice {
+  grid-column: 1 / -1;
+  padding: 0.5em 0.75em;
+  border-radius: var(--radius-sm);
+  background-color: var(--status-highlight);
+  color: var(--text-on-warm);
+  font-size: 0.875em;
+  font-weight: var(--weight-semibold);
+}

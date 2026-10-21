@@ -1,0 +1,36 @@
+.panel {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--space-6));
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--space-3);
+  max-height: calc(100dvh - var(--topbar-height) - var(--space-6) * 2);
+}
+
+.title {
+  font-size: var(--text-button);
+  font-weight: var(--weight-bold);
+}
+
+.lines {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.footer {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  font-weight: var(--weight-semibold);
+}
+
+.totalAmount {
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}

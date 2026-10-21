@@ -1,0 +1,10 @@
+.page {
+  min-height: calc(100dvh - var(--topbar-height));
+  padding: var(--space-6);
+  background-color: var(--surface-kitchen);
+  color: var(--text-inverse);
+}
+
+.page :focus-visible {
+  outline-color: var(--focus-ring-inverse);
+}

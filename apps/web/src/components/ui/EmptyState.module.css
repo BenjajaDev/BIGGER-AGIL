@@ -1,0 +1,32 @@
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--text-secondary);
+  animation: fade-in var(--duration-slow) var(--ease-out);
+}
+
+.icon {
+  color: var(--accent);
+}
+
+.title {
+  color: var(--text-primary);
+  font-size: var(--text-button);
+  font-weight: var(--weight-semibold);
+}
+
+.action {
+  margin-top: var(--space-2);
+}
+
+.inverse,
+.inverse .title {
+  color: var(--text-inverse);
+}
+
+.inverse .icon {
+  color: var(--status-highlight);
+}

@@ -1,0 +1,27 @@
+.shell {
+  display: grid;
+  grid-template-rows: var(--topbar-height) 1fr;
+  min-height: 100dvh;
+}
+
+.skipLink {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 10;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-card);
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+  transform: translateY(-200%);
+}
+
+.skipLink:focus-visible {
+  transform: none;
+}
+
+.main {
+  min-width: 0;
+  animation: fade-in var(--duration-base) var(--ease-out);
+}
