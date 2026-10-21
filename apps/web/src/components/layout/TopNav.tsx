@@ -13,9 +13,16 @@ function ConnectionIndicator({ state }: { state: RealtimeConnectionState }) {
   const isOnline = state === 'open';
   const Icon = isOnline ? Wifi : WifiOff;
   return (
-    <span role="status" className={cx(styles.connection, !isOnline && styles.offline)}>
-      <Icon size={16} aria-hidden="true" />
-      {isOnline ? 'En línea' : 'Reconectando…'}
+    <span
+      role="status"
+      className={cx(styles.connection, !isOnline && styles.offline)}
+      title={isOnline ? 'En línea' : undefined}
+    >
+      <Icon size={18} aria-hidden="true" />
+      {/* Online is the quiet default; losing the connection is spelled out for everyone. */}
+      <span className={isOnline ? 'visually-hidden' : undefined}>
+        {isOnline ? 'En línea' : 'Reconectando…'}
+      </span>
     </span>
   );
 }

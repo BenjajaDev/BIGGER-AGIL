@@ -8,6 +8,8 @@ const kuchen = {
   description: 'Masa casera, crema pastelera y frambuesas.',
   priceClp: 3200,
   allergens: ['gluten', 'lacteos', 'huevo'] as const,
+  comboSlots: [],
+  modifierGroups: [],
 };
 
 describe('MenuProductCard', () => {
@@ -18,9 +20,46 @@ describe('MenuProductCard', () => {
     const article = screen.getByRole('article', { name: 'Kuchen de frambuesa' });
 
     expect(article.textContent).toBe(
-      'Kuchen de frambuesa$ 3.2003.200 pesosMasa casera, crema pastelera y frambuesas.Contiene: Gluten · Lácteos · Huevo',
+      'Kuchen de frambuesa$\u00a03.2003.200 pesosMasa casera, crema pastelera y frambuesas.Contiene: Gluten · Lácteos · Huevo',
     );
-    expect(container.querySelector('[aria-hidden="true"]')?.textContent).toBe('$ 3.200');
+    expect(container.querySelector('[aria-hidden="true"]')?.textContent).toBe('$\u00a03.200');
+  });
+
+  it('lists what a combo includes and how a product can be customized', () => {
+    render(
+      <MenuProductCard
+        product={{
+          ...kuchen,
+          allergens: [],
+          comboSlots: [
+            {
+              id: 's-1',
+              name: 'Café a elección',
+              options: [
+                {
+                  productId: 'a',
+                  productName: 'Americano',
+                  extraPriceClp: 0,
+                  isAvailable: true,
+                  allergens: [],
+                },
+                {
+                  productId: 'b',
+                  productName: 'Latte',
+                  extraPriceClp: 200,
+                  isAvailable: true,
+                  allergens: [],
+                },
+              ],
+            },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText('Incluye')).toBeInTheDocument();
+    expect(screen.getByRole('listitem')).toHaveTextContent(
+      'Café a elección: Americano o Latte (+$ 200)',
+    );
   });
 
   it('states explicitly when a product has no declared allergens', () => {

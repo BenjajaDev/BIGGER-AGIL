@@ -8,9 +8,9 @@ const timeFormatter = new Intl.DateTimeFormat('es-CL', {
 
 const MINUTE_MS = 60_000;
 
-/** "$ 3.200" — visual price. */
+/** "$ 3.200" — visual price; the non-breaking space keeps sign and amount on one line. */
 export function formatClp(amount: number): string {
-  return `$ ${integerFormatter.format(amount)}`;
+  return `$\u00a0${integerFormatter.format(amount)}`;
 }
 
 /** "3.200 pesos" — how screen readers should announce a price. */

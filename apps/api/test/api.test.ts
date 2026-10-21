@@ -14,8 +14,8 @@ import { createTestContext, type TestContext } from './helpers/test-app.js';
 
 let context: TestContext;
 
-beforeEach(() => {
-  context = createTestContext();
+beforeEach(async () => {
+  context = await createTestContext();
 });
 
 afterEach(() => {
@@ -40,6 +40,7 @@ describe('catalog endpoints', () => {
       'helados',
       'sandwiches',
       'bebidas',
+      'combos',
     ]);
   });
 
@@ -71,8 +72,24 @@ describe('catalog endpoints', () => {
   it('serves the public menu grouped by category', async () => {
     const response = await request(context.app).get('/api/v1/menu');
     const body = apiSuccessSchema(MenuSchema).parse(response.body);
-    expect(body.data.categories).toHaveLength(5);
+    expect(body.data.categories).toHaveLength(6);
     expect(body.data.categories.every((category) => category.products.length > 0)).toBe(true);
+
+    const products = body.data.categories.flatMap((category) => category.products);
+    const capuchino = products.find((product) => product.name === 'Capuchino');
+    expect(capuchino?.modifierGroups.map((group) => group.name)).toEqual([
+      'Tamaño',
+      'Tipo de leche',
+      'Extras',
+    ]);
+
+    const once = products.find((product) => product.name === 'Once BIGGER');
+    expect(once?.kind).toBe('combo');
+    expect(once?.comboSlots.map((slot) => slot.name)).toEqual([
+      'Café a elección',
+      'Dulce a elección',
+    ]);
+    expect(once?.allergens).toEqual(['gluten', 'lacteos', 'huevo']);
   });
 });
 

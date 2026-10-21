@@ -10,6 +10,7 @@ Contrato de API: [`docs/api/openapi.yaml`](api/openapi.yaml).
 | ----------------------------- | ------------- | ----------- |
 | Mesas y comandas (+ WhatsApp) | Activo        | INC-3       |
 | Carta digital y catálogo      | Activo        | INC-3/4     |
+| Configuración de la carta     | Activo        | INC-4       |
 | Vista de cocina               | Activo        | INC-3       |
 | Bodega                        | En desarrollo | INC-4       |
 | Compras                       | En desarrollo | INC-4       |
@@ -67,9 +68,20 @@ erDiagram
   dining_tables ||--o{ orders : "pedidos de mesa"
   orders ||--|{ order_items : incluye
   products ||--o{ order_items : "vendido como"
+  products ||--o{ product_modifier_groups : ofrece
+  modifier_groups ||--o{ product_modifier_groups : "asignada a"
+  modifier_groups ||--|{ modifier_options : tiene
+  products ||--o{ combo_slots : "combo con"
+  combo_slots ||--|{ combo_slot_options : "a elegir"
+  products ||--o{ combo_slot_options : "opción de combo"
 
-  categories { text id PK; text slug UK; text name; int sort_order }
-  products { text id PK; text category_id FK; text name; text description; int price_clp; json allergens; bool is_available; int sort_order }
+  categories { text id PK; text slug UK; text name; int sort_order; ts archived_at }
+  products { text id PK; text category_id FK; text kind; text name; text description; int price_clp; json allergens; bool is_available; int sort_order; ts archived_at }
+  modifier_groups { text id PK; text name; int min_selections; int max_selections }
+  modifier_options { text id PK; text group_id FK; text name; int price_delta_clp; bool is_available; int position }
+  product_modifier_groups { text product_id PK; text group_id PK; int position }
+  combo_slots { text id PK; text combo_id FK; text name; int position }
+  combo_slot_options { text slot_id PK; text product_id PK; int extra_price_clp; int position }
   dining_tables { text id PK; int number UK; text label; int sort_order; bool is_active }
   orders { text id PK; text channel; text status; text table_id FK; text customer_name; ts pickup_at; int total_clp; ts created_at }
   order_items { text id PK; text order_id FK; text product_id FK; text product_name; int position; int unit_price_clp; int quantity; json quick_notes; text note }
@@ -83,7 +95,22 @@ Decisiones:
 - **Estado de mesa derivado, no almacenado**: `free` sin pedidos abiertos, `awaiting-payment`
   si todos están entregados, `occupied` en otro caso. Así nunca se desincroniza
   (`apps/api/src/modules/tables/table-overview.ts`).
-- **`position`** conserva el orden en que se anotó la comanda.
+- **`position`** conserva el orden en que se anotó la comanda (y el orden de opciones,
+  espacios y personalizaciones en la configuración).
+- **Eliminar = archivar** (`archived_at`): el producto o la categoría desaparecen de la carta
+  y de Pedido, pero las comandas pasadas siguen apuntando a ellos y se pueden restaurar.
+  Un producto que es opción de un combo activo no se puede eliminar (409) y una categoría
+  con productos activos tampoco.
+- **Combos como productos (`kind = combo`)**: tienen categoría, precio y disponibilidad
+  propios, y aparecen en la carta y en Pedido sin casos especiales. Cada espacio
+  («Café a elección») lista productos simples con un recargo opcional; un combo fijo es un
+  combo con una sola opción por espacio. No se anidan combos.
+- **Personalizaciones reutilizables** (`modifier_groups`): «Tipo de leche» se define una vez
+  y se asigna a varios productos; `min_selections ≥ 1` la vuelve obligatoria.
+- **Alérgenos de un combo derivados**: son la unión de los productos que puede incluir, así
+  nunca quedan desactualizados.
+- **Carta pública**: oculta opciones agotadas, grupos sin opciones y combos con un espacio
+  sin nada disponible (`apps/api/src/modules/catalog/catalog-product.ts`).
 - Todas las tablas tienen `created_at`/`updated_at` como base para Reportes.
 
 ### Ciclo de vida de un pedido
@@ -105,15 +132,20 @@ las mismas en la API y en la UI.
 ## 5. Tiempo real
 
 Las mutaciones van por REST. Tras cada cambio, el servicio publica un `RealtimeEvent`
-(`order.created` / `order.updated`) en el `EventHub`, y `GET /api/v1/events` lo reenvía por
-SSE a todas las tablets. La UI (`useRealtimeSync`) invalida las queries `orders` y `tables`,
-y la barra superior muestra «En línea / Reconectando…» con ícono y texto.
+(`order.created` / `order.updated` / `catalog.updated`) en el `EventHub`, y
+`GET /api/v1/events` lo reenvía por SSE a todas las tablets. La UI (`useRealtimeSync`)
+invalida las queries afectadas: al cambiar un precio en Configuración, Pedido se actualiza
+solo. La barra superior muestra el estado de conexión con ícono y, si se cae, con el texto
+«Reconectando…».
 
 ## 6. Convenciones de API
 
 - Éxito `{ "data": … }`; error `{ "error": { "code", "message", "issues?" } }`.
-- Códigos: `VALIDATION_ERROR` 400 · `NOT_FOUND` 404 · `CONFLICT` 409 ·
-  `INVALID_STATE_TRANSITION` 409 · `INTERNAL_ERROR` 500 (sin filtrar detalles internos).
+- Códigos: `VALIDATION_ERROR` 400 · `UNAUTHORIZED` 401 · `NOT_FOUND` 404 · `CONFLICT` 409 ·
+  `INVALID_STATE_TRANSITION` 409 · `TOO_MANY_REQUESTS` 429 · `INTERNAL_ERROR` 500 (sin
+  filtrar detalles internos).
+- Los `issues` usan la misma ruta que el formulario (`comboSlots.0.options.1.productId`), así
+  la UI marca el campo exacto sin traducir nada.
 - Toda entrada se valida en el borde HTTP (`parseOrThrow`) y toda respuesta se valida en el
   cliente (`getJson`).
 - Variables de entorno validadas con zod al arrancar (`apps/api/src/config/env.ts`,
@@ -150,17 +182,26 @@ Reglas aplicadas en los componentes:
 - `helmet`, CORS restringido por `CORS_ORIGINS`, cuerpo JSON limitado a 100 kB, sin
   `x-powered-by`, errores 500 sin detalles internos.
 - Secretos solo en `.env` (ignorado por git); se versiona `.env.example`.
-- **Riesgo abierto:** el MVP no tiene autenticación y está pensado para correr solo en la
-  red local del local (`HOST=127.0.0.1` por defecto). Antes de exponerlo fuera de esa red,
-  la Fase 2 debe agregar autenticación por dispositivo para las rutas internas
-  (`/menu` seguirá siendo pública).
+- **Configuración protegida por PIN** (`/api/v1/admin/*`): el PIN del encargado se guarda
+  como hash scrypt con sal (`ADMIN_PIN_HASH`, generado con `pnpm --filter @bigger/api
+admin:pin`). Al ingresarlo se emite un token firmado con HMAC (12 h) en una cookie
+  `httpOnly`, `SameSite=Strict`, limitada a `/api/v1/admin` y `Secure` cuando hay HTTPS.
+  Tras 5 PIN incorrectos por cliente se bloquea 15 minutos (un PIN corto solo es seguro con
+  intentos limitados). Rotar `ADMIN_SESSION_SECRET` cierra todas las sesiones.
+- **Riesgo abierto:** Mesas, Pedido y Cocina aún no exigen autenticación y están pensados
+  para correr solo en la red del local (`HOST=127.0.0.1` por defecto). La Fase 2 agrega
+  autenticación por dispositivo; `/menu` seguirá siendo pública.
 
 ## 9. Hoja de ruta por fases
 
 1. **Fase 1 (esta entrega):** arquitectura, modelo de datos, contrato OpenAPI, entorno,
    tokens, componentes base y lecturas (`GET`) funcionando con datos de ejemplo.
-2. **Fase 2 · Backend:** `POST /orders`, `PATCH /orders/{id}/status` con publicación SSE,
-   CRUD de productos (P01) y autenticación por dispositivo. En la UI se conectan
-   `ComandaPanel.onSubmit` y `KitchenBoard.onAdvance` (hoy se muestran sin acción).
-3. **Fase 3 · Frontend:** mutaciones optimistas, administración del catálogo, QR por mesa.
+   **Configuración de la carta (hecho):** categorías, productos, combos con elección y
+   personalizaciones reutilizables, con PIN de administración (P01).
+2. **Fase 2 · Backend:** `POST /orders`, `PATCH /orders/{id}/status` con publicación SSE y
+   autenticación por dispositivo. Las líneas de comanda guardarán una copia de las opciones
+   y la elección del combo (nombre y recargo), igual que hoy guardan nombre y precio. En la
+   UI se conectan `ComandaPanel.onSubmit` y `KitchenBoard.onAdvance`.
+3. **Fase 3 · Frontend:** selector de personalizaciones y combos al tomar el pedido,
+   mutaciones optimistas, orden manual de la carta, QR por mesa.
 4. **Fase 4 · QA:** pruebas P01–P13, TalkBack/VoiceOver, pruebas en horario real.

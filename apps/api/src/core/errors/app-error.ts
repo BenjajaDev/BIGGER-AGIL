@@ -2,9 +2,11 @@ import type { ApiErrorCode, ApiFieldIssue } from '@bigger/shared';
 
 const STATUS_BY_CODE: Readonly<Record<ApiErrorCode, number>> = {
   VALIDATION_ERROR: 400,
+  UNAUTHORIZED: 401,
   NOT_FOUND: 404,
   CONFLICT: 409,
   INVALID_STATE_TRANSITION: 409,
+  TOO_MANY_REQUESTS: 429,
   INTERNAL_ERROR: 500,
 };
 

@@ -19,7 +19,8 @@ export function createApp({ env, logger, ...container }: AppDependencies): Expre
 
   app.disable('x-powered-by');
   app.use(helmet());
-  app.use(cors({ origin: env.CORS_ORIGINS }));
+  // Credentials allow the httpOnly admin cookie when the web app is served from another port.
+  app.use(cors({ origin: env.CORS_ORIGINS, credentials: true }));
   app.use(express.json({ limit: '100kb' }));
   app.use(pinoHttp({ logger }));
 

@@ -9,7 +9,13 @@ const logger = createLogger(env.LOG_LEVEL);
 const connection = openDatabase(env.DATABASE_PATH);
 runMigrations(connection.db);
 
-const app = createApp({ env, logger, db: connection.db, eventHub: new EventHub() });
+const app = createApp({
+  env,
+  logger,
+  db: connection.db,
+  eventHub: new EventHub(),
+  adminAuth: { pinHash: env.ADMIN_PIN_HASH, sessionSecret: env.ADMIN_SESSION_SECRET },
+});
 
 const server = app.listen(env.PORT, env.HOST, () => {
   logger.info({ host: env.HOST, port: env.PORT }, 'BIGGER Ágil API escuchando');

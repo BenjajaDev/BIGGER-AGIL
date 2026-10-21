@@ -37,3 +37,21 @@
   font-size: 0.875em;
   font-weight: var(--weight-semibold);
 }
+
+.details {
+  display: grid;
+  gap: 0.125em;
+  font-size: 0.9375em;
+}
+
+.detailsTitle {
+  font-weight: var(--weight-semibold);
+}
+
+.detailsList {
+  display: grid;
+  gap: 0.125em;
+  margin: 0;
+  padding-left: 1.25em;
+  color: var(--menu-text-secondary);
+}

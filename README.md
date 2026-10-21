@@ -18,17 +18,20 @@ vista de cocina en tiempo real y carta digital accesible por QR.
 pnpm install
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
+pnpm --filter @bigger/api admin:pin   # pide el PIN del encargado y entrega las 2 variables ADMIN_*
+                                      # para pegarlas en apps/api/.env
 pnpm db:seed   # aplica migraciones y carga el catálogo y los pedidos de ejemplo
 pnpm dev       # API en :3000 y web en :5173
 ```
 
-| URL                          | Vista                        |
-| ---------------------------- | ---------------------------- |
-| http://localhost:5173/mesas  | Mapa de mesas y WhatsApp     |
-| http://localhost:5173/pedido | Toma de pedido               |
-| http://localhost:5173/cocina | Vista de cocina              |
-| http://localhost:5173/carta  | Carta pública (celular / QR) |
-| http://localhost:5173/bodega | Módulo «En desarrollo»       |
+| URL                                 | Vista                           |
+| ----------------------------------- | ------------------------------- |
+| http://localhost:5173/mesas         | Mapa de mesas y WhatsApp        |
+| http://localhost:5173/pedido        | Toma de pedido                  |
+| http://localhost:5173/cocina        | Vista de cocina                 |
+| http://localhost:5173/carta         | Carta pública (celular / QR)    |
+| http://localhost:5173/configuracion | Configuración de la carta (PIN) |
+| http://localhost:5173/bodega        | Módulo «En desarrollo»          |
 
 Para usar la app desde las tablets del local, define `HOST=0.0.0.0` en `apps/api/.env` y
 agrega el origen de la tablet a `CORS_ORIGINS`.
@@ -44,6 +47,7 @@ agrega el origen de la tablet a `CORS_ORIGINS`.
 | `pnpm db:migrate`                       | Aplica migraciones pendientes                      |
 | `pnpm db:seed`                          | Carga datos de ejemplo (bloqueado en producción)   |
 | `pnpm --filter @bigger/api db:generate` | Genera una migración desde `schema.ts`             |
+| `pnpm --filter @bigger/api admin:pin`   | Genera el hash del PIN y el secreto de sesión      |
 
 ## Estructura
 

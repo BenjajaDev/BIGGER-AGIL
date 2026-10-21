@@ -1,5 +1,5 @@
 import type { Product } from '@bigger/shared';
-import { CircleSlash } from 'lucide-react';
+import { CircleSlash, Combine } from 'lucide-react';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { formatClp, formatClpSpoken } from '../../../lib/format';
 import styles from './ProductTile.module.css';
@@ -26,6 +26,7 @@ export function ProductTile({ product, onAdd }: ProductTileProps) {
     >
       <span className={styles.name}>{product.name}</span>
       <span className={styles.price}>{formatClp(product.priceClp)}</span>
+      {product.kind === 'combo' && <StatusBadge tone="highlight" icon={Combine} label="Combo" />}
       {!product.isAvailable && <StatusBadge tone="neutral" icon={CircleSlash} label="Agotado" />}
     </button>
   );

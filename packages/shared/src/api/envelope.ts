@@ -2,9 +2,11 @@ import { z } from 'zod';
 
 export const API_ERROR_CODES = [
   'VALIDATION_ERROR',
+  'UNAUTHORIZED',
   'NOT_FOUND',
   'CONFLICT',
   'INVALID_STATE_TRANSITION',
+  'TOO_MANY_REQUESTS',
   'INTERNAL_ERROR',
 ] as const;
 export const ApiErrorCodeSchema = z.enum(API_ERROR_CODES);

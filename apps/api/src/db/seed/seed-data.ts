@@ -161,6 +161,87 @@ export const SEED_CATEGORIES: readonly SeedCategory[] = [
   },
 ];
 
+export interface SeedModifierGroup {
+  name: string;
+  minSelections: number;
+  maxSelections: number;
+  options: { name: string; priceDeltaClp: number }[];
+  /** Products (by name) that offer this customization. */
+  appliesTo: string[];
+}
+
+export const SEED_MODIFIER_GROUPS: readonly SeedModifierGroup[] = [
+  {
+    name: 'Tamaño',
+    minSelections: 1,
+    maxSelections: 1,
+    options: [
+      { name: 'Normal', priceDeltaClp: 0 },
+      { name: 'Grande', priceDeltaClp: 600 },
+    ],
+    appliesTo: ['Americano', 'Capuchino', 'Latte'],
+  },
+  {
+    name: 'Tipo de leche',
+    minSelections: 0,
+    maxSelections: 1,
+    options: [
+      { name: 'Entera', priceDeltaClp: 0 },
+      { name: 'Sin lactosa', priceDeltaClp: 300 },
+      { name: 'Vegetal', priceDeltaClp: 500 },
+    ],
+    appliesTo: ['Capuchino', 'Latte'],
+  },
+  {
+    name: 'Extras',
+    minSelections: 0,
+    maxSelections: 3,
+    options: [
+      { name: 'Crema', priceDeltaClp: 400 },
+      { name: 'Canela', priceDeltaClp: 0 },
+      { name: 'Shot extra de café', priceDeltaClp: 700 },
+    ],
+    appliesTo: ['Americano', 'Capuchino', 'Latte'],
+  },
+];
+
+export interface SeedCombo {
+  categorySlug: string;
+  name: string;
+  description: string;
+  priceClp: number;
+  slots: { name: string; options: { productName: string; extraPriceClp: number }[] }[];
+}
+
+export const SEED_COMBO_CATEGORY = { slug: 'combos', name: 'Combos' } as const;
+
+export const SEED_COMBOS: readonly SeedCombo[] = [
+  {
+    categorySlug: SEED_COMBO_CATEGORY.slug,
+    name: 'Once BIGGER',
+    description: 'Un café y un dulce a elección.',
+    priceClp: 5200,
+    slots: [
+      {
+        name: 'Café a elección',
+        options: [
+          { productName: 'Americano', extraPriceClp: 0 },
+          { productName: 'Capuchino', extraPriceClp: 0 },
+          { productName: 'Latte', extraPriceClp: 200 },
+        ],
+      },
+      {
+        name: 'Dulce a elección',
+        options: [
+          { productName: 'Kuchen de frambuesa', extraPriceClp: 0 },
+          { productName: 'Medialuna', extraPriceClp: 0 },
+          { productName: 'Torta mil hojas', extraPriceClp: 600 },
+        ],
+      },
+    ],
+  },
+];
+
 export const SEED_TABLE_COUNT = 10;
 
 export interface SeedOrderItem {

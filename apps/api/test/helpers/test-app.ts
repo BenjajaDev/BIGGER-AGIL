@@ -3,24 +3,31 @@ import { createApp } from '../../src/app.js';
 import { createLogger } from '../../src/core/logger.js';
 import { openDatabase, runMigrations, type DatabaseConnection } from '../../src/db/client.js';
 import { seedDatabase } from '../../src/db/seed/seed.js';
+import { hashPin } from '../../src/modules/admin-auth/pin-hash.js';
 import { EventHub } from '../../src/realtime/event-hub.js';
+
+export const TEST_ADMIN_PIN = '482915';
+const pinHash = hashPin(TEST_ADMIN_PIN);
 
 export interface TestContext {
   app: Express;
   connection: DatabaseConnection;
+  eventHub: EventHub;
 }
 
-export function createTestContext({ withDemoOrders = true } = {}): TestContext {
+export async function createTestContext({ withDemoOrders = true } = {}): Promise<TestContext> {
   const connection = openDatabase(':memory:');
   runMigrations(connection.db);
   seedDatabase(connection.db, { withDemoOrders });
+  const eventHub = new EventHub();
 
   const app = createApp({
     env: { CORS_ORIGINS: ['http://localhost:5173'] },
     logger: createLogger('silent'),
     db: connection.db,
-    eventHub: new EventHub(),
+    eventHub,
+    adminAuth: { pinHash: await pinHash, sessionSecret: 'test-session-secret-0123456789abcdef' },
   });
 
-  return { app, connection };
+  return { app, connection, eventHub };
 }

@@ -14,9 +14,11 @@ info:
     Las operaciones marcadas `x-status: planned` forman parte del contrato acordado y se
     implementan en la Fase 2.
 
-    **Seguridad:** el MVP corre solo en la red local del local y aún no exige autenticación
-    (`security: []`). La Fase 2 incorpora autenticación por dispositivo para las rutas
-    internas; `/menu` seguirá siendo pública.
+    **Seguridad:** las rutas `/admin/*` (configuración de la carta) exigen la cookie de sesión
+    `bigger_admin` (httpOnly, SameSite=Strict) obtenida con el PIN del encargado en
+    `POST /admin/session`; tras 5 PIN incorrectos se bloquea 15 min (429). El resto de las rutas
+    internas aún no exige autenticación y corre solo en la red del local; la Fase 2 agrega
+    autenticación por dispositivo. `/menu` es pública.
   license:
     name: Propietario · uso exclusivo de BIGGER
     identifier: LicenseRef-Proprietary
@@ -35,6 +37,8 @@ tags:
     description: Comandas de mesa, para llevar y WhatsApp.
   - name: Tiempo real
     description: Notificaciones de cambios por Server-Sent Events.
+  - name: Administración
+    description: Sesión del encargado y configuración de la carta (requiere PIN).
 paths:
   /health:
     get:
@@ -75,7 +79,7 @@ paths:
   /products:
     get:
       tags: [Catálogo]
-      summary: Lista productos del catálogo interno
+      summary: Lista productos activos con sus personalizaciones y espacios de combo
       operationId: listProducts
       parameters:
         - name: categoryId
@@ -93,55 +97,8 @@ paths:
                 type: object
                 required: [data]
                 properties:
-                  data: { type: array, items: { $ref: '#/components/schemas/Product' } }
+                  data: { type: array, items: { $ref: '#/components/schemas/MenuProduct' } }
         '400': { $ref: '#/components/responses/ValidationError' }
-    post:
-      tags: [Catálogo]
-      summary: Crea un producto (prueba P01)
-      operationId: createProduct
-      x-status: planned
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ProductInput' }
-      responses:
-        '201':
-          description: Producto creado
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data]
-                properties:
-                  data: { $ref: '#/components/schemas/Product' }
-        '400': { $ref: '#/components/responses/ValidationError' }
-
-  /products/{productId}:
-    patch:
-      tags: [Catálogo]
-      summary: Edita o desactiva un producto (prueba P01)
-      operationId: updateProduct
-      x-status: planned
-      parameters:
-        - $ref: '#/components/parameters/ProductId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ProductPatch' }
-      responses:
-        '200':
-          description: Producto actualizado
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data]
-                properties:
-                  data: { $ref: '#/components/schemas/Product' }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
 
   /menu:
     get:
@@ -286,13 +243,310 @@ paths:
             text/event-stream:
               schema: { $ref: '#/components/schemas/RealtimeEvent' }
 
+  /admin/session:
+    post:
+      tags: [Administración]
+      summary: Inicia sesión con el PIN del encargado
+      operationId: adminLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pin]
+              properties:
+                pin: { type: string, pattern: '^\d{4,12}$' }
+      responses:
+        '200':
+          description: Sesión iniciada; responde con la cookie `bigger_admin`
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSessionResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429':
+          description: Demasiados intentos (`TOO_MANY_REQUESTS`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+    get:
+      tags: [Administración]
+      summary: Estado de la sesión actual
+      operationId: adminSession
+      responses:
+        '200':
+          description: Estado de la sesión
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSessionResponse' }
+    delete:
+      tags: [Administración]
+      summary: Cierra la sesión
+      operationId: adminLogout
+      responses:
+        '200':
+          description: Sesión cerrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSessionResponse' }
+
+  /admin/categories:
+    get:
+      tags: [Administración]
+      summary: Lista categorías con su cantidad de productos activos
+      operationId: adminListCategories
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/IncludeArchived' }]
+      responses:
+        '200':
+          description: Categorías
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/AdminCategory' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Administración]
+      summary: Crea una categoría (el slug se genera desde el nombre)
+      operationId: adminCreateCategory
+      security: [{ adminSession: [] }]
+      requestBody: { $ref: '#/components/requestBodies/CategoryInput' }
+      responses:
+        '201': { $ref: '#/components/responses/AdminCategory' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/categories/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    put:
+      tags: [Administración]
+      summary: Renombra una categoría (el slug no cambia)
+      operationId: adminRenameCategory
+      security: [{ adminSession: [] }]
+      requestBody: { $ref: '#/components/requestBodies/CategoryInput' }
+      responses:
+        '200': { $ref: '#/components/responses/AdminCategory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Administración]
+      summary: Elimina (archiva) una categoría sin productos activos
+      operationId: adminArchiveCategory
+      security: [{ adminSession: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminCategory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/categories/{id}/restore:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Administración]
+      summary: Restaura una categoría eliminada
+      operationId: adminRestoreCategory
+      security: [{ adminSession: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminCategory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/products:
+    get:
+      tags: [Administración]
+      summary: Lista productos y combos
+      operationId: adminListProducts
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/IncludeArchived' }]
+      responses:
+        '200':
+          description: Productos y combos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/AdminProduct' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Administración]
+      summary: Crea un producto o un combo (prueba P01)
+      description: |
+        `kind: single` acepta alérgenos y personalizaciones; `kind: combo` acepta espacios con
+        productos simples a elección. Los errores de validación indican el campo exacto, p. ej.
+        `comboSlots.0.options.1.productId`. Emite `catalog.updated` por SSE.
+      operationId: adminCreateProduct
+      security: [{ adminSession: [] }]
+      requestBody: { $ref: '#/components/requestBodies/ProductInput' }
+      responses:
+        '201': { $ref: '#/components/responses/AdminProduct' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/products/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Administración]
+      summary: Detalle de un producto o combo
+      operationId: adminGetProduct
+      security: [{ adminSession: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminProduct' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Administración]
+      summary: Reemplaza la configuración completa de un producto o combo
+      operationId: adminUpdateProduct
+      security: [{ adminSession: [] }]
+      requestBody: { $ref: '#/components/requestBodies/ProductInput' }
+      responses:
+        '200': { $ref: '#/components/responses/AdminProduct' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Administración]
+      summary: Elimina (archiva) un producto
+      description: |
+        Borrado lógico: desaparece de la carta y de Pedido, pero las comandas pasadas lo siguen
+        referenciando. Responde 409 si el producto es opción de un combo activo.
+      operationId: adminArchiveProduct
+      security: [{ adminSession: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminProduct' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/products/{id}/restore:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Administración]
+      summary: Restaura un producto eliminado
+      operationId: adminRestoreProduct
+      security: [{ adminSession: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminProduct' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/modifier-groups:
+    get:
+      tags: [Administración]
+      summary: Lista personalizaciones reutilizables
+      operationId: adminListModifierGroups
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: Personalizaciones
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/AdminModifierGroup' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Administración]
+      summary: Crea una personalización
+      operationId: adminCreateModifierGroup
+      security: [{ adminSession: [] }]
+      requestBody: { $ref: '#/components/requestBodies/ModifierGroupInput' }
+      responses:
+        '201': { $ref: '#/components/responses/AdminModifierGroup' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/modifier-groups/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Administración]
+      summary: Detalle de una personalización
+      operationId: adminGetModifierGroup
+      security: [{ adminSession: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminModifierGroup' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Administración]
+      summary: Reemplaza nombre, regla y opciones (conserva el id de las opciones enviadas con id)
+      operationId: adminUpdateModifierGroup
+      security: [{ adminSession: [] }]
+      requestBody: { $ref: '#/components/requestBodies/ModifierGroupInput' }
+      responses:
+        '200': { $ref: '#/components/responses/AdminModifierGroup' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Administración]
+      summary: Elimina la personalización y la quita de todos los productos
+      operationId: adminDeleteModifierGroup
+      security: [{ adminSession: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/AdminModifierGroup' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
 components:
+  securitySchemes:
+    adminSession:
+      type: apiKey
+      in: cookie
+      name: bigger_admin
+      description: Cookie httpOnly emitida por `POST /admin/session`; dura 12 h.
+
   parameters:
-    ProductId:
-      name: productId
+    Id:
+      name: id
       in: path
       required: true
       schema: { type: string, format: uuid }
+    IncludeArchived:
+      name: includeArchived
+      in: query
+      description: Incluye los elementos eliminados (archivados).
+      schema: { type: string, enum: ['true', 'false'], default: 'false' }
+
+  requestBodies:
+    CategoryInput:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name]
+            properties:
+              name: { type: string, minLength: 1, maxLength: 60 }
+    ProductInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ProductInput' }
+    ModifierGroupInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ModifierGroupInput' }
 
   responses:
     ValidationError:
@@ -305,6 +559,43 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ApiError' }
+    Unauthorized:
+      description: Falta la sesión de administración o el PIN es incorrecto (`UNAUTHORIZED`)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    Conflict:
+      description: La acción contradice el estado actual (`CONFLICT`), p. ej. nombre repetido
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    AdminCategory:
+      description: Categoría
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: '#/components/schemas/AdminCategory' }
+    AdminProduct:
+      description: Producto o combo
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: '#/components/schemas/AdminProduct' }
+    AdminModifierGroup:
+      description: Personalización
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: '#/components/schemas/AdminModifierGroup' }
 
   schemas:
     ApiError:
@@ -344,41 +635,193 @@ components:
 
     Product:
       type: object
-      required: [id, categoryId, name, description, priceClp, allergens, isAvailable, sortOrder]
+      required:
+        [id, categoryId, kind, name, description, priceClp, allergens, isAvailable, sortOrder]
       properties:
         id: { type: string, format: uuid }
         categoryId: { type: string, format: uuid }
+        kind: { type: string, enum: [single, combo] }
         name: { type: string, maxLength: 80 }
         description: { type: string, maxLength: 240 }
         priceClp: { type: integer, minimum: 0 }
-        allergens: { type: array, items: { $ref: '#/components/schemas/Allergen' } }
+        allergens:
+          type: array
+          description: En un combo, unión de los alérgenos de los productos que puede incluir.
+          items: { $ref: '#/components/schemas/Allergen' }
         isAvailable: { type: boolean }
         sortOrder: { type: integer, minimum: 0 }
 
-    ProductInput:
+    ModifierOption:
       type: object
-      required: [categoryId, name, priceClp]
+      required: [id, name, priceDeltaClp, isAvailable]
       properties:
-        categoryId: { type: string, format: uuid }
-        name: { type: string, minLength: 1, maxLength: 80 }
-        description: { type: string, maxLength: 240, default: '' }
-        priceClp: { type: integer, minimum: 0 }
-        allergens:
-          type: array
-          items: { $ref: '#/components/schemas/Allergen' }
-          default: []
-        isAvailable: { type: boolean, default: true }
-
-    ProductPatch:
-      type: object
-      minProperties: 1
-      properties:
-        categoryId: { type: string, format: uuid }
-        name: { type: string, minLength: 1, maxLength: 80 }
-        description: { type: string, maxLength: 240 }
-        priceClp: { type: integer, minimum: 0 }
-        allergens: { type: array, items: { $ref: '#/components/schemas/Allergen' } }
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 40 }
+        priceDeltaClp: { type: integer, minimum: 0 }
         isAvailable: { type: boolean }
+
+    ModifierGroup:
+      type: object
+      description: Personalización reutilizable; `minSelections ≥ 1` la hace obligatoria.
+      required: [id, name, minSelections, maxSelections, options]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 40 }
+        minSelections: { type: integer, minimum: 0, maximum: 10 }
+        maxSelections: { type: integer, minimum: 1, maximum: 10 }
+        options: { type: array, items: { $ref: '#/components/schemas/ModifierOption' } }
+
+    ComboSlot:
+      type: object
+      description: Una elección dentro del combo («Café a elección»).
+      required: [id, name, options]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 40 }
+        options:
+          type: array
+          items:
+            type: object
+            required: [productId, productName, extraPriceClp, isAvailable, allergens]
+            properties:
+              productId: { type: string, format: uuid }
+              productName: { type: string }
+              extraPriceClp: { type: integer, minimum: 0 }
+              isAvailable: { type: boolean }
+              allergens: { type: array, items: { $ref: '#/components/schemas/Allergen' } }
+
+    MenuProduct:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          required: [modifierGroups, comboSlots]
+          properties:
+            modifierGroups: { type: array, items: { $ref: '#/components/schemas/ModifierGroup' } }
+            comboSlots: { type: array, items: { $ref: '#/components/schemas/ComboSlot' } }
+
+    AdminCategory:
+      allOf:
+        - $ref: '#/components/schemas/Category'
+        - type: object
+          required: [archivedAt, activeProductCount]
+          properties:
+            archivedAt: { type: [string, 'null'], format: date-time }
+            activeProductCount: { type: integer, minimum: 0 }
+
+    AdminProduct:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          required: [archivedAt, modifierGroupIds, comboSlots]
+          properties:
+            archivedAt: { type: [string, 'null'], format: date-time }
+            modifierGroupIds: { type: array, items: { type: string, format: uuid } }
+            comboSlots: { type: array, items: { $ref: '#/components/schemas/ComboSlot' } }
+
+    AdminModifierGroup:
+      allOf:
+        - $ref: '#/components/schemas/ModifierGroup'
+        - type: object
+          required: [productCount]
+          properties:
+            productCount: { type: integer, minimum: 0, description: Productos activos que la usan }
+
+    AdminSessionResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [authenticated, expiresAt]
+          properties:
+            authenticated: { type: boolean }
+            expiresAt: { type: [string, 'null'], format: date-time }
+
+    ProductInput:
+      oneOf:
+        - type: object
+          required:
+            [
+              kind,
+              categoryId,
+              name,
+              description,
+              priceClp,
+              isAvailable,
+              allergens,
+              modifierGroupIds,
+            ]
+          properties:
+            kind: { const: single }
+            categoryId: { type: string, format: uuid }
+            name: { type: string, minLength: 1, maxLength: 80 }
+            description: { type: string, maxLength: 240 }
+            priceClp: { type: integer, minimum: 0, maximum: 1000000 }
+            isAvailable: { type: boolean }
+            allergens:
+              type: array
+              uniqueItems: true
+              items: { $ref: '#/components/schemas/Allergen' }
+            modifierGroupIds:
+              type: array
+              uniqueItems: true
+              maxItems: 10
+              items: { type: string, format: uuid }
+        - type: object
+          required: [kind, categoryId, name, description, priceClp, isAvailable, comboSlots]
+          properties:
+            kind: { const: combo }
+            categoryId: { type: string, format: uuid }
+            name: { type: string, minLength: 1, maxLength: 80 }
+            description: { type: string, maxLength: 240 }
+            priceClp: { type: integer, minimum: 0, maximum: 1000000 }
+            isAvailable: { type: boolean }
+            comboSlots:
+              type: array
+              minItems: 1
+              maxItems: 6
+              items:
+                type: object
+                required: [name, options]
+                properties:
+                  name: { type: string, minLength: 1, maxLength: 40 }
+                  options:
+                    type: array
+                    minItems: 1
+                    maxItems: 20
+                    description: Solo productos simples activos, sin repetir dentro del espacio.
+                    items:
+                      type: object
+                      required: [productId, extraPriceClp]
+                      properties:
+                        productId: { type: string, format: uuid }
+                        extraPriceClp: { type: integer, minimum: 0, maximum: 1000000 }
+      discriminator:
+        propertyName: kind
+
+    ModifierGroupInput:
+      type: object
+      description: '`minSelections ≤ maxSelections ≤ options.length`; nombres de opción únicos.'
+      required: [name, minSelections, maxSelections, options]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 40 }
+        minSelections: { type: integer, minimum: 0, maximum: 10 }
+        maxSelections: { type: integer, minimum: 1, maximum: 10 }
+        options:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: object
+            required: [name, priceDeltaClp, isAvailable]
+            properties:
+              id:
+                type: string
+                format: uuid
+                description: Envíalo al editar para conservar la identidad de la opción.
+              name: { type: string, minLength: 1, maxLength: 40 }
+              priceDeltaClp: { type: integer, minimum: 0, maximum: 1000000 }
+              isAvailable: { type: boolean }
 
     Menu:
       type: object
@@ -392,7 +835,7 @@ components:
               - type: object
                 required: [products]
                 properties:
-                  products: { type: array, items: { $ref: '#/components/schemas/Product' } }
+                  products: { type: array, items: { $ref: '#/components/schemas/MenuProduct' } }
 
     TableStatus:
       type: string
@@ -503,3 +946,8 @@ components:
           properties:
             type: { const: order.updated }
             payload: { $ref: '#/components/schemas/Order' }
+        - type: object
+          description: La carta cambió; los clientes vuelven a pedirla.
+          required: [type]
+          properties:
+            type: { const: catalog.updated }

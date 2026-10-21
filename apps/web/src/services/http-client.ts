@@ -1,4 +1,4 @@
-import { ApiErrorBodySchema, type ApiErrorCode } from '@bigger/shared';
+import { ApiErrorBodySchema, type ApiErrorCode, type ApiFieldIssue } from '@bigger/shared';
 import { z } from 'zod';
 import { webEnv } from '../config/env';
 
@@ -7,18 +7,32 @@ export type ClientErrorCode = ApiErrorCode | 'NETWORK_ERROR' | 'INVALID_RESPONSE
 export class ApiRequestError extends Error {
   readonly code: ClientErrorCode;
   readonly status: number | null;
+  readonly issues: readonly ApiFieldIssue[];
 
-  constructor(code: ClientErrorCode, message: string, status: number | null) {
+  constructor(
+    code: ClientErrorCode,
+    message: string,
+    status: number | null,
+    issues: readonly ApiFieldIssue[] = [],
+  ) {
     super(message);
     this.name = 'ApiRequestError';
     this.code = code;
     this.status = status;
+    this.issues = issues;
   }
 }
 
-const SuccessEnvelopeSchema = z.object({ data: z.unknown() });
-
 export type QueryParams = Record<string, string | undefined>;
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
+interface RequestOptions {
+  params?: QueryParams;
+  body?: unknown;
+  signal?: AbortSignal;
+}
+
+const SuccessEnvelopeSchema = z.object({ data: z.unknown() });
 
 export function buildApiUrl(path: string, params: QueryParams = {}): string {
   const url = new URL(`${webEnv.VITE_API_BASE_URL}${path}`, window.location.origin);
@@ -36,17 +50,23 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-/** GET + runtime validation of the payload: the UI never trusts an unchecked response. */
-export async function getJson<T extends z.ZodType>(
+/** Every call validates the payload at runtime: the UI never trusts an unchecked response. */
+export async function requestJson<T extends z.ZodType>(
+  method: HttpMethod,
   path: string,
   schema: T,
-  params?: QueryParams,
-  signal?: AbortSignal,
+  { params, body, signal }: RequestOptions = {},
 ): Promise<z.output<T>> {
   let response: Response;
   try {
     response = await fetch(buildApiUrl(path, params), {
-      headers: { Accept: 'application/json' },
+      method,
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       ...(signal ? { signal } : {}),
     });
   } catch (error) {
@@ -54,15 +74,16 @@ export async function getJson<T extends z.ZodType>(
     throw new ApiRequestError('NETWORK_ERROR', 'No hay conexión con el servidor del local', null);
   }
 
-  const body = await readJson(response);
+  const payload = await readJson(response);
 
   if (!response.ok) {
-    const parsedError = ApiErrorBodySchema.safeParse(body);
+    const parsedError = ApiErrorBodySchema.safeParse(payload);
     throw parsedError.success
       ? new ApiRequestError(
           parsedError.data.error.code,
           parsedError.data.error.message,
           response.status,
+          parsedError.data.error.issues,
         )
       : new ApiRequestError(
           'INTERNAL_ERROR',
@@ -71,7 +92,7 @@ export async function getJson<T extends z.ZodType>(
         );
   }
 
-  const envelope = SuccessEnvelopeSchema.safeParse(body);
+  const envelope = SuccessEnvelopeSchema.safeParse(payload);
   const parsed = envelope.success ? schema.safeParse(envelope.data.data) : null;
   if (!parsed?.success) {
     throw new ApiRequestError(
@@ -81,4 +102,16 @@ export async function getJson<T extends z.ZodType>(
     );
   }
   return parsed.data;
+}
+
+export function getJson<T extends z.ZodType>(
+  path: string,
+  schema: T,
+  params?: QueryParams,
+  signal?: AbortSignal,
+): Promise<z.output<T>> {
+  return requestJson('GET', path, schema, {
+    ...(params ? { params } : {}),
+    ...(signal ? { signal } : {}),
+  });
 }

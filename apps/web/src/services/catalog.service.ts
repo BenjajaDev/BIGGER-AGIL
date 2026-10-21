@@ -1,4 +1,4 @@
-import { CategorySchema, MenuSchema, ProductSchema, type ProductFilter } from '@bigger/shared';
+import { CategorySchema, MenuProductSchema, MenuSchema, type ProductFilter } from '@bigger/shared';
 import { z } from 'zod';
 import { getJson } from './http-client';
 
@@ -9,7 +9,7 @@ export const catalogService = {
   listProducts: (filter: ProductFilter, signal?: AbortSignal) =>
     getJson(
       '/products',
-      z.array(ProductSchema),
+      z.array(MenuProductSchema),
       {
         categoryId: filter.categoryId,
         onlyAvailable:

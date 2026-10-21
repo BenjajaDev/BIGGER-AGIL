@@ -5,6 +5,7 @@ import {
   LayoutGrid,
   type LucideIcon,
   Package,
+  Settings,
   ShoppingCart,
   Users,
 } from 'lucide-react';
@@ -33,6 +34,7 @@ export const APP_MODULES: readonly AppModule[] = [
   { path: '/mesas', label: 'Mesas', icon: LayoutGrid, status: 'active' },
   { path: '/pedido', label: 'Pedido', icon: ClipboardList, status: 'active' },
   { path: '/cocina', label: 'Cocina', icon: ChefHat, status: 'active' },
+  { path: '/configuracion', label: 'Configuración', icon: Settings, status: 'active' },
   {
     path: '/bodega',
     label: 'Bodega',

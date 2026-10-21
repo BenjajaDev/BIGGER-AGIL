@@ -19,6 +19,10 @@ export function useRealtimeSync(): RealtimeConnectionState {
               void queryClient.invalidateQueries({ queryKey: queryKeys.orders });
               void queryClient.invalidateQueries({ queryKey: queryKeys.tables });
               break;
+            case 'catalog.updated':
+              void queryClient.invalidateQueries({ queryKey: queryKeys.catalog });
+              void queryClient.invalidateQueries({ queryKey: queryKeys.admin });
+              break;
           }
         },
       }),

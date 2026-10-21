@@ -3,8 +3,11 @@ import '@fontsource-variable/inter';
 import './styles/tokens.css';
 import './styles/global.css';
 import { StrictMode } from 'react';
+import { z } from 'zod';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+
+z.config(z.locales.es());
 
 const container = document.getElementById('root');
 if (!container) throw new Error('No se encontró el elemento #root');

@@ -1,7 +1,25 @@
 import { count } from 'drizzle-orm';
 import type { AppDatabase } from '../client.js';
-import { categories, diningTables, orderItems, orders, products } from '../schema.js';
-import { SEED_CATEGORIES, SEED_DEMO_ORDERS, SEED_TABLE_COUNT } from './seed-data.js';
+import {
+  categories,
+  comboSlotOptions,
+  comboSlots,
+  diningTables,
+  modifierGroups,
+  modifierOptions,
+  orderItems,
+  orders,
+  productModifierGroups,
+  products,
+} from '../schema.js';
+import {
+  SEED_CATEGORIES,
+  SEED_COMBO_CATEGORY,
+  SEED_COMBOS,
+  SEED_DEMO_ORDERS,
+  SEED_MODIFIER_GROUPS,
+  SEED_TABLE_COUNT,
+} from './seed-data.js';
 
 export interface SeedOptions {
   withDemoOrders: boolean;
@@ -40,6 +58,81 @@ export function seedDatabase(db: AppDatabase, options: SeedOptions): SeedResult 
           .all();
         if (!product) throw new Error(`No se pudo crear el producto ${seedProduct.name}`);
         productsByName.set(seedProduct.name, product);
+      });
+    });
+
+    const productId = (name: string): string => {
+      const product = productsByName.get(name);
+      if (!product) throw new Error(`Producto de ejemplo desconocido: ${name}`);
+      return product.id;
+    };
+
+    for (const group of SEED_MODIFIER_GROUPS) {
+      const [created] = tx
+        .insert(modifierGroups)
+        .values({
+          name: group.name,
+          minSelections: group.minSelections,
+          maxSelections: group.maxSelections,
+        })
+        .returning({ id: modifierGroups.id })
+        .all();
+      if (!created) throw new Error(`No se pudo crear la personalización ${group.name}`);
+      tx.insert(modifierOptions)
+        .values(
+          group.options.map((option, position) => ({ ...option, groupId: created.id, position })),
+        )
+        .run();
+      tx.insert(productModifierGroups)
+        .values(
+          group.appliesTo.map((name) => ({
+            productId: productId(name),
+            groupId: created.id,
+            position: SEED_MODIFIER_GROUPS.indexOf(group),
+          })),
+        )
+        .run();
+    }
+
+    const [comboCategory] = tx
+      .insert(categories)
+      .values({ ...SEED_COMBO_CATEGORY, sortOrder: SEED_CATEGORIES.length })
+      .returning({ id: categories.id })
+      .all();
+    if (!comboCategory) throw new Error('No se pudo crear la categoría de combos');
+
+    SEED_COMBOS.forEach((combo, comboIndex) => {
+      const [created] = tx
+        .insert(products)
+        .values({
+          categoryId: comboCategory.id,
+          kind: 'combo',
+          name: combo.name,
+          description: combo.description,
+          priceClp: combo.priceClp,
+          sortOrder: comboIndex,
+        })
+        .returning({ id: products.id })
+        .all();
+      if (!created) throw new Error(`No se pudo crear el combo ${combo.name}`);
+
+      combo.slots.forEach((slot, slotPosition) => {
+        const [createdSlot] = tx
+          .insert(comboSlots)
+          .values({ comboId: created.id, name: slot.name, position: slotPosition })
+          .returning({ id: comboSlots.id })
+          .all();
+        if (!createdSlot) throw new Error(`No se pudo crear el espacio ${slot.name}`);
+        tx.insert(comboSlotOptions)
+          .values(
+            slot.options.map((option, position) => ({
+              slotId: createdSlot.id,
+              productId: productId(option.productName),
+              extraPriceClp: option.extraPriceClp,
+              position,
+            })),
+          )
+          .run();
       });
     });
 

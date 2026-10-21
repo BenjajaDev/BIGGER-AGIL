@@ -1,0 +1,40 @@
+.wrapper {
+  display: grid;
+  place-items: center;
+  min-height: calc(100dvh - var(--topbar-height));
+  padding: var(--space-6);
+}
+
+.card {
+  display: grid;
+  gap: var(--space-4);
+  width: min(26rem, 100%);
+  padding: var(--space-8);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-muted);
+  color: var(--accent);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-subtitle);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+}
+
+.lead {
+  color: var(--text-secondary);
+}
+
+.pin {
+  font-size: var(--text-heading);
+  letter-spacing: 0.3em;
+  text-align: center;
+}

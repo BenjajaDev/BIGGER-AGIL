@@ -38,6 +38,8 @@
   --accent: var(--color-terracota-600);
   --status-success: var(--color-salvia-600);
   --status-success-hover: var(--color-salvia-700);
+  /* Validation errors: dark red text (7,4:1 on white), always paired with an icon. */
+  --status-error: var(--color-rojo-700);
   /* Dorado y ámbar siempre con texto carbón, nunca blanco. */
   --status-highlight: var(--color-dorado-400);
   --status-warning: var(--color-ambar-400);

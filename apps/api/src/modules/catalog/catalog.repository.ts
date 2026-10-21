@@ -1,11 +1,14 @@
-import type { Category, Product, ProductFilter } from '@bigger/shared';
-import { and, asc, eq, type SQL } from 'drizzle-orm';
+import type { Category, MenuProduct, ProductFilter } from '@bigger/shared';
+import { and, asc, eq, isNull, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '../../db/client.js';
 import { categories, products } from '../../db/schema.js';
+import { buildCatalogProduct } from './catalog-product.js';
+import { activeProduct, loadCatalogRelations, productColumns } from './catalog-relations.js';
 
+/** Read side used by order taking and the public menu: archived rows never appear here. */
 export interface CatalogRepository {
   listCategories: () => Promise<Category[]>;
-  listProducts: (filter: ProductFilter) => Promise<Product[]>;
+  listProducts: (filter: ProductFilter) => Promise<MenuProduct[]>;
 }
 
 export class DrizzleCatalogRepository implements CatalogRepository {
@@ -24,27 +27,23 @@ export class DrizzleCatalogRepository implements CatalogRepository {
         sortOrder: categories.sortOrder,
       })
       .from(categories)
+      .where(isNull(categories.archivedAt))
       .orderBy(asc(categories.sortOrder), asc(categories.name));
   }
 
-  async listProducts(filter: ProductFilter): Promise<Product[]> {
-    const conditions: SQL[] = [];
+  async listProducts(filter: ProductFilter): Promise<MenuProduct[]> {
+    const conditions: SQL[] = [activeProduct(), isNull(categories.archivedAt)];
     if (filter.categoryId) conditions.push(eq(products.categoryId, filter.categoryId));
     if (filter.onlyAvailable) conditions.push(eq(products.isAvailable, true));
 
-    return this.#db
-      .select({
-        id: products.id,
-        categoryId: products.categoryId,
-        name: products.name,
-        description: products.description,
-        priceClp: products.priceClp,
-        allergens: products.allergens,
-        isAvailable: products.isAvailable,
-        sortOrder: products.sortOrder,
-      })
+    const rows = await this.#db
+      .select(productColumns)
       .from(products)
+      .innerJoin(categories, eq(products.categoryId, categories.id))
       .where(and(...conditions))
       .orderBy(asc(products.sortOrder), asc(products.name));
+
+    const relations = await loadCatalogRelations(this.#db, rows);
+    return rows.map((row) => buildCatalogProduct(row, relations));
   }
 }

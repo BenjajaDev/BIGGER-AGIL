@@ -1,4 +1,4 @@
-import type { Menu, Product } from '@bigger/shared';
+import type { Menu, MenuProduct } from '@bigger/shared';
 
 function normalize(text: string): string {
   return text
@@ -9,7 +9,7 @@ function normalize(text: string): string {
 }
 
 /** Accent-insensitive search so "limon" finds "Pie de limón". */
-export function searchMenu(menu: Menu, query: string): Product[] {
+export function searchMenu(menu: Menu, query: string): MenuProduct[] {
   const needle = normalize(query);
   if (!needle) return [];
   return menu.categories

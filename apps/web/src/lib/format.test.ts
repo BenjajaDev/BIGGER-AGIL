@@ -9,8 +9,8 @@ import {
 
 describe('formatClp', () => {
   it('formats Chilean pesos with thousands separator', () => {
-    expect(formatClp(3200)).toBe('$ 3.200');
-    expect(formatClp(1284000)).toBe('$ 1.284.000');
+    expect(formatClp(3200)).toBe('$\u00a03.200');
+    expect(formatClp(1284000)).toBe('$\u00a01.284.000');
   });
 });
 
