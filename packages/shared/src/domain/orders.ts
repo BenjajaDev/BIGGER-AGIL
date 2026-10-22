@@ -49,14 +49,31 @@ export const QUICK_NOTES = ['no-sugar', 'takeaway', 'lactose-free', 'sweetener']
 export const QuickNoteSchema = z.enum(QUICK_NOTES);
 export type QuickNote = z.infer<typeof QuickNoteSchema>;
 
+export const ORDER_ITEM_OPTION_KINDS = ['modifier', 'combo'] as const;
+export const OrderItemOptionKindSchema = z.enum(ORDER_ITEM_OPTION_KINDS);
+export type OrderItemOptionKind = z.infer<typeof OrderItemOptionKindSchema>;
+
+/** A chosen customization or combo pick, snapshot with the name and price it was sold at. */
+export const OrderItemOptionSchema = z.object({
+  kind: OrderItemOptionKindSchema,
+  /** The group ("Tipo de leche") or combo slot ("Café a elección") it belongs to. */
+  label: z.string().min(1),
+  /** The chosen option ("Almendra") or product ("Cortado"). */
+  name: z.string().min(1),
+  priceDeltaClp: PriceClpSchema,
+});
+export type OrderItemOption = z.infer<typeof OrderItemOptionSchema>;
+
 export const OrderItemSchema = z.object({
   id: z.uuid(),
   productId: z.uuid(),
   productName: z.string().min(1),
+  /** Base price per unit; the extras are listed in `options`. */
   unitPriceClp: PriceClpSchema,
   quantity: z.int().positive().max(99),
   quickNotes: z.array(QuickNoteSchema),
   note: z.string().max(140).nullable(),
+  options: z.array(OrderItemOptionSchema),
 });
 export type OrderItem = z.infer<typeof OrderItemSchema>;
 
@@ -85,11 +102,26 @@ export const OrderListFilterSchema = z.object({
 });
 export type OrderListFilter = z.infer<typeof OrderListFilterSchema>;
 
+/** The client sends only ids; the server resolves the name and price from the catalog. */
+export const ChosenModifierSchema = z.object({
+  groupId: z.uuid(),
+  optionId: z.uuid(),
+});
+export type ChosenModifier = z.infer<typeof ChosenModifierSchema>;
+
+export const ChosenComboOptionSchema = z.object({
+  slotId: z.uuid(),
+  productId: z.uuid(),
+});
+export type ChosenComboOption = z.infer<typeof ChosenComboOptionSchema>;
+
 export const CreateOrderItemInputSchema = z.object({
   productId: z.uuid(),
   quantity: z.int().positive().max(99),
   quickNotes: z.array(QuickNoteSchema).default([]),
   note: z.string().trim().max(140).nullable().default(null),
+  options: z.array(ChosenModifierSchema).default([]),
+  comboChoices: z.array(ChosenComboOptionSchema).default([]),
 });
 export type CreateOrderItemInput = z.infer<typeof CreateOrderItemInputSchema>;
 

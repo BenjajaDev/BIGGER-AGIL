@@ -48,7 +48,7 @@ export function buildApiRouters({ db, eventHub, adminAuth }: ContainerDependenci
   const catalogController = new CatalogController(
     new CatalogService(new DrizzleCatalogRepository(db)),
   );
-  const ordersController = new OrdersController(new OrdersService(ordersRepository));
+  const ordersController = new OrdersController(new OrdersService(ordersRepository, eventHub));
   const tablesController = new TablesController(
     new TablesService(new DrizzleTablesRepository(db), ordersRepository),
   );

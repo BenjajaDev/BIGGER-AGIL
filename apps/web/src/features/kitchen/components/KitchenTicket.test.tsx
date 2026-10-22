@@ -21,6 +21,7 @@ const order: Order = {
       quantity: 2,
       quickNotes: ['no-sugar'],
       note: null,
+      options: [],
     },
   ],
   totalClp: 5000,

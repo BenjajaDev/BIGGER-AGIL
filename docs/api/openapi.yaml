@@ -161,10 +161,12 @@ paths:
       tags: [Pedidos]
       summary: Envía una comanda a cocina (prueba P02)
       description: |
-        El servidor toma nombre y precio vigentes del catálogo (snapshot), calcula el total
-        y emite `order.created` por SSE.
+        El cliente envía solo ids; el servidor toma nombre y precio vigentes del catálogo
+        (snapshot del producto y de cada opción y elección de combo), calcula el total
+        (base + extras) y emite `order.created` por SSE. Un pedido `takeaway` exige
+        `customerName`. Un producto u opción no disponible, archivado o ajeno al producto se
+        rechaza con `VALIDATION_ERROR` indicando el campo exacto (`items.0.options.0`).
       operationId: createOrder
-      x-status: planned
       requestBody:
         required: true
         content:
@@ -181,12 +183,6 @@ paths:
                 properties:
                   data: { $ref: '#/components/schemas/Order' }
         '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409':
-          description: Producto no disponible
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ApiError' }
 
   /orders/{orderId}/status:
     patch:
@@ -869,17 +865,31 @@ components:
       type: string
       enum: [no-sugar, takeaway, lactose-free, sweetener]
 
+    OrderItemOption:
+      type: object
+      description: Opción o elección de combo, con nombre y precio al momento de la venta.
+      required: [kind, label, name, priceDeltaClp]
+      properties:
+        kind: { type: string, enum: [modifier, combo] }
+        label: { type: string, description: 'Grupo («Tipo de leche») o espacio del combo' }
+        name: { type: string, description: 'Opción («Almendra») o producto elegido' }
+        priceDeltaClp: { type: integer, minimum: 0 }
+
     OrderItem:
       type: object
-      required: [id, productId, productName, unitPriceClp, quantity, quickNotes, note]
+      required: [id, productId, productName, unitPriceClp, quantity, quickNotes, note, options]
       properties:
         id: { type: string, format: uuid }
         productId: { type: string, format: uuid }
         productName: { type: string, description: Nombre al momento de la venta }
-        unitPriceClp: { type: integer, minimum: 0, description: Precio al momento de la venta }
+        unitPriceClp:
+          type: integer
+          minimum: 0
+          description: Precio base por unidad; los extras van en `options`.
         quantity: { type: integer, minimum: 1, maximum: 99 }
         quickNotes: { type: array, items: { $ref: '#/components/schemas/QuickNote' } }
         note: { type: [string, 'null'], maxLength: 140 }
+        options: { type: array, items: { $ref: '#/components/schemas/OrderItemOption' } }
 
     Order:
       type: object
@@ -933,6 +943,26 @@ components:
                 items: { $ref: '#/components/schemas/QuickNote' }
                 default: []
               note: { type: [string, 'null'], maxLength: 140, default: null }
+              options:
+                type: array
+                default: []
+                description: Personalizaciones elegidas; el servidor resuelve nombre y precio.
+                items:
+                  type: object
+                  required: [groupId, optionId]
+                  properties:
+                    groupId: { type: string, format: uuid }
+                    optionId: { type: string, format: uuid }
+              comboChoices:
+                type: array
+                default: []
+                description: Producto elegido por espacio del combo.
+                items:
+                  type: object
+                  required: [slotId, productId]
+                  properties:
+                    slotId: { type: string, format: uuid }
+                    productId: { type: string, format: uuid }
 
     RealtimeEvent:
       oneOf:

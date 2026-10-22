@@ -67,6 +67,7 @@ erDiagram
   categories ||--o{ products : contiene
   dining_tables ||--o{ orders : "pedidos de mesa"
   orders ||--|{ order_items : incluye
+  order_items ||--o{ order_item_options : "con opciones"
   products ||--o{ order_items : "vendido como"
   products ||--o{ product_modifier_groups : ofrece
   modifier_groups ||--o{ product_modifier_groups : "asignada a"
@@ -85,13 +86,18 @@ erDiagram
   dining_tables { text id PK; int number UK; text label; int sort_order; bool is_active }
   orders { text id PK; text channel; text status; text table_id FK; text customer_name; ts pickup_at; int total_clp; ts created_at }
   order_items { text id PK; text order_id FK; text product_id FK; text product_name; int position; int unit_price_clp; int quantity; json quick_notes; text note }
+  order_item_options { text id PK; text order_item_id FK; text kind; text label; text name; int price_delta_clp; int position; text reference_id }
 ```
 
 Decisiones:
 
 - **Montos en enteros CLP**: sin decimales ni errores de punto flotante.
-- **Snapshot en `order_items`** (`product_name`, `unit_price_clp`): cambiar un precio no
-  altera comandas ni reportes pasados.
+- **Snapshot de la venta** en `order_items` (`product_name`, `unit_price_clp`) y en
+  `order_item_options` (`label`, `name`, `price_delta_clp`): cambiar un precio o una
+  personalización no altera comandas ni reportes pasados. `unit_price_clp` es el precio
+  **base**; los extras viven en `order_item_options` y el total de la línea es
+  `(base + Σ extras) × cantidad`. El `reference_id` apunta a la opción o producto de origen
+  sin clave foránea, para que la carta se siga pudiendo editar.
 - **Estado de mesa derivado, no almacenado**: `free` sin pedidos abiertos, `awaiting-payment`
   si todos están entregados, `occupied` en otro caso. Así nunca se desincroniza
   (`apps/api/src/modules/tables/table-overview.ts`).
@@ -198,10 +204,16 @@ admin:pin`). Al ingresarlo se emite un token firmado con HMAC (12 h) en una cook
    tokens, componentes base y lecturas (`GET`) funcionando con datos de ejemplo.
    **Configuración de la carta (hecho):** categorías, productos, combos con elección y
    personalizaciones reutilizables, con PIN de administración (P01).
-2. **Fase 2 · Backend:** `POST /orders`, `PATCH /orders/{id}/status` con publicación SSE y
-   autenticación por dispositivo. Las líneas de comanda guardarán una copia de las opciones
-   y la elección del combo (nombre y recargo), igual que hoy guardan nombre y precio. En la
-   UI se conectan `ComandaPanel.onSubmit` y `KitchenBoard.onAdvance`.
-3. **Fase 3 · Frontend:** selector de personalizaciones y combos al tomar el pedido,
-   mutaciones optimistas, orden manual de la carta, QR por mesa.
+2. **Fase 2 · Backend:**
+   - **`POST /orders` (hecho):** crea la comanda validando disponibilidad de productos y
+     opciones, calcula el total en el servidor (base + extras) y emite `order.created` por
+     SSE. Cada línea guarda el snapshot de sus personalizaciones y elecciones de combo
+     (`order_item_options`), igual que ya guardaba nombre y precio. Un pedido `takeaway`
+     exige nombre. `ComandaPanel.onSubmit` quedó conectado.
+   - **Pendiente:** `PATCH /orders/{id}/status` (con `KitchenBoard.onAdvance`) y la
+     autenticación por dispositivo.
+3. **Fase 3 · Frontend:**
+   - **Toma de pedidos (hecho):** catálogo con búsqueda, selector de personalizaciones y
+     combos en un modal, y comanda tipo ticket que envía las opciones elegidas.
+   - **Pendiente:** mutaciones optimistas, orden manual de la carta, QR por mesa.
 4. **Fase 4 · QA:** pruebas P01–P13, TalkBack/VoiceOver, pruebas en horario real.

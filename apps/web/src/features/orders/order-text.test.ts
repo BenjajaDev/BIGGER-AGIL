@@ -1,20 +1,29 @@
 import { describeOrderItem, orderTitle } from './order-text';
 
 describe('describeOrderItem', () => {
-  it('appends quick notes and free-text notes', () => {
+  it('appends options, quick notes and free-text notes', () => {
     expect(
       describeOrderItem({
         quantity: 2,
         productName: 'Capuchino',
         quickNotes: ['no-sugar'],
         note: 'leche tibia',
+        options: [
+          { kind: 'modifier', label: 'Tipo de leche', name: 'Almendra', priceDeltaClp: 500 },
+        ],
       }),
-    ).toBe('2 × Capuchino · sin azúcar · leche tibia');
+    ).toBe('2 × Capuchino · almendra · sin azúcar · leche tibia');
   });
 
   it('omits the separator when there are no notes', () => {
     expect(
-      describeOrderItem({ quantity: 1, productName: 'Brownie', quickNotes: [], note: null }),
+      describeOrderItem({
+        quantity: 1,
+        productName: 'Brownie',
+        quickNotes: [],
+        note: null,
+        options: [],
+      }),
     ).toBe('1 × Brownie');
   });
 });

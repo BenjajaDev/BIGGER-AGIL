@@ -53,7 +53,20 @@ describe('CreateOrderInputSchema', () => {
       quantity: 2,
       quickNotes: ['no-sugar'],
       note: null,
+      options: [],
+      comboChoices: [],
     });
+  });
+
+  it('keeps the chosen options and combo picks', () => {
+    const groupId = 'a1b2c3d4-e5f6-4a3b-8c2d-1e0f9a8b7c60';
+    const optionId = 'a1b2c3d4-e5f6-4a3b-8c2d-1e0f9a8b7c61';
+    const result = CreateOrderInputSchema.parse({
+      channel: 'dine-in',
+      tableId,
+      items: [{ productId, quantity: 1, options: [{ groupId, optionId }] }],
+    });
+    expect(result.items[0]?.options).toEqual([{ groupId, optionId }]);
   });
 });
 
