@@ -8,26 +8,33 @@ export function useRealtimeSync(): RealtimeConnectionState {
   const queryClient = useQueryClient();
   const [state, setState] = useState<RealtimeConnectionState>('connecting');
 
-  useEffect(
-    () =>
-      subscribeToRealtime({
-        onStateChange: setState,
-        onEvent: (event) => {
-          switch (event.type) {
-            case 'order.created':
-            case 'order.updated':
-              void queryClient.invalidateQueries({ queryKey: queryKeys.orders });
-              void queryClient.invalidateQueries({ queryKey: queryKeys.tables });
-              break;
-            case 'catalog.updated':
-              void queryClient.invalidateQueries({ queryKey: queryKeys.catalog });
-              void queryClient.invalidateQueries({ queryKey: queryKeys.admin });
-              break;
-          }
-        },
-      }),
-    [queryClient],
-  );
+  useEffect(() => {
+    let previousState: RealtimeConnectionState = 'connecting';
+    return subscribeToRealtime({
+      onStateChange: (nextState) => {
+        // The initial page queries already load data; only recover a broken connection.
+        if (nextState === 'open' && previousState === 'reconnecting') {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.orders });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.tables });
+        }
+        previousState = nextState;
+        setState(nextState);
+      },
+      onEvent: (event) => {
+        switch (event.type) {
+          case 'order.created':
+          case 'order.updated':
+            void queryClient.invalidateQueries({ queryKey: queryKeys.orders });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.tables });
+            break;
+          case 'catalog.updated':
+            void queryClient.invalidateQueries({ queryKey: queryKeys.catalog });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.admin });
+            break;
+        }
+      },
+    });
+  }, [queryClient]);
 
   return state;
 }

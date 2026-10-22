@@ -22,3 +22,18 @@ export function useCreateOrder() {
     },
   });
 }
+
+/** Reconcile every view even when the response was lost after the server saved the change. */
+export function useUpdateOrderStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ordersService.updateStatus,
+    retry: false,
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.orders }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.tables }),
+      ]);
+    },
+  });
+}

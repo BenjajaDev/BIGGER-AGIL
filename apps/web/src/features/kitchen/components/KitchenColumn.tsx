@@ -1,4 +1,4 @@
-import type { Order } from '@bigger/shared';
+import { canTransitionOrder, type Order } from '@bigger/shared';
 import { Coffee } from 'lucide-react';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { pluralize } from '../../../lib/format';
@@ -11,9 +11,16 @@ export interface KitchenColumnProps {
   orders: readonly Order[];
   now: Date;
   onAdvance?: (order: Order) => void;
+  pendingOrderIds?: ReadonlySet<string>;
 }
 
-export function KitchenColumn({ column, orders, now, onAdvance }: KitchenColumnProps) {
+export function KitchenColumn({
+  column,
+  orders,
+  now,
+  onAdvance,
+  pendingOrderIds,
+}: KitchenColumnProps) {
   const headingId = `cocina-${column.status}`;
   const Icon = column.icon;
 
@@ -35,10 +42,11 @@ export function KitchenColumn({ column, orders, now, onAdvance }: KitchenColumnP
               <KitchenTicket
                 order={order}
                 now={now}
-                {...(onAdvance
+                {...(onAdvance && canTransitionOrder(order.status, column.action.nextStatus)
                   ? {
                       action: {
                         ...column.action,
+                        isPending: pendingOrderIds?.has(order.id) ?? false,
                         onClick: () => {
                           onAdvance(order);
                         },

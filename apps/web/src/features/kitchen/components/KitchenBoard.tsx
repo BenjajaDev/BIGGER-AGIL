@@ -8,9 +8,10 @@ export interface KitchenBoardProps {
   orders: OrdersByKitchenStatus;
   now: Date;
   onAdvance?: (order: Order) => void;
+  pendingOrderIds?: ReadonlySet<string>;
 }
 
-export function KitchenBoard({ orders, now, onAdvance }: KitchenBoardProps) {
+export function KitchenBoard({ orders, now, onAdvance, pendingOrderIds }: KitchenBoardProps) {
   return (
     <div className={styles.board}>
       {KITCHEN_COLUMNS.map((column) => (
@@ -19,6 +20,7 @@ export function KitchenBoard({ orders, now, onAdvance }: KitchenBoardProps) {
           column={column}
           orders={orders[column.status]}
           now={now}
+          pendingOrderIds={pendingOrderIds}
           {...(onAdvance ? { onAdvance } : {})}
         />
       ))}

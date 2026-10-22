@@ -1,4 +1,5 @@
 import type { Order } from '@bigger/shared';
+import { LoaderCircle } from 'lucide-react';
 import { Button, type ButtonVariant } from '../../../components/ui/Button';
 import { cx } from '../../../lib/cx';
 import { formatElapsed } from '../../../lib/format';
@@ -9,6 +10,7 @@ export interface KitchenTicketAction {
   label: string;
   variant: ButtonVariant;
   onClick: () => void;
+  isPending?: boolean;
 }
 
 export interface KitchenTicketProps {
@@ -22,7 +24,11 @@ export function KitchenTicket({ order, now, action }: KitchenTicketProps) {
   const titleId = `ticket-${order.id}`;
 
   return (
-    <article className={cx(styles.ticket, styles[order.status])} aria-labelledby={titleId}>
+    <article
+      className={cx(styles.ticket, styles[order.status])}
+      aria-labelledby={titleId}
+      data-order-id={order.id}
+    >
       <header className={styles.header}>
         <h3 id={titleId} className={styles.title}>
           {title}
@@ -42,9 +48,14 @@ export function KitchenTicket({ order, now, action }: KitchenTicketProps) {
           size="lg"
           fullWidth
           onClick={action.onClick}
-          aria-label={`${action.label}: ${title}`}
+          disabled={action.isPending}
+          aria-busy={action.isPending}
+          aria-label={`${action.isPending ? 'Guardando… ' : ''}${action.label}: ${title}`}
         >
-          {action.label}
+          {action.isPending && (
+            <LoaderCircle className={styles.spinner} size={20} aria-hidden="true" />
+          )}
+          {action.isPending ? 'Guardando…' : action.label}
         </Button>
       )}
     </article>

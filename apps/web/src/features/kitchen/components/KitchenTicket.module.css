@@ -40,3 +40,13 @@
   gap: var(--space-1);
   font-size: var(--text-body);
 }
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
