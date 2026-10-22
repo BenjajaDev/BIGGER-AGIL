@@ -3,6 +3,18 @@
   grid-template-rows: auto 1fr;
   gap: var(--space-4);
   min-width: 0;
+  min-height: 12rem;
+  border-radius: var(--radius-md);
+}
+
+.validDrop {
+  outline: 2px dashed var(--status-highlight);
+  outline-offset: 6px;
+}
+
+.dropTarget {
+  outline-style: solid;
+  background-color: color-mix(in srgb, var(--status-highlight) 12%, transparent);
 }
 
 .heading {

@@ -11,6 +11,7 @@ import { createQueryClient } from '../../app/query-client';
 import { queryKeys } from '../../app/query-keys';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { orderFixture as baseOrder } from '../../test/orders';
+import { installKitchenDragGeometry } from '../../test/kitchen-drag';
 import { WhatsAppOrdersPanel } from '../orders/components/WhatsAppOrdersPanel';
 import { useTableOverview } from '../tables/useTableOverview';
 import { KitchenPage } from './KitchenPage';
@@ -137,6 +138,311 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe('KitchenPage drag and drop', () => {
+  beforeEach(() => {
+    installKitchenDragGeometry();
+  });
+
+  it('moves with the real keyboard sensor through the existing PATCH mutation', async () => {
+    const app = setup([baseOrder]);
+    app.renderPage();
+    const handle = await screen.findByRole('button', { name: 'Arrastrar: Mesa 2' });
+    const user = userEvent.setup();
+    handle.focus();
+    await user.keyboard(' ');
+    const destination = screen.getByRole('region', { name: /En preparación/ });
+    await waitFor(() => {
+      expect(destination).toHaveClass('validDrop');
+    });
+    await waitFor(() => {
+      expect(handle.closest('article')).toHaveClass('dragging');
+    });
+    await user.keyboard('{ArrowRight}');
+    await waitFor(() => {
+      expect(destination).toHaveClass('dropTarget');
+    });
+    await user.keyboard(' ');
+    await waitFor(() => {
+      expect(
+        within(destination).getByRole('button', { name: 'Marcar listo: Mesa 2' }),
+      ).toBeEnabled();
+    });
+    expect(app.patchCalls()).toHaveLength(1);
+    expect(app.patchCalls()[0]?.[1]?.body).toBe(JSON.stringify({ status: 'preparing' }));
+  });
+
+  it('moves with the real pointer sensor into an empty column', async () => {
+    const app = setup([baseOrder]);
+    app.renderPage();
+    const handle = await screen.findByRole('button', { name: 'Arrastrar: Mesa 2' });
+    fireEvent.pointerDown(handle, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      clientX: 260,
+      clientY: 90,
+      button: 0,
+      buttons: 1,
+    });
+    const destination = screen.getByRole('region', { name: /En preparación/ });
+    await waitFor(() => {
+      expect(destination).toHaveClass('validDrop');
+    });
+    fireEvent.pointerMove(document, { pointerId: 1, clientX: 470, clientY: 250, buttons: 1 });
+    await waitFor(() => {
+      expect(destination).toHaveClass('dropTarget');
+    });
+    fireEvent.pointerUp(document, { pointerId: 1, clientX: 470, clientY: 250, button: 0 });
+    await waitFor(() => {
+      expect(
+        within(destination).getByRole('button', { name: 'Marcar listo: Mesa 2' }),
+      ).toBeEnabled();
+    });
+    expect(app.patchCalls()).toHaveLength(1);
+  });
+
+  async function startPointer(title = 'Mesa 2', pointerType = 'mouse') {
+    const handle = await screen.findByRole('button', { name: `Arrastrar: ${title}` });
+    const rect = handle.getBoundingClientRect();
+    const column = handle.closest('section');
+    fireEvent.pointerDown(handle, {
+      pointerId: 1,
+      pointerType,
+      clientX: rect.left + 20,
+      clientY: rect.top + 20,
+      button: 0,
+      buttons: 1,
+    });
+    await waitFor(() => {
+      expect(handle.closest('article')).toHaveClass('dragging');
+    });
+    return { handle, column };
+  }
+
+  async function movePointer(x: number, y = 250) {
+    fireEvent.pointerMove(document, { pointerId: 1, clientX: x, clientY: y, buttons: 1 });
+    await act(async () => {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          resolve();
+        });
+      });
+    });
+  }
+
+  function releasePointer(x: number, y = 250) {
+    fireEvent.pointerUp(document, { pointerId: 1, clientX: x, clientY: y, button: 0 });
+  }
+
+  it.each([
+    ['new', 'preparing', 'Empezar', 470],
+    ['preparing', 'ready', 'Marcar listo', 790],
+  ] as const)(
+    'keeps %s until the server confirms %s and invalidates all views',
+    async (from, to, label, x) => {
+      const app = setup([{ ...baseOrder, status: from }]);
+      const pending = deferred<Response>();
+      app.setPatchHandler(() => pending.promise);
+      app.renderPage();
+      const { column } = await startPointer();
+      await movePointer(x);
+      releasePointer(x);
+      await waitFor(() => {
+        expect(app.patchCalls()).toHaveLength(1);
+      });
+      const action = screen.getByRole('button', { name: `Guardando… ${label}: Mesa 2` });
+      expect(action).toBeDisabled();
+      expect(column).toContainElement(action);
+      expect(
+        app.client.getQueryData<Order[]>(
+          queryKeys.orderList({ statuses: KITCHEN_ORDER_STATUSES }),
+        )?.[0]?.status,
+      ).toBe(from);
+      await act(async () => {
+        pending.resolve(json({ data: app.updateStored(baseOrder.id, to) }));
+        await pending.promise;
+      });
+      const destination = document.querySelector(`[data-kitchen-status="${to}"]`);
+      await waitFor(() => {
+        expect(destination?.querySelector('[data-order-action]')).toBeEnabled();
+      });
+      expect(destination).toContainElement(screen.getByRole('article', { name: 'Mesa 2' }));
+      expect(app.patchCalls()[0]?.[1]?.body).toBe(JSON.stringify({ status: to }));
+      expect(app.invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.orders });
+      expect(app.invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.tables });
+    },
+  );
+
+  it.each([
+    ['new', 790],
+    ['preparing', 150],
+    ['new', 150],
+    ['new', 1100],
+  ] as const)('does not send HTTP for an invalid drop from %s at %s', async (from, x) => {
+    const app = setup([{ ...baseOrder, status: from }]);
+    app.renderPage();
+    const { column } = await startPointer();
+    await movePointer(x);
+    releasePointer(x);
+    await waitFor(() => {
+      expect(screen.getByRole('article', { name: 'Mesa 2' })).not.toHaveClass('dragging');
+    });
+    expect(column).toContainElement(screen.getByRole('article', { name: 'Mesa 2' }));
+    expect(app.patchCalls()).toHaveLength(0);
+  });
+
+  it('keeps ready orders available only through the delivery button', async () => {
+    const app = setup([readyOrder]);
+    app.renderPage();
+    await screen.findByRole('button', { name: 'Entregado: Mesa 8' });
+    expect(screen.queryByRole('button', { name: 'Arrastrar: Mesa 8' })).not.toBeInTheDocument();
+    expect(app.patchCalls()).toHaveLength(0);
+  });
+
+  it('cancels with Escape and leaves the original order untouched', async () => {
+    const app = setup([baseOrder]);
+    app.renderPage();
+    const { handle, column } = await startPointer();
+    await movePointer(470);
+    fireEvent.keyDown(handle, { key: 'Escape' });
+    await waitFor(() => {
+      expect(handle.closest('article')).not.toHaveClass('dragging');
+    });
+    expect(column).toContainElement(handle);
+    expect(app.patchCalls()).toHaveLength(0);
+  });
+
+  it('handles touch input using the dedicated handle', async () => {
+    const app = setup([baseOrder]);
+    app.renderPage();
+    await startPointer('Mesa 2', 'touch');
+    await movePointer(470);
+    releasePointer(470);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Marcar listo: Mesa 2' })).toBeEnabled();
+    });
+    expect(app.patchCalls()).toHaveLength(1);
+  });
+
+  it.each(['network', 'conflict'] as const)(
+    'reconciles the real server data after a %s failure',
+    async (failure) => {
+      const app = setup([baseOrder]);
+      app.setPatchHandler((id) => {
+        if (failure === 'network') return Promise.reject(new TypeError('Offline'));
+        app.updateStored(id, 'ready');
+        return Promise.resolve(
+          json(
+            { error: { code: 'CONFLICT', message: 'Pedido actualizado por otro dispositivo' } },
+            409,
+          ),
+        );
+      });
+      app.renderPage();
+      await startPointer();
+      await movePointer(470);
+      releasePointer(470);
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        failure === 'network' ? 'No hay conexión' : 'El pedido cambió',
+      );
+      const actionName = failure === 'network' ? 'Empezar: Mesa 2' : 'Entregado: Mesa 2';
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: actionName })).toBeEnabled();
+      });
+      expect(app.patchCalls()).toHaveLength(1);
+      expect(app.invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.orders });
+      expect(app.invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.tables });
+    },
+  );
+
+  it('blocks duplicate drags and button actions on the pending order, while other orders work', async () => {
+    const app = setup([baseOrder, preparingOrder]);
+    const pending = deferred<Response>();
+    app.setPatchHandler((id, status) =>
+      id === baseOrder.id
+        ? pending.promise
+        : Promise.resolve(json({ data: app.updateStored(id, status) })),
+    );
+    app.renderPage();
+    const { handle } = await startPointer();
+    await movePointer(470);
+    releasePointer(470);
+    await waitFor(() => {
+      expect(handle).toBeDisabled();
+    });
+    const action = screen.getByRole('button', { name: 'Guardando… Empezar: Mesa 2' });
+    fireEvent.click(action);
+    fireEvent.pointerDown(handle, { pointerId: 2, clientX: 260, clientY: 90, buttons: 1 });
+    expect(app.patchCalls()).toHaveLength(1);
+    await userEvent.click(screen.getByRole('button', { name: 'Marcar listo: Mesa 5' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Entregado: Mesa 5' })).toBeEnabled();
+    });
+    expect(app.patchCalls()).toHaveLength(2);
+    await act(async () => {
+      pending.resolve(json({ data: app.updateStored(baseOrder.id, 'preparing') }));
+      await pending.promise;
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Marcar listo: Mesa 2' })).toBeEnabled();
+    });
+  });
+
+  it.each(['ready', 'new'] as const)(
+    'cancels if a remote update changes the state or version to %s during the gesture',
+    async (status) => {
+      const app = setup([baseOrder]);
+      app.renderPage();
+      await startPointer();
+      app.updateStored(baseOrder.id, status);
+      await act(async () => {
+        await app.client.invalidateQueries({ queryKey: queryKeys.orders });
+      });
+      await waitFor(() => {
+        expect(document.querySelector('[data-dnd-dragging]')).not.toBeInTheDocument();
+      });
+      releasePointer(470);
+      expect(app.patchCalls()).toHaveLength(0);
+      expect(
+        screen.getByRole('button', {
+          name: status === 'ready' ? 'Entregado: Mesa 2' : 'Empezar: Mesa 2',
+        }),
+      ).toBeEnabled();
+    },
+  );
+
+  it('supports Enter and the down arrow from preparing to ready with keyboard cancellation', async () => {
+    const app = setup([{ ...baseOrder, status: 'preparing' }]);
+    app.renderPage();
+    const handle = await screen.findByRole('button', { name: 'Arrastrar: Mesa 2' });
+    const user = userEvent.setup();
+    handle.focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(handle.closest('article')).toHaveClass('dragging');
+    });
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(handle.closest('article')).not.toHaveClass('dragging');
+    });
+    expect(app.patchCalls()).toHaveLength(0);
+    handle.focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(handle.closest('article')).toHaveClass('dragging');
+    });
+    await user.keyboard('{ArrowDown}');
+    const column = screen.getByRole('region', { name: /Listos para entregar/ });
+    await waitFor(() => {
+      expect(column).toHaveClass('dropTarget');
+    });
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(within(column).getByRole('button', { name: 'Entregado: Mesa 2' })).toBeEnabled();
+    });
+    expect(app.patchCalls()).toHaveLength(1);
+  });
+});
+
 describe('KitchenPage status actions', () => {
   it('shows the existing colored full-width buttons in their corresponding columns', async () => {
     const app = setup();
@@ -194,9 +500,13 @@ describe('KitchenPage status actions', () => {
           ).toBeInTheDocument();
         });
         await waitFor(() => {
-          expect(within(column).getByRole('button')).toBeEnabled();
+          expect(
+            within(column).getByRole('button', { name: /^(Marcar listo|Entregado):/ }),
+          ).toBeEnabled();
         });
-        expect(within(column).getByRole('button')).toHaveFocus();
+        expect(
+          within(column).getByRole('button', { name: /^(Marcar listo|Entregado):/ }),
+        ).toHaveFocus();
       } else {
         await waitFor(() => {
           expect(
@@ -322,6 +632,8 @@ describe('KitchenPage status actions', () => {
     app.renderPage();
     const button = await screen.findByRole('button', { name: 'Empezar: Mesa 2' });
     const user = userEvent.setup();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Arrastrar: Mesa 2' })).toHaveFocus();
     await user.tab();
     expect(button).toHaveFocus();
     await user.keyboard(key);

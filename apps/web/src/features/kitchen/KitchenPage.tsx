@@ -1,18 +1,27 @@
-import { canTransitionOrder, type Order } from '@bigger/shared';
+import {
+  canTransitionOrder,
+  KITCHEN_ORDER_STATUSES,
+  type KitchenOrderStatus,
+  type Order,
+} from '@bigger/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { AsyncContent } from '../../components/ui/AsyncContent';
+import { queryKeys } from '../../app/query-keys';
 import { useNow } from '../../hooks/useNow';
 import { ApiRequestError } from '../../services/http-client';
 import { orderTitle } from '../orders/order-text';
 import { useUpdateOrderStatus } from '../orders/useOrders';
 import { KitchenBoard } from './components/KitchenBoard';
 import { KITCHEN_COLUMNS } from './kitchen-columns';
+import { matchesKitchenDrag } from './kitchen-drag';
 import styles from './KitchenPage.module.css';
 import { groupByKitchenStatus, useKitchenOrders } from './useKitchenOrders';
 
 export function KitchenPage() {
   const ordersQuery = useKitchenOrders();
+  const queryClient = useQueryClient();
   const now = useNow(15_000);
   const updateStatus = useUpdateOrderStatus();
   const pendingIdsRef = useRef(new Set<string>());
@@ -28,16 +37,31 @@ export function KitchenPage() {
 
   useEffect(() => {
     if (!focusTarget || !focusTarget.origin || document.activeElement !== document.body) return;
-    const button = pageRef.current?.querySelector<HTMLButtonElement>(
-      `[data-order-id="${focusTarget.orderId}"] button`,
-    );
+    const selector = focusTarget.origin.hasAttribute('data-drag-handle')
+      ? '[data-drag-handle]'
+      : 'button[data-order-action]';
+    const button =
+      pageRef.current?.querySelector<HTMLButtonElement>(
+        `[data-order-id="${focusTarget.orderId}"] ${selector}`,
+      ) ??
+      pageRef.current?.querySelector<HTMLButtonElement>(
+        `[data-order-id="${focusTarget.orderId}"] [data-order-action]`,
+      );
     (button ?? headingRef.current)?.focus();
   }, [focusTarget]);
 
-  const advanceOrder = async (order: Order) => {
+  const advanceOrder = async (order: Order, destination?: KitchenOrderStatus) => {
+    const current = queryClient
+      .getQueryData<Order[]>(queryKeys.orderList({ statuses: KITCHEN_ORDER_STATUSES }))
+      ?.find((candidate) => candidate.id === order.id);
+    if (!matchesKitchenDrag(current, order)) {
+      setError('El pedido cambió en otro dispositivo. Revisa su estado actualizado.');
+      return;
+    }
     const action = KITCHEN_COLUMNS.find((column) => column.status === order.status)?.action;
     if (
       !action ||
+      (destination !== undefined && destination !== action.nextStatus) ||
       !canTransitionOrder(order.status, action.nextStatus) ||
       pendingIdsRef.current.has(order.id)
     )
@@ -91,8 +115,8 @@ export function KitchenPage() {
             orders={groupByKitchenStatus(orders)}
             now={now}
             pendingOrderIds={pendingOrderIds}
-            onAdvance={(order) => {
-              void advanceOrder(order);
+            onAdvance={(order, destination) => {
+              void advanceOrder(order, destination);
             }}
           />
         )}

@@ -5,6 +5,23 @@ import { z } from 'zod';
 
 z.config(z.locales.es());
 
+// jsdom lacks PointerEvent. Keep the native event inheritance used by the drag sensors.
+if (typeof window.PointerEvent === 'undefined') {
+  class TestPointerEvent extends MouseEvent {
+    readonly pointerId: number;
+    readonly pointerType: string;
+    readonly isPrimary: boolean;
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerId = init.pointerId ?? 1;
+      this.pointerType = init.pointerType ?? 'mouse';
+      this.isPrimary = init.isPrimary ?? true;
+    }
+  }
+  Object.assign(window, { PointerEvent: TestPointerEvent });
+  Object.assign(globalThis, { PointerEvent: TestPointerEvent });
+}
+
 afterEach(() => {
   cleanup();
 });
