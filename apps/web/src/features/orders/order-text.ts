@@ -8,9 +8,13 @@ export const QUICK_NOTE_LABELS: Readonly<Record<QuickNote, string>> = {
 };
 
 export function describeOrderItem(
-  item: Pick<OrderItem, 'quantity' | 'productName' | 'quickNotes' | 'note'>,
+  item: Pick<OrderItem, 'quantity' | 'productName' | 'quickNotes' | 'note' | 'options'>,
 ): string {
-  const notes = [...item.quickNotes.map((note) => QUICK_NOTE_LABELS[note].toLowerCase()), item.note]
+  const notes = [
+    ...item.options.map((option) => option.name.toLowerCase()),
+    ...item.quickNotes.map((note) => QUICK_NOTE_LABELS[note].toLowerCase()),
+    item.note,
+  ]
     .filter(Boolean)
     .join(' · ');
   return `${item.quantity} × ${item.productName}${notes ? ` · ${notes}` : ''}`;

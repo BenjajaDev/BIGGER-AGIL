@@ -18,6 +18,23 @@
   font-weight: var(--weight-bold);
 }
 
+.search {
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: var(--space-3);
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.search input {
+  padding-left: var(--space-8);
+}
+
 .centered {
   max-width: 32rem;
   margin: var(--space-10) auto;
@@ -26,5 +43,7 @@
 @media (max-width: 960px) {
   .layout {
     grid-template-columns: 1fr;
+    gap: var(--space-4);
+    padding: var(--space-4);
   }
 }

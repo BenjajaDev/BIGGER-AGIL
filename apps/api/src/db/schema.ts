@@ -1,5 +1,6 @@
 import {
   ORDER_CHANNELS,
+  ORDER_ITEM_OPTION_KINDS,
   ORDER_STATUSES,
   PRODUCT_KINDS,
   type Allergen,
@@ -179,4 +180,24 @@ export const orderItems = sqliteTable(
     note: text(),
   },
   (table) => [index('order_items_order_idx').on(table.orderId)],
+);
+
+export const orderItemOptions = sqliteTable(
+  'order_item_options',
+  {
+    id: id(),
+    orderItemId: text()
+      .notNull()
+      .references(() => orderItems.id, { onDelete: 'cascade' }),
+    kind: text({ enum: ORDER_ITEM_OPTION_KINDS }).notNull(),
+    /** Snapshot of the group ("Tipo de leche") or combo slot ("Café a elección"). */
+    label: text().notNull(),
+    /** Snapshot of the chosen option ("Almendra") or product ("Cortado"). */
+    name: text().notNull(),
+    priceDeltaClp: integer().notNull().default(0),
+    position: integer().notNull(),
+    /** Soft reference to the modifier option / combo product; no FK keeps the menu editable. */
+    referenceId: text(),
+  },
+  (table) => [index('order_item_options_item_idx').on(table.orderItemId)],
 );

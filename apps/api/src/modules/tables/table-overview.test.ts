@@ -13,6 +13,7 @@ function item(quantity: number): OrderItem {
     quantity,
     quickNotes: [],
     note: null,
+    options: [],
   };
 }
 

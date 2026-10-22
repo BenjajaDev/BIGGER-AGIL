@@ -1,6 +1,11 @@
-import { OrderSchema, type OrderChannel, type OrderStatus } from '@bigger/shared';
+import {
+  OrderSchema,
+  type CreateOrderInput,
+  type OrderChannel,
+  type OrderStatus,
+} from '@bigger/shared';
 import { z } from 'zod';
-import { getJson } from './http-client';
+import { getJson, requestJson } from './http-client';
 
 export interface OrderListParams {
   statuses?: readonly OrderStatus[];
@@ -15,4 +20,5 @@ export const ordersService = {
       { status: params.statuses?.join(','), channel: params.channel },
       signal,
     ),
+  create: (input: CreateOrderInput) => requestJson('POST', '/orders', OrderSchema, { body: input }),
 };

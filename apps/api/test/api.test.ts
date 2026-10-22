@@ -128,6 +128,134 @@ describe('GET /api/v1/orders', () => {
   });
 });
 
+describe('POST /api/v1/orders', () => {
+  async function freeTable() {
+    const tables = apiSuccessSchema(z.array(TableOverviewSchema)).parse(
+      (await request(context.app).get('/api/v1/tables')).body,
+    ).data;
+    const table = tables.find((candidate) => candidate.status === 'free');
+    if (!table) throw new Error('El seed no dejó ninguna mesa libre');
+    return table;
+  }
+
+  async function capuchino() {
+    const products = apiSuccessSchema(z.array(ProductSchema)).parse(
+      (await request(context.app).get('/api/v1/products')).body,
+    ).data;
+    const product = products.find((candidate) => candidate.name === 'Capuchino');
+    if (!product) throw new Error('El seed no tiene Capuchino');
+    return product;
+  }
+
+  it('creates a dine-in order, prices it on the server and publishes it', async () => {
+    const table = await freeTable();
+    const product = await capuchino();
+    const events: unknown[] = [];
+    context.eventHub.subscribe((event) => events.push(event));
+
+    const response = await request(context.app)
+      .post('/api/v1/orders')
+      .send({
+        channel: 'dine-in',
+        tableId: table.id,
+        items: [{ productId: product.id, quantity: 2, quickNotes: ['no-sugar'] }],
+      });
+
+    expect(response.status).toBe(201);
+    const order = apiSuccessSchema(OrderSchema).parse(response.body).data;
+    expect(order.status).toBe('new');
+    expect(order.tableLabel).toBe(table.label);
+    expect(order.totalClp).toBe(product.priceClp * 2);
+    expect(order.items[0]).toMatchObject({
+      productName: 'Capuchino',
+      unitPriceClp: product.priceClp,
+      quantity: 2,
+      quickNotes: ['no-sugar'],
+    });
+    expect(events).toEqual([{ type: 'order.created', payload: order }]);
+  });
+
+  it('resolves a chosen option, snapshots it and adds it to the total', async () => {
+    const table = await freeTable();
+    const menu = apiSuccessSchema(MenuSchema).parse(
+      (await request(context.app).get('/api/v1/menu')).body,
+    ).data;
+    const product = menu.categories
+      .flatMap((category) => category.products)
+      .find((candidate) => candidate.name === 'Capuchino');
+    const group = product?.modifierGroups[0];
+    const option = group?.options.find((candidate) => candidate.priceDeltaClp > 0);
+    if (!product || !group || !option) throw new Error('El seed no tiene un extra con precio');
+
+    const response = await request(context.app)
+      .post('/api/v1/orders')
+      .send({
+        channel: 'dine-in',
+        tableId: table.id,
+        items: [
+          {
+            productId: product.id,
+            quantity: 1,
+            options: [{ groupId: group.id, optionId: option.id }],
+          },
+        ],
+      });
+
+    expect(response.status).toBe(201);
+    const order = apiSuccessSchema(OrderSchema).parse(response.body).data;
+    expect(order.items[0]?.options).toEqual([
+      {
+        kind: 'modifier',
+        label: group.name,
+        name: option.name,
+        priceDeltaClp: option.priceDeltaClp,
+      },
+    ]);
+    expect(order.totalClp).toBe(product.priceClp + option.priceDeltaClp);
+  });
+
+  it('marks the table occupied once the order exists', async () => {
+    const table = await freeTable();
+    const product = await capuchino();
+
+    await request(context.app)
+      .post('/api/v1/orders')
+      .send({
+        channel: 'dine-in',
+        tableId: table.id,
+        items: [{ productId: product.id, quantity: 1 }],
+      });
+
+    const tables = apiSuccessSchema(z.array(TableOverviewSchema)).parse(
+      (await request(context.app).get('/api/v1/tables')).body,
+    ).data;
+    expect(tables.find((candidate) => candidate.id === table.id)?.status).toBe('occupied');
+  });
+
+  it('rejects a takeaway order without a customer name', async () => {
+    const product = await capuchino();
+
+    const response = await request(context.app)
+      .post('/api/v1/orders')
+      .send({ channel: 'takeaway', items: [{ productId: product.id, quantity: 1 }] });
+
+    expect(response.status).toBe(400);
+    const body = ApiErrorBodySchema.parse(response.body);
+    expect(body.error.issues?.[0]?.path).toBe('customerName');
+  });
+
+  it('rejects a dine-in order without a table', async () => {
+    const product = await capuchino();
+
+    const response = await request(context.app)
+      .post('/api/v1/orders')
+      .send({ channel: 'dine-in', items: [{ productId: product.id, quantity: 1 }] });
+
+    expect(response.status).toBe(400);
+    expect(ApiErrorBodySchema.parse(response.body).error.issues?.[0]?.path).toBe('tableId');
+  });
+});
+
 describe('GET /api/v1/tables', () => {
   it('derives each table status from its open orders', async () => {
     const response = await request(context.app).get('/api/v1/tables');
