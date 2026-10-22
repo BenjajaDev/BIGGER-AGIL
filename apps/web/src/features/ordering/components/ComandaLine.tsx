@@ -19,6 +19,7 @@ interface Detail {
 
 function lineDetails(line: DraftLine): Detail[] {
   return [
+    ...(line.size ? [{ text: line.size.sizeName, priceClp: 0 }] : []),
     ...line.options.map((option) => ({ text: option.optionName, priceClp: option.priceDeltaClp })),
     ...line.comboChoices.map((choice) => ({
       text: choice.productName,

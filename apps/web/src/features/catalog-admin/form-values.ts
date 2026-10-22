@@ -3,8 +3,14 @@ import type {
   AdminModifierGroup,
   AdminProduct,
   ComboProductInput,
+  ImageAsset,
+  ImageRefInput,
   ModifierGroupInput,
+  ProductSize,
+  ProductType,
+  ProductTypeInput,
   SingleProductInput,
+  SizeInput,
 } from '@bigger/shared';
 import type { DefaultValues } from 'react-hook-form';
 
@@ -27,6 +33,8 @@ export const PRODUCT_KIND_COPY = {
   },
 } as const;
 
+export const PRODUCT_TYPES_PATH = '/configuracion/tipos';
+
 const COMBO_CATEGORY_SLUG = 'combos';
 
 function suggestedCategoryId(
@@ -39,58 +47,98 @@ function suggestedCategoryId(
   return preferred?.id ?? '';
 }
 
+export function toImageRef(image: ImageAsset | null): ImageRefInput | null {
+  return image ? { imageId: image.id, focusY: image.focusY } : null;
+}
+
+function toSizeInputs(sizes: readonly (Omit<ProductSize, 'id'> & { id?: string })[]): SizeInput[] {
+  return sizes.map((size) => ({
+    ...(size.id ? { id: size.id } : {}),
+    name: size.name,
+    priceClp: size.priceClp,
+    groupRules: size.groupRules.map((rule) => ({ ...rule })),
+  }));
+}
+
+/** New product pre-filled from a type (template): sizes, customizations and per-size rules. */
 export function singleProductDefaults(
   product: AdminProduct | undefined,
   categories: readonly AdminCategory[],
+  template: ProductType | null = null,
 ): DefaultValues<SingleProductInput> {
   if (!product) {
     return {
       kind: 'single',
+      typeId: template?.id ?? null,
       categoryId: suggestedCategoryId(categories, 'single'),
       name: '',
+      subtitle: '',
       description: '',
+      priceClp: null,
       isAvailable: true,
+      image: null,
+      promotion: null,
       allergens: [],
-      modifierGroupIds: [],
+      modifierGroupIds: template ? [...template.modifierGroupIds] : [],
+      sizes: template ? toSizeInputs(template.sizes) : [],
     };
   }
   return {
     kind: 'single',
+    typeId: product.typeId,
     categoryId: product.categoryId,
     name: product.name,
+    subtitle: product.subtitle,
     description: product.description,
-    priceClp: product.priceClp,
+    priceClp: product.sizes.length > 0 ? null : product.priceClp,
     isAvailable: product.isAvailable,
+    image: toImageRef(product.image),
+    promotion: product.promotion,
     allergens: product.allergens,
     modifierGroupIds: product.modifierGroupIds,
+    sizes: toSizeInputs(product.sizes),
   };
 }
 
-export const EMPTY_COMBO_SLOT = { name: '', options: [{ productId: '', extraPriceClp: 0 }] };
+export const EMPTY_COMBO_OPTION = { productId: '', extraPriceClp: 0 };
+export const EMPTY_COMBO_SLOT = { name: '', isRequired: true, options: [EMPTY_COMBO_OPTION] };
 
 export function comboProductDefaults(
   product: AdminProduct | undefined,
   categories: readonly AdminCategory[],
+  template: ProductType | null = null,
 ): DefaultValues<ComboProductInput> {
   if (!product) {
     return {
       kind: 'combo',
+      typeId: template?.id ?? null,
       categoryId: suggestedCategoryId(categories, 'combo'),
       name: '',
+      subtitle: '',
       description: '',
       isAvailable: true,
-      comboSlots: [EMPTY_COMBO_SLOT],
+      image: null,
+      promotion: null,
+      comboSlots:
+        template && template.comboSlots.length > 0
+          ? template.comboSlots.map((slot) => ({ ...slot, options: [EMPTY_COMBO_OPTION] }))
+          : [EMPTY_COMBO_SLOT],
     };
   }
   return {
     kind: 'combo',
+    typeId: product.typeId,
     categoryId: product.categoryId,
     name: product.name,
+    subtitle: product.subtitle,
     description: product.description,
     priceClp: product.priceClp,
     isAvailable: product.isAvailable,
+    image: toImageRef(product.image),
+    promotion: product.promotion,
     comboSlots: product.comboSlots.map((slot) => ({
       name: slot.name,
+      isRequired: slot.isRequired,
       options: slot.options.map((option) => ({
         productId: option.productId,
         extraPriceClp: option.extraPriceClp,
@@ -117,5 +165,28 @@ export function modifierGroupDefaults(
       priceDeltaClp,
       isAvailable,
     })),
+  };
+}
+
+export function productTypeDefaults(
+  type: ProductType | undefined,
+): DefaultValues<ProductTypeInput> {
+  if (!type) {
+    return {
+      name: '',
+      description: '',
+      kind: 'single',
+      sizes: [],
+      modifierGroupIds: [],
+      comboSlots: [],
+    };
+  }
+  return {
+    name: type.name,
+    description: type.description,
+    kind: type.kind,
+    sizes: toSizeInputs(type.sizes),
+    modifierGroupIds: type.modifierGroupIds,
+    comboSlots: type.comboSlots,
   };
 }

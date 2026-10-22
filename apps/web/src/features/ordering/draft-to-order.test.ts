@@ -6,6 +6,7 @@ const draft: OrderDraft = {
   lines: [
     {
       lineId: 'l-1',
+      size: null,
       productId: 'p-1',
       productName: 'Capuchino',
       basePriceClp: 2500,
@@ -17,6 +18,7 @@ const draft: OrderDraft = {
     },
     {
       lineId: 'l-2',
+      size: null,
       productId: 'p-2',
       productName: 'Torta',
       basePriceClp: 3800,
@@ -43,6 +45,7 @@ describe('draftToCreateOrder', () => {
           quantity: 2,
           quickNotes: ['no-sugar'],
           note: 'sin espuma',
+          sizeId: null,
           options: [],
           comboChoices: [],
         },
@@ -51,6 +54,7 @@ describe('draftToCreateOrder', () => {
           quantity: 1,
           quickNotes: [],
           note: null,
+          sizeId: null,
           options: [],
           comboChoices: [],
         },
@@ -65,6 +69,7 @@ describe('draftToCreateOrder', () => {
         lines: [
           {
             lineId: 'l-3',
+            size: null,
             productId: 'p-3',
             productName: 'Ensalada de pollo',
             basePriceClp: 4990,
@@ -106,5 +111,29 @@ describe('draftToCreateOrder', () => {
     expect(input.channel).toBe('takeaway');
     expect(input.tableId).toBeNull();
     expect(input.customerName).toBeNull();
+  });
+
+  it('sends the chosen size id', () => {
+    const input = draftToCreateOrder(
+      {
+        customerName: '',
+        lines: [
+          {
+            lineId: 'l-9',
+            productId: 'p-9',
+            productName: 'Arma tu ensalada',
+            basePriceClp: 4900,
+            quantity: 1,
+            quickNotes: [],
+            note: '',
+            size: { sizeId: 's-grande', sizeName: 'Grande', priceClp: 4900 },
+            options: [],
+            comboChoices: [],
+          },
+        ],
+      },
+      { channel: 'dine-in', tableId: 't-1' },
+    );
+    expect(input.items[0]?.sizeId).toBe('s-grande');
   });
 });

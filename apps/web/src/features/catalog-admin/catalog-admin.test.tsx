@@ -1,7 +1,8 @@
-import type { AdminCategory, AdminModifierGroup, AdminProduct } from '@bigger/shared';
+import type { AdminModifierGroup, ProductType } from '@bigger/shared';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { makeAdminCategory, makeAdminProduct } from '../../test/fixtures';
 import { mockFetch, renderRoute } from '../../test/render';
 import { ConfigLayout } from './ConfigLayout';
 import { ModifierGroupEditorPage } from './ModifierGroupEditorPage';
@@ -15,29 +16,9 @@ const ids = {
   latte: '3c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f',
 };
 
-const category = (id: string, slug: string, name: string): AdminCategory => ({
-  id,
-  slug,
-  name,
-  sortOrder: 0,
-  archivedAt: null,
-  activeProductCount: 1,
-});
-
-const coffee = (id: string, name: string): AdminProduct => ({
-  id,
-  categoryId: ids.cafes,
-  kind: 'single',
-  name,
-  description: '',
-  priceClp: 2000,
-  allergens: [],
-  isAvailable: true,
-  sortOrder: 0,
-  archivedAt: null,
-  modifierGroupIds: [],
-  comboSlots: [],
-});
+const category = (id: string, slug: string, name: string) => makeAdminCategory({ id, slug, name });
+const coffee = (id: string, name: string) =>
+  makeAdminProduct({ id, name, categoryId: ids.cafes, priceClp: 2000 });
 
 const CATEGORIES = [
   category(ids.cafes, 'cafes', 'Cafés'),
@@ -45,6 +26,7 @@ const CATEGORIES = [
 ];
 const PRODUCTS = [coffee(ids.americano, 'Americano'), coffee(ids.latte, 'Latte')];
 const GROUPS: AdminModifierGroup[] = [];
+const TYPES: ProductType[] = [];
 
 function catalogHandler(
   onWrite?: (method: string, path: string, body: unknown) => { status?: number; body: unknown },
@@ -55,6 +37,7 @@ function catalogHandler(
     if (url.pathname.endsWith('/admin/categories')) return { body: { data: CATEGORIES } };
     if (url.pathname.endsWith('/admin/products')) return { body: { data: PRODUCTS } };
     if (url.pathname.endsWith('/admin/modifier-groups')) return { body: { data: GROUPS } };
+    if (url.pathname.endsWith('/admin/product-types')) return { body: { data: TYPES } };
     return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'No encontrado' } } };
   });
 }

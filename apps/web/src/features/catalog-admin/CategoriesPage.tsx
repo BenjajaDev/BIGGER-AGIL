@@ -2,12 +2,14 @@ import { CategoryInputSchema, type AdminCategory, type CategoryInput } from '@bi
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Archive, ArchiveRestore, FolderTree, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
+import type { z } from 'zod';
 import { controlClassName } from '../../components/form/control';
 import { Field } from '../../components/form/Field';
 import { AsyncContent } from '../../components/ui/AsyncContent';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { CoverImage } from '../../components/ui/CoverImage';
 import { Chip } from '../../components/ui/Chip';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -16,7 +18,9 @@ import { cx } from '../../lib/cx';
 import { pluralize } from '../../lib/format';
 import styles from './CatalogAdmin.module.css';
 import { FormAlert } from './components/FormAlert';
+import { ImageField } from './components/ImageField';
 import { applyServerErrors } from './form-errors';
+import { toImageRef } from './form-values';
 import {
   useAdminCategories,
   useArchiveCategory,
@@ -29,23 +33,36 @@ interface CategoryFormProps {
   label: string;
   submitLabel: string;
   primary: boolean;
+  /** Editing shows the photo field; a new category starts with just its name. */
+  withImage?: boolean;
   onDone?: () => void;
 }
 
-function CategoryForm({ category, label, submitLabel, primary, onDone }: CategoryFormProps) {
+const EMPTY_CATEGORY: CategoryInput = { name: '', image: null };
+
+function CategoryForm({
+  category,
+  label,
+  submitLabel,
+  primary,
+  withImage = false,
+  onDone,
+}: CategoryFormProps) {
   const save = useSaveCategory();
   const [alert, setAlert] = useState<string | null>(null);
-  const form = useForm<CategoryInput>({
+  const form = useForm<z.input<typeof CategoryInputSchema>, unknown, CategoryInput>({
     resolver: zodResolver(CategoryInputSchema),
     mode: 'onTouched',
-    defaultValues: { name: category?.name ?? '' },
+    defaultValues: category
+      ? { name: category.name, image: toImageRef(category.image) }
+      : EMPTY_CATEGORY,
   });
 
   const onSubmit = form.handleSubmit(async (input) => {
     setAlert(null);
     try {
       await save.mutateAsync({ id: category?.id, input });
-      form.reset({ name: '' });
+      form.reset(EMPTY_CATEGORY);
       onDone?.();
     } catch (error) {
       setAlert(applyServerErrors(error, form.setError));
@@ -54,7 +71,7 @@ function CategoryForm({ category, label, submitLabel, primary, onDone }: Categor
 
   return (
     <form
-      className={styles.subCardHeader}
+      className={withImage ? styles.form : styles.subCardHeader}
       onSubmit={(event) => void onSubmit(event)}
       noValidate
       aria-label={label}
@@ -69,15 +86,31 @@ function CategoryForm({ category, label, submitLabel, primary, onDone }: Categor
           />
         )}
       </Field>
-      <Button type="submit" variant={primary ? 'primary' : 'secondary'} disabled={save.isPending}>
-        {primary && <Plus size={20} aria-hidden="true" />}
-        {submitLabel}
-      </Button>
-      {onDone && (
-        <Button variant="ghost" onClick={onDone}>
-          Cancelar
-        </Button>
+      {withImage && (
+        <Controller
+          control={form.control}
+          name="image"
+          render={({ field, fieldState }) => (
+            <ImageField
+              legend="Foto de la categoría"
+              value={field.value ?? null}
+              onChange={field.onChange}
+              error={fieldState.error?.message}
+            />
+          )}
+        />
       )}
+      <div className={styles.headerActions}>
+        <Button type="submit" variant={primary ? 'primary' : 'secondary'} disabled={save.isPending}>
+          {primary && <Plus size={20} aria-hidden="true" />}
+          {submitLabel}
+        </Button>
+        {onDone && (
+          <Button variant="ghost" onClick={onDone}>
+            Cancelar
+          </Button>
+        )}
+      </div>
     </form>
   );
 }
@@ -137,15 +170,22 @@ export function CategoriesPage() {
                     {editingId === category.id ? (
                       <CategoryForm
                         category={category}
-                        label={`Nuevo nombre para «${category.name}»`}
+                        label={`Nombre de «${category.name}»`}
                         submitLabel="Guardar"
                         primary={false}
+                        withImage
                         onDone={() => {
                           setEditingId(null);
                         }}
                       />
                     ) : (
                       <>
+                        <CoverImage
+                          image={category.image}
+                          ratio="4 / 3"
+                          sizes="4.5rem"
+                          className={styles.thumb}
+                        />
                         <div className={styles.rowMain}>
                           <span className={styles.rowTitle}>
                             {category.name}
@@ -184,7 +224,7 @@ export function CategoriesPage() {
                                 }}
                               >
                                 <Pencil size={18} aria-hidden="true" />
-                                Renombrar<span className="visually-hidden"> {category.name}</span>
+                                Editar<span className="visually-hidden"> {category.name}</span>
                               </Button>
                               <Button
                                 variant="ghost"

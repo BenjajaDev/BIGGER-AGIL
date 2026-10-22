@@ -15,6 +15,8 @@ describe('parseEnv', () => {
       DATABASE_PATH: './data/bigger.db',
       CORS_ORIGINS: ['http://localhost:5173'],
       LOG_LEVEL: 'info',
+      UPLOADS_DIR: './data/uploads',
+      BUSINESS_TIMEZONE: 'America/Santiago',
       ...ADMIN,
     });
   });
@@ -35,6 +37,7 @@ describe('parseEnv', () => {
     [{ ADMIN_SESSION_SECRET: ADMIN.ADMIN_SESSION_SECRET }],
     [{ ...ADMIN, ADMIN_PIN_HASH: '123456' }],
     [{ ...ADMIN, ADMIN_SESSION_SECRET: 'short' }],
+    [{ ...ADMIN, BUSINESS_TIMEZONE: 'Marte/Olympus' }],
   ])('rejects invalid values %o', (source) => {
     expect(() => parseEnv(source)).toThrow(/Variables de entorno inválidas/);
   });

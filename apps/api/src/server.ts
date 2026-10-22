@@ -15,6 +15,8 @@ const app = createApp({
   db: connection.db,
   eventHub: new EventHub(),
   adminAuth: { pinHash: env.ADMIN_PIN_HASH, sessionSecret: env.ADMIN_SESSION_SECRET },
+  uploadsDir: env.UPLOADS_DIR,
+  clock: { timeZone: env.BUSINESS_TIMEZONE, now: () => new Date() },
 });
 
 const server = app.listen(env.PORT, env.HOST, () => {

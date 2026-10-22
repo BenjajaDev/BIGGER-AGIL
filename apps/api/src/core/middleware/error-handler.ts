@@ -7,6 +7,10 @@ function isBodyParseError(error: unknown): boolean {
   return error instanceof SyntaxError && 'type' in error && error.type === 'entity.parse.failed';
 }
 
+function isBodyTooLarge(error: unknown): boolean {
+  return error instanceof Error && 'type' in error && error.type === 'entity.too.large';
+}
+
 function toErrorBody(error: AppError): ApiErrorBody {
   return {
     error: {
@@ -31,6 +35,12 @@ export function createErrorHandler(logger: Logger): ErrorRequestHandler {
             new AppError('VALIDATION_ERROR', 'El cuerpo de la solicitud no es JSON válido'),
           ),
         );
+      return;
+    }
+    if (isBodyTooLarge(error)) {
+      res
+        .status(413)
+        .json(toErrorBody(new AppError('PAYLOAD_TOO_LARGE', 'El archivo es demasiado grande')));
       return;
     }
     logger.error({ err: error }, 'Unhandled error');

@@ -4,7 +4,9 @@ import {
   ORDER_STATUSES,
   PRODUCT_KINDS,
   type Allergen,
+  type ProductSize,
   type QuickNote,
+  type TemplateComboSlot,
 } from '@bigger/shared';
 import { randomUUID } from 'node:crypto';
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
@@ -27,12 +29,42 @@ const timestamps = {
 /** Soft delete: archived rows disappear from the menu but keep past comandas intact. */
 const archivedAt = () => integer({ mode: 'timestamp_ms' });
 
+/** Processed uploads; the files live in UPLOADS_DIR as `<id>-card.webp` / `<id>-thumb.webp`. */
+export const images = sqliteTable('images', {
+  id: id(),
+  width: integer().notNull(),
+  height: integer().notNull(),
+  createdAt: timestamps.createdAt,
+});
+
+const imageColumns = () => ({
+  imageId: text().references(() => images.id, { onDelete: 'set null' }),
+  imageFocusY: integer().notNull().default(50),
+});
+
 export const categories = sqliteTable('categories', {
   id: id(),
   slug: text().notNull().unique(),
   name: text().notNull(),
   sortOrder: integer().notNull().default(0),
+  ...imageColumns(),
   archivedAt: archivedAt(),
+  ...timestamps,
+});
+
+export interface ProductTypeTemplate {
+  sizes: Omit<ProductSize, 'id'>[];
+  modifierGroupIds: string[];
+  comboSlots: TemplateComboSlot[];
+}
+
+/** Templates that pre-fill a new product ("Ensalada armable"); products keep their own copy. */
+export const productTypes = sqliteTable('product_types', {
+  id: id(),
+  name: text().notNull(),
+  description: text().notNull().default(''),
+  kind: text({ enum: PRODUCT_KINDS }).notNull().default('single'),
+  template: text({ mode: 'json' }).$type<ProductTypeTemplate>().notNull(),
   ...timestamps,
 });
 
@@ -43,8 +75,10 @@ export const products = sqliteTable(
     categoryId: text()
       .notNull()
       .references(() => categories.id, { onDelete: 'restrict' }),
+    typeId: text().references(() => productTypes.id, { onDelete: 'set null' }),
     kind: text({ enum: PRODUCT_KINDS }).notNull().default('single'),
     name: text().notNull(),
+    subtitle: text().notNull().default(''),
     description: text().notNull().default(''),
     priceClp: integer().notNull(),
     allergens: text({ mode: 'json' })
@@ -53,10 +87,32 @@ export const products = sqliteTable(
       .$defaultFn(() => []),
     isAvailable: integer({ mode: 'boolean' }).notNull().default(true),
     sortOrder: integer().notNull().default(0),
+    ...imageColumns(),
+    isPromotion: integer({ mode: 'boolean' }).notNull().default(false),
+    /** Calendar dates (`YYYY-MM-DD`) in the shop's time zone; null = open-ended. */
+    promoStartsOn: text(),
+    promoEndsOn: text(),
     archivedAt: archivedAt(),
     ...timestamps,
   },
-  (table) => [index('products_category_idx').on(table.categoryId)],
+  (table) => [
+    index('products_category_idx').on(table.categoryId),
+    index('products_type_idx').on(table.typeId),
+  ],
+);
+
+export const productSizes = sqliteTable(
+  'product_sizes',
+  {
+    id: id(),
+    productId: text()
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    name: text().notNull(),
+    priceClp: integer().notNull(),
+    position: integer().notNull(),
+  },
+  (table) => [index('product_sizes_product_idx').on(table.productId)],
 );
 
 export const modifierGroups = sqliteTable('modifier_groups', {
@@ -99,6 +155,25 @@ export const productModifierGroups = sqliteTable(
   ],
 );
 
+/** Per-size override of a customization's rule; maxSelections = 0 hides it for that size. */
+export const sizeGroupRules = sqliteTable(
+  'size_group_rules',
+  {
+    sizeId: text()
+      .notNull()
+      .references(() => productSizes.id, { onDelete: 'cascade' }),
+    groupId: text()
+      .notNull()
+      .references(() => modifierGroups.id, { onDelete: 'cascade' }),
+    minSelections: integer().notNull(),
+    maxSelections: integer().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.sizeId, table.groupId] }),
+    index('size_group_rules_group_idx').on(table.groupId),
+  ],
+);
+
 export const comboSlots = sqliteTable(
   'combo_slots',
   {
@@ -107,6 +182,7 @@ export const comboSlots = sqliteTable(
       .notNull()
       .references(() => products.id, { onDelete: 'cascade' }),
     name: text().notNull(),
+    isRequired: integer({ mode: 'boolean' }).notNull().default(true),
     position: integer().notNull(),
   },
   (table) => [index('combo_slots_combo_idx').on(table.comboId)],

@@ -174,9 +174,90 @@
   font-weight: var(--weight-medium);
 }
 
+.quickRow {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) 10rem auto;
+  align-items: start;
+  gap: var(--space-3);
+}
+
 @media (max-width: 720px) {
   .optionRow,
-  .optionRowWide {
+  .optionRowWide,
+  .quickRow {
     grid-template-columns: 1fr;
+  }
+
+  .quickRow .alignWithControl {
+    margin-top: 0;
+  }
+}
+
+/* Form + sticky live preview side by side on PC/tablet, stacked on phones. */
+.editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+  align-items: start;
+  gap: var(--space-6);
+}
+
+.preview {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--space-4));
+  display: grid;
+  gap: var(--space-3);
+}
+
+.previewTitle {
+  font-size: var(--text-button);
+  font-weight: var(--weight-bold);
+}
+
+.typeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-3);
+}
+
+.typeCard {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  height: 100%;
+  min-height: 7rem;
+  padding: var(--space-4);
+  border: var(--border-width-strong) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-card);
+  color: var(--text-primary);
+  text-decoration: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.typeCard:hover {
+  border-color: var(--accent);
+}
+
+.typeCard:active {
+  transform: scale(0.98);
+}
+
+.thumb {
+  width: 4.5rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+@media (max-width: 1100px) {
+  .editor {
+    grid-template-columns: 1fr;
+  }
+
+  .preview {
+    position: static;
+    max-width: 26rem;
   }
 }

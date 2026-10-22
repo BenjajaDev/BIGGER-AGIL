@@ -1,7 +1,7 @@
 import type { AdminProduct, ApiFieldIssue, ProductInput } from '@bigger/shared';
 import { AppError } from '../../core/errors/app-error.js';
 import type { RealtimePublisher } from '../../realtime/event-hub.js';
-import type { ModifierGroupsAdminRepository } from './modifier-groups.repository.js';
+import { customizationIssues, type CatalogLookups } from './catalog-lookups.js';
 import type { ProductsAdminRepository } from './products.repository.js';
 import { sameName } from './slugify.js';
 
@@ -12,18 +12,18 @@ const CATEGORY_ISSUES = {
 
 export class ProductsAdminService {
   readonly #products: ProductsAdminRepository;
-  readonly #modifierGroups: Pick<ModifierGroupsAdminRepository, 'existingIds'>;
+  readonly #lookups: CatalogLookups;
   readonly #publisher: RealtimePublisher;
   readonly #now: () => Date;
 
   constructor(
     products: ProductsAdminRepository,
-    modifierGroups: Pick<ModifierGroupsAdminRepository, 'existingIds'>,
+    lookups: CatalogLookups,
     publisher: RealtimePublisher,
     now: () => Date = () => new Date(),
   ) {
     this.#products = products;
-    this.#modifierGroups = modifierGroups;
+    this.#lookups = lookups;
     this.#publisher = publisher;
     this.#now = now;
   }
@@ -100,11 +100,15 @@ export class ProductsAdminService {
       issues.push({ path: 'categoryId', message: CATEGORY_ISSUES[categoryState] });
     }
 
+    if (input.typeId && (await this.#lookups.existingTypeIds([input.typeId])).length === 0) {
+      issues.push({ path: 'typeId', message: 'El tipo de producto ya no existe' });
+    }
+    if (input.image && (await this.#lookups.existingImageIds([input.image.imageId])).length === 0) {
+      issues.push({ path: 'image.imageId', message: 'La foto ya no existe; súbela de nuevo' });
+    }
+
     if (input.kind === 'single') {
-      const existing = new Set(await this.#modifierGroups.existingIds(input.modifierGroupIds));
-      if (input.modifierGroupIds.some((groupId) => !existing.has(groupId))) {
-        issues.push({ path: 'modifierGroupIds', message: 'Una personalización ya no existe' });
-      }
+      issues.push(...(await customizationIssues(this.#lookups, input)));
     } else {
       issues.push(...(await this.#comboIssues(input.comboSlots, productId)));
     }

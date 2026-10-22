@@ -10,6 +10,8 @@ const loadCatalogAdmin = {
   groupList: () => import('../features/catalog-admin/ModifierGroupListPage'),
   groupEditor: () => import('../features/catalog-admin/ModifierGroupEditorPage'),
   categories: () => import('../features/catalog-admin/CategoriesPage'),
+  typeList: () => import('../features/catalog-admin/ProductTypeListPage'),
+  typeEditor: () => import('../features/catalog-admin/ProductTypeEditorPage'),
 };
 
 const configurationRoute: RouteObject = {
@@ -35,6 +37,15 @@ const configurationRoute: RouteObject = {
         { path: `${segment}/:productId`, lazy: editor },
       ];
     }),
+    {
+      path: 'tipos',
+      lazy: () => loadCatalogAdmin.typeList().then((m) => ({ Component: m.ProductTypeListPage })),
+    },
+    ...['tipos/nuevo', 'tipos/:typeId'].map((path) => ({
+      path,
+      lazy: () =>
+        loadCatalogAdmin.typeEditor().then((m) => ({ Component: m.ProductTypeEditorPage })),
+    })),
     {
       path: 'personalizaciones',
       lazy: () =>

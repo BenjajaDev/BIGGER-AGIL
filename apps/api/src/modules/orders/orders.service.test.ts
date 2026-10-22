@@ -22,6 +22,7 @@ const capuchino: OrderableProduct = {
   priceClp: 2500,
   isAvailable: true,
   archivedAt: null,
+  sizes: [],
   modifierGroups: [leche],
   comboSlots: [],
 };
@@ -32,9 +33,101 @@ const brownie: OrderableProduct = {
   priceClp: 3200,
   isAvailable: true,
   archivedAt: null,
+  sizes: [],
   modifierGroups: [],
   comboSlots: [],
 };
+
+const group = (id: string, name: string, optionNames: string[]): ModifierGroup => ({
+  id,
+  name,
+  minSelections: 0,
+  maxSelections: 3,
+  options: optionNames.map((optionName) => ({
+    id: `${id}-${optionName}`,
+    name: optionName,
+    priceDeltaClp: 0,
+    isAvailable: true,
+  })),
+});
+const proteina = group('g-prot', 'Proteína', ['Pollo', 'Atún']);
+const vegetales = group('g-veg', 'Vegetales', ['Lechuga', 'Tomate', 'Choclo', 'Pepino']);
+
+/** Grande = 1 proteína + 3 vegetales · Mediano = sin proteína, 3 vegetales. */
+const ensalada: OrderableProduct = {
+  id: 'p-3',
+  name: 'Arma tu ensalada',
+  kind: 'single',
+  priceClp: 5200,
+  isAvailable: true,
+  archivedAt: null,
+  sizes: [
+    {
+      id: 's-grande',
+      name: 'Grande',
+      priceClp: 6900,
+      groupRules: [
+        { groupId: 'g-prot', minSelections: 1, maxSelections: 1 },
+        { groupId: 'g-veg', minSelections: 3, maxSelections: 3 },
+      ],
+    },
+    {
+      id: 's-mediano',
+      name: 'Mediano',
+      priceClp: 5200,
+      groupRules: [
+        { groupId: 'g-prot', minSelections: 0, maxSelections: 0 },
+        { groupId: 'g-veg', minSelections: 3, maxSelections: 3 },
+      ],
+    },
+  ],
+  modifierGroups: [proteina, vegetales],
+  comboSlots: [],
+};
+
+const cafeDonut: OrderableProduct = {
+  id: 'p-4',
+  name: 'Café + Donut',
+  kind: 'combo',
+  priceClp: 3500,
+  isAvailable: true,
+  archivedAt: null,
+  sizes: [],
+  modifierGroups: [],
+  comboSlots: [
+    {
+      id: 'slot-cafe',
+      name: 'Café',
+      isRequired: true,
+      options: [
+        {
+          productId: 'p-1',
+          productName: 'Capuchino',
+          extraPriceClp: 300,
+          isAvailable: true,
+          allergens: [],
+        },
+      ],
+    },
+    {
+      id: 'slot-donut',
+      name: 'Donut',
+      isRequired: false,
+      options: [
+        {
+          productId: 'p-9',
+          productName: 'Donut glaseada',
+          extraPriceClp: 0,
+          isAvailable: true,
+          allergens: [],
+        },
+      ],
+    },
+  ],
+};
+
+const pick = (groupId: string, ...names: string[]) =>
+  names.map((name) => ({ groupId, optionId: `${groupId}-${name}` }));
 
 function fakeOrder(order: NewOrder): Order {
   return {
@@ -92,6 +185,7 @@ function line(overrides: Partial<CreateOrderInput['items'][number]> = {}) {
     quantity: 2,
     quickNotes: [],
     note: null,
+    sizeId: null,
     options: [],
     comboChoices: [],
     ...overrides,
@@ -218,5 +312,132 @@ describe('OrdersService.create', () => {
       { path: 'customerName', message: 'Un pedido para llevar requiere un nombre' },
     ]);
     expect(created).toHaveLength(0);
+  });
+});
+
+describe('OrdersService.create with sizes and size rules', () => {
+  const catalog = [capuchino, brownie, ensalada, cafeDonut];
+
+  async function issuesFor(item: ReturnType<typeof line>) {
+    const { service } = setup(catalog);
+    const error = await service
+      .create(dineInInput({ items: [item] }))
+      .catch((caught: unknown) => caught);
+    return (error as AppError).issues;
+  }
+
+  it('prices the line with the chosen size and snapshots the size first', async () => {
+    const { service, created } = setup(catalog);
+
+    const order = await service.create(
+      dineInInput({
+        items: [
+          line({
+            productId: 'p-3',
+            quantity: 1,
+            sizeId: 's-grande',
+            options: [...pick('g-prot', 'Pollo'), ...pick('g-veg', 'Lechuga', 'Tomate', 'Choclo')],
+          }),
+        ],
+      }),
+    );
+
+    expect(order.totalClp).toBe(6900);
+    expect(created[0]?.items[0]?.unitPriceClp).toBe(6900);
+    expect(created[0]?.items[0]?.options[0]).toEqual({
+      kind: 'size',
+      label: 'Tamaño',
+      name: 'Grande',
+      priceDeltaClp: 0,
+      referenceId: 's-grande',
+    });
+  });
+
+  it('requires a size for products that have sizes', async () => {
+    expect(await issuesFor(line({ productId: 'p-3' }))).toEqual([
+      { path: 'items.0.sizeId', message: 'Elige un tamaño para «Arma tu ensalada»' },
+    ]);
+  });
+
+  it('rejects a size on a product without sizes', async () => {
+    expect(await issuesFor(line({ productId: 'p-2', sizeId: 's-grande' }))).toEqual([
+      { path: 'items.0.sizeId', message: '«Brownie» no tiene tamaños' },
+    ]);
+  });
+
+  it('enforces the minimum of each customization for the chosen size', async () => {
+    const issues = await issuesFor(
+      line({ productId: 'p-3', sizeId: 's-grande', options: pick('g-veg', 'Lechuga', 'Tomate') }),
+    );
+    expect(issues).toEqual([
+      { path: 'items.0.options', message: 'Elige al menos 1 en «Proteína»' },
+      { path: 'items.0.options', message: 'Elige al menos 3 en «Vegetales»' },
+    ]);
+  });
+
+  it('enforces the maximum of each customization for the chosen size', async () => {
+    const issues = await issuesFor(
+      line({
+        productId: 'p-3',
+        sizeId: 's-grande',
+        options: [
+          ...pick('g-prot', 'Pollo'),
+          ...pick('g-veg', 'Lechuga', 'Tomate', 'Choclo', 'Pepino'),
+        ],
+      }),
+    );
+    expect(issues).toEqual([
+      { path: 'items.0.options', message: 'Puedes elegir hasta 3 en «Vegetales»' },
+    ]);
+  });
+
+  it('rejects a customization the chosen size does not offer', async () => {
+    const issues = await issuesFor(
+      line({
+        productId: 'p-3',
+        sizeId: 's-mediano',
+        options: [...pick('g-prot', 'Pollo'), ...pick('g-veg', 'Lechuga', 'Tomate', 'Choclo')],
+      }),
+    );
+    expect(issues).toEqual([
+      { path: 'items.0.options.0', message: 'Esa personalización no se ofrece en tamaño Mediano' },
+    ]);
+  });
+
+  it('accepts a combo with its optional slot left empty', async () => {
+    const { service, created } = setup(catalog);
+    const order = await service.create(
+      dineInInput({
+        items: [
+          line({
+            productId: 'p-4',
+            quantity: 1,
+            comboChoices: [{ slotId: 'slot-cafe', productId: 'p-1' }],
+          }),
+        ],
+      }),
+    );
+    expect(order.totalClp).toBe(3500 + 300);
+    expect(created[0]?.items[0]?.options.map((option) => option.name)).toEqual(['Capuchino']);
+  });
+
+  it('requires every mandatory combo slot and one choice per slot', async () => {
+    expect(
+      await issuesFor(
+        line({ productId: 'p-4', comboChoices: [{ slotId: 'slot-donut', productId: 'p-9' }] }),
+      ),
+    ).toEqual([{ path: 'items.0.comboChoices', message: 'Elige «Café»' }]);
+
+    expect(
+      await issuesFor(
+        line({
+          productId: 'p-4',
+          comboChoices: [
+            { slotId: 'slot-cafe', productId: 'p-1' },
+            { slotId: 'slot-cafe', productId: 'p-1' },
+          ],
+        }),
+      ),
+    ).toEqual([{ path: 'items.0.comboChoices.1', message: 'Solo se elige una opción en «Café»' }]);
   });
 });

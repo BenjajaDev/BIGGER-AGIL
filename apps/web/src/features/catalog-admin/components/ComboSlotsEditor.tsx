@@ -9,6 +9,7 @@ import { useFieldArray, useFormContext } from 'react-hook-form';
 import { controlClassName } from '../../../components/form/control';
 import { Field, FieldError } from '../../../components/form/Field';
 import { MoneyInput } from '../../../components/form/MoneyInput';
+import { Checkbox } from '../../../components/form/Checkbox';
 import { Button } from '../../../components/ui/Button';
 import { cx } from '../../../lib/cx';
 import { formatClp } from '../../../lib/format';
@@ -57,6 +58,13 @@ function SlotEditor({ index, choices, onRemove }: SlotEditorProps) {
             />
           )}
         </Field>
+        <div className={styles.alignWithControl}>
+          <Checkbox
+            {...register(`comboSlots.${index}.isRequired`)}
+            label="Obligatorio"
+            description="Si no, el cliente puede dejarlo vacío."
+          />
+        </div>
         {onRemove && (
           <Button variant="ghost" onClick={onRemove} className={styles.alignWithControl}>
             <Trash2 size={18} aria-hidden="true" />

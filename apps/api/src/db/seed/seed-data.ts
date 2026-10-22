@@ -1,15 +1,41 @@
-import type { Allergen, OrderChannel, OrderStatus, QuickNote } from '@bigger/shared';
+import type { Allergen, OrderChannel, OrderStatus, ProductKind, QuickNote } from '@bigger/shared';
 
 /**
  * Datos de ejemplo tomados de los mockups validados (H3).
  * Se reemplazan por el catálogo real de BIGGER antes del piloto.
  */
 
+export interface SeedRule {
+  /** Customization group name. */
+  group: string;
+  min: number;
+  max: number;
+}
+
+export interface SeedSize {
+  name: string;
+  priceClp: number;
+  rules?: SeedRule[];
+}
+
+export interface SeedPromotion {
+  startsOn: string | null;
+  endsOn: string | null;
+}
+
 export interface SeedProduct {
   name: string;
+  subtitle?: string;
   description: string;
   priceClp: number;
   allergens: Allergen[];
+  /** With sizes, each size carries its own price and customization rules. */
+  sizes?: SeedSize[];
+  /** Customization groups offered, by name, in display order. */
+  groups?: string[];
+  /** Product type (template) name. */
+  type?: string;
+  promotion?: SeedPromotion;
 }
 
 export interface SeedCategory {
@@ -18,229 +44,235 @@ export interface SeedCategory {
   products: SeedProduct[];
 }
 
-const PASTRY_ALLERGENS: Allergen[] = ['gluten', 'lacteos', 'huevo'];
-
-export const SEED_CATEGORIES: readonly SeedCategory[] = [
-  {
-    slug: 'cafes',
-    name: 'Cafés',
-    products: [
-      {
-        name: 'Espresso',
-        description: 'Café de grano recién molido.',
-        priceClp: 1800,
-        allergens: [],
-      },
-      {
-        name: 'Americano',
-        description: 'Espresso alargado con agua caliente.',
-        priceClp: 2000,
-        allergens: [],
-      },
-      {
-        name: 'Capuchino',
-        description: 'Espresso, leche vaporizada y espuma.',
-        priceClp: 2500,
-        allergens: ['lacteos'],
-      },
-      {
-        name: 'Latte',
-        description: 'Espresso con abundante leche vaporizada.',
-        priceClp: 2700,
-        allergens: ['lacteos'],
-      },
-    ],
-  },
-  {
-    slug: 'pasteleria',
-    name: 'Pastelería',
-    products: [
-      {
-        name: 'Kuchen de frambuesa',
-        description: 'Masa casera, crema pastelera y frambuesas.',
-        priceClp: 3200,
-        allergens: PASTRY_ALLERGENS,
-      },
-      {
-        name: 'Torta mil hojas',
-        description: 'Hojarasca, manjar y crema chantilly.',
-        priceClp: 3800,
-        allergens: PASTRY_ALLERGENS,
-      },
-      {
-        name: 'Pie de limón',
-        description: 'Base crocante, crema de limón y merengue.',
-        priceClp: 3000,
-        allergens: PASTRY_ALLERGENS,
-      },
-      {
-        name: 'Brownie',
-        description: 'Chocolate intenso con nueces.',
-        priceClp: 2200,
-        allergens: [...PASTRY_ALLERGENS, 'frutos-secos'],
-      },
-      {
-        name: 'Medialuna',
-        description: 'Hojaldre de mantequilla.',
-        priceClp: 1200,
-        allergens: PASTRY_ALLERGENS,
-      },
-      {
-        name: 'Alfajor de maicena',
-        description: 'Relleno de manjar y coco rallado.',
-        priceClp: 1000,
-        allergens: PASTRY_ALLERGENS,
-      },
-      {
-        name: 'Cheesecake',
-        description: 'Queso crema sobre base de galleta.',
-        priceClp: 3500,
-        allergens: PASTRY_ALLERGENS,
-      },
-      {
-        name: 'Tartaleta de fruta',
-        description: 'Crema pastelera y fruta de temporada.',
-        priceClp: 3300,
-        allergens: PASTRY_ALLERGENS,
-      },
-    ],
-  },
-  {
-    slug: 'helados',
-    name: 'Helados',
-    products: [
-      {
-        name: 'Helado 1 sabor',
-        description: 'Helado artesanal en vaso o cono.',
-        priceClp: 2000,
-        allergens: ['lacteos'],
-      },
-      {
-        name: 'Helado 2 sabores',
-        description: 'Dos sabores de helado artesanal.',
-        priceClp: 2800,
-        allergens: ['lacteos'],
-      },
-    ],
-  },
-  {
-    slug: 'sandwiches',
-    name: 'Sándwiches',
-    products: [
-      {
-        name: 'Sándwich ave palta',
-        description: 'Pan amasado, pollo y palta.',
-        priceClp: 4200,
-        allergens: ['gluten'],
-      },
-      {
-        name: 'Sándwich jamón queso',
-        description: 'Pan de molde tostado.',
-        priceClp: 3200,
-        allergens: ['gluten', 'lacteos'],
-      },
-    ],
-  },
-  {
-    slug: 'bebidas',
-    name: 'Bebidas y jugos',
-    products: [
-      {
-        name: 'Jugo natural',
-        description: 'Fruta de temporada, sin azúcar añadida.',
-        priceClp: 2500,
-        allergens: [],
-      },
-      {
-        name: 'Agua mineral',
-        description: 'Con o sin gas, 500 ml.',
-        priceClp: 1200,
-        allergens: [],
-      },
-    ],
-  },
-];
-
 export interface SeedModifierGroup {
   name: string;
   minSelections: number;
   maxSelections: number;
   options: { name: string; priceDeltaClp: number }[];
-  /** Products (by name) that offer this customization. */
-  appliesTo: string[];
 }
-
-export const SEED_MODIFIER_GROUPS: readonly SeedModifierGroup[] = [
-  {
-    name: 'Tamaño',
-    minSelections: 1,
-    maxSelections: 1,
-    options: [
-      { name: 'Normal', priceDeltaClp: 0 },
-      { name: 'Grande', priceDeltaClp: 600 },
-    ],
-    appliesTo: ['Americano', 'Capuchino', 'Latte'],
-  },
-  {
-    name: 'Tipo de leche',
-    minSelections: 0,
-    maxSelections: 1,
-    options: [
-      { name: 'Entera', priceDeltaClp: 0 },
-      { name: 'Sin lactosa', priceDeltaClp: 300 },
-      { name: 'Vegetal', priceDeltaClp: 500 },
-    ],
-    appliesTo: ['Capuchino', 'Latte'],
-  },
-  {
-    name: 'Extras',
-    minSelections: 0,
-    maxSelections: 3,
-    options: [
-      { name: 'Crema', priceDeltaClp: 400 },
-      { name: 'Canela', priceDeltaClp: 0 },
-      { name: 'Shot extra de café', priceDeltaClp: 700 },
-    ],
-    appliesTo: ['Americano', 'Capuchino', 'Latte'],
-  },
-];
 
 export interface SeedCombo {
   categorySlug: string;
   name: string;
+  subtitle?: string;
   description: string;
   priceClp: number;
-  slots: { name: string; options: { productName: string; extraPriceClp: number }[] }[];
+  type?: string;
+  promotion?: SeedPromotion;
+  slots: {
+    name: string;
+    isRequired: boolean;
+    options: { productName: string; extraPriceClp: number }[];
+  }[];
 }
 
-export const SEED_COMBO_CATEGORY = { slug: 'combos', name: 'Combos' } as const;
+export interface SeedProductType {
+  name: string;
+  description: string;
+  kind: ProductKind;
+  sizes: SeedSize[];
+  groups: string[];
+  comboSlots: { name: string; isRequired: boolean }[];
+}
 
-export const SEED_COMBOS: readonly SeedCombo[] = [
+/** Fajitas: salsas gratis a elección (regla a validar con BIGGER: opcional, hasta 3). */
+const FAJITA = { groups: ['Salsas'], type: 'Fajita' } as const;
+
+const price = (name: string, priceClp: number): SeedProduct => ({
+  name,
+  description: '',
+  priceClp,
+  allergens: [],
+});
+
+const fajita = (name: string, priceClp: number): SeedProduct => ({
+  ...price(name, priceClp),
+  groups: [...FAJITA.groups],
+  type: FAJITA.type,
+});
+
+export const SEED_MODIFIER_GROUPS: readonly SeedModifierGroup[] = [
   {
-    categorySlug: SEED_COMBO_CATEGORY.slug,
-    name: 'Once BIGGER',
-    description: 'Un café y un dulce a elección.',
-    priceClp: 5200,
-    slots: [
-      {
-        name: 'Café a elección',
-        options: [
-          { productName: 'Americano', extraPriceClp: 0 },
-          { productName: 'Capuchino', extraPriceClp: 0 },
-          { productName: 'Latte', extraPriceClp: 200 },
-        ],
-      },
-      {
-        name: 'Dulce a elección',
-        options: [
-          { productName: 'Kuchen de frambuesa', extraPriceClp: 0 },
-          { productName: 'Medialuna', extraPriceClp: 0 },
-          { productName: 'Torta mil hojas', extraPriceClp: 600 },
-        ],
-      },
+    name: 'Salsas',
+    minSelections: 0,
+    maxSelections: 3,
+    options: ['Mayonesa', 'Ketchup', 'Mostaza', 'Ají', 'BBQ', 'Salsa verde', 'Ajo', 'Queso'].map(
+      (name) => ({ name, priceDeltaClp: 0 }),
+    ),
+  },
+  {
+    // Pollo, palta reina y huevo vienen incluidos; atún, churrasco y lengua suben el total de la
+    // ensalada grande a $5.400 / $5.600 / $5.600 (recargo sobre $4.900).
+    name: 'Proteína',
+    minSelections: 0,
+    maxSelections: 1,
+    options: [
+      { name: 'Pollo', priceDeltaClp: 0 },
+      { name: 'Palta reina', priceDeltaClp: 0 },
+      { name: 'Huevo', priceDeltaClp: 0 },
+      { name: 'Atún', priceDeltaClp: 500 },
+      { name: 'Churrasco', priceDeltaClp: 700 },
+      { name: 'Lengua', priceDeltaClp: 700 },
+    ],
+  },
+  {
+    name: 'Vegetales',
+    minSelections: 0,
+    maxSelections: 4,
+    options: [
+      'Aceituna',
+      'Apio',
+      'Arvejas',
+      'Betarraga',
+      'Brócoli',
+      'Cebolla',
+      'Choclo',
+      'Pepino',
+      'Pimentón',
+      'Porotos negros',
+      'Porotos verdes',
+      'Tomate',
+      'Zanahoria',
+    ].map((name) => ({ name, priceDeltaClp: 0 })),
+  },
+  {
+    name: 'Relleno',
+    minSelections: 1,
+    maxSelections: 1,
+    options: [
+      { name: 'Crema pastelera', priceDeltaClp: 0 },
+      { name: 'Manjar', priceDeltaClp: 0 },
     ],
   },
 ];
+
+/** Grande = 1 proteína + 4 vegetales (incluye lechuga) · Pequeña = 3 vegetales, sin proteína. */
+const SALAD_SIZES: SeedSize[] = [
+  {
+    name: 'Grande',
+    priceClp: 4900,
+    rules: [
+      { group: 'Proteína', min: 1, max: 1 },
+      { group: 'Vegetales', min: 4, max: 4 },
+    ],
+  },
+  {
+    name: 'Pequeña',
+    priceClp: 2500,
+    rules: [
+      { group: 'Proteína', min: 0, max: 0 },
+      { group: 'Vegetales', min: 3, max: 3 },
+    ],
+  },
+];
+
+export const SEED_PRODUCT_TYPES: readonly SeedProductType[] = [
+  {
+    name: 'Ensalada armable',
+    description: 'Grande con 1 proteína y 4 vegetales; pequeña con 3 vegetales.',
+    kind: 'single',
+    sizes: SALAD_SIZES,
+    groups: ['Proteína', 'Vegetales'],
+    comboSlots: [],
+  },
+  {
+    name: 'Fajita',
+    description: 'Fajita con salsas a elección.',
+    kind: 'single',
+    sizes: [],
+    groups: ['Salsas'],
+    comboSlots: [],
+  },
+];
+
+export const SEED_CATEGORIES: readonly SeedCategory[] = [
+  {
+    slug: 'churrascos',
+    name: 'Churrascos',
+    products: [
+      price('Solo', 3400),
+      price('Chacarero', 4590),
+      price('Italiano', 4900),
+      price('Luco', 3990),
+      price('Chemilico', 5190),
+    ],
+  },
+  {
+    slug: 'sandwiches-especiales',
+    name: 'Sándwiches especiales',
+    products: [
+      price('Napolitano', 3800),
+      price('Lechuga Jamón Tomate', 3500),
+      price('Lechuga Tomate Quesillo', 3500),
+      price('Lechuga Tomate Jamón Quesillo', 4200),
+    ],
+  },
+  {
+    slug: 'fajitas-vacuno',
+    name: 'Fajitas de vacuno',
+    products: [
+      fajita('Italiana', 4900),
+      fajita('Granjera', 4200),
+      fajita('Chacarera', 4300),
+      fajita('Chilena', 5000),
+      fajita('Americana', 5200),
+    ],
+  },
+  {
+    slug: 'fajitas-pollo',
+    name: 'Fajitas de pollo',
+    products: [fajita('Italiana pollo', 4500), fajita('Pollo 1', 3900), fajita('Pollo 2', 4200)],
+  },
+  {
+    slug: 'fajitas-especiales',
+    name: 'Fajitas especiales',
+    products: [
+      fajita('Napolitana', 3900),
+      fajita('Vegetariana', 3500),
+      fajita('Marina', 4500),
+      fajita('Atún', 4500),
+    ],
+  },
+  {
+    slug: 'ensaladas',
+    name: 'Ensaladas',
+    products: [
+      {
+        name: 'Arma tu ensalada',
+        subtitle: 'Grande o pequeña, con lechuga incluida',
+        description: '',
+        priceClp: 2500,
+        allergens: [],
+        sizes: SALAD_SIZES,
+        groups: ['Proteína', 'Vegetales'],
+        type: 'Ensalada armable',
+      },
+      price('César', 3800),
+    ],
+  },
+  {
+    slug: 'pasteles',
+    name: 'Pasteles',
+    products: [
+      { ...price('Media luna', 1300), groups: ['Relleno'] },
+      price('Pie limón', 1300),
+      price('Kuchen manzana', 1300),
+      price('Kuchen nuez', 1300),
+      price('Roll canela', 1300),
+      price('Crumbl cookies rellenas', 2700),
+      price('Cheesecake Berries', 3900),
+      price('Cheesecake Maracuyá', 3900),
+      price('Trozo queque', 900),
+      price('Muffins Chips', 1300),
+      price('Cuchuflís bañados artesanales', 1500),
+      price('Galletas bañadas artesanales', 1500),
+      price('Facturas', 1300),
+    ],
+  },
+];
+
+/** El catálogo real no tiene combos todavía; se crean desde Configuración. */
+export const SEED_COMBOS: readonly SeedCombo[] = [];
 
 export const SEED_TABLE_COUNT = 10;
 
@@ -267,8 +299,8 @@ export const SEED_DEMO_ORDERS: readonly SeedOrder[] = [
     tableNumber: 2,
     minutesAgo: 1,
     items: [
-      { productName: 'Capuchino', quantity: 2, quickNotes: ['no-sugar'] },
-      { productName: 'Torta mil hojas', quantity: 1, quickNotes: ['takeaway'] },
+      { productName: 'Chacarero', quantity: 2 },
+      { productName: 'Napolitano', quantity: 1, quickNotes: ['takeaway'] },
     ],
   },
   {
@@ -278,8 +310,8 @@ export const SEED_DEMO_ORDERS: readonly SeedOrder[] = [
     pickupInMinutes: 20,
     minutesAgo: 6,
     items: [
-      { productName: 'Capuchino', quantity: 2 },
-      { productName: 'Kuchen de frambuesa', quantity: 1 },
+      { productName: 'Italiano', quantity: 2 },
+      { productName: 'Pie limón', quantity: 1 },
     ],
   },
   {
@@ -288,8 +320,8 @@ export const SEED_DEMO_ORDERS: readonly SeedOrder[] = [
     tableNumber: 5,
     minutesAgo: 9,
     items: [
-      { productName: 'Sándwich ave palta', quantity: 1 },
-      { productName: 'Jugo natural', quantity: 1 },
+      { productName: 'Italiana', quantity: 1 },
+      { productName: 'Kuchen manzana', quantity: 1 },
     ],
   },
   {
@@ -297,7 +329,7 @@ export const SEED_DEMO_ORDERS: readonly SeedOrder[] = [
     status: 'ready',
     tableNumber: 8,
     minutesAgo: 12,
-    items: [{ productName: 'Helado 2 sabores', quantity: 3 }],
+    items: [{ productName: 'Roll canela', quantity: 3 }],
   },
   {
     channel: 'dine-in',
@@ -305,9 +337,8 @@ export const SEED_DEMO_ORDERS: readonly SeedOrder[] = [
     tableNumber: 4,
     minutesAgo: 25,
     items: [
-      { productName: 'Capuchino', quantity: 2 },
-      { productName: 'Torta mil hojas', quantity: 1 },
-      { productName: 'Alfajor de maicena', quantity: 1 },
+      { productName: 'Luco', quantity: 2 },
+      { productName: 'Cheesecake Berries', quantity: 1 },
     ],
   },
 ];

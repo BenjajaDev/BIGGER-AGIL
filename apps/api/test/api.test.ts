@@ -2,10 +2,11 @@ import {
   ApiErrorBodySchema,
   apiSuccessSchema,
   CategorySchema,
+  MenuProductSchema,
   MenuSchema,
   OrderSchema,
-  ProductSchema,
   TableOverviewSchema,
+  type MenuProduct,
 } from '@bigger/shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -22,6 +23,18 @@ afterEach(() => {
   context.connection.close();
 });
 
+async function catalogProducts(): Promise<MenuProduct[]> {
+  return apiSuccessSchema(z.array(MenuProductSchema)).parse(
+    (await request(context.app).get('/api/v1/products')).body,
+  ).data;
+}
+
+async function productNamed(name: string): Promise<MenuProduct> {
+  const product = (await catalogProducts()).find((candidate) => candidate.name === name);
+  if (!product) throw new Error(`El seed no tiene «${name}»`);
+  return product;
+}
+
 describe('GET /api/v1/health', () => {
   it('reports the service as healthy', async () => {
     const response = await request(context.app).get('/api/v1/health');
@@ -35,12 +48,13 @@ describe('catalog endpoints', () => {
     const response = await request(context.app).get('/api/v1/categories');
     const body = apiSuccessSchema(z.array(CategorySchema)).parse(response.body);
     expect(body.data.map((category) => category.slug)).toEqual([
-      'cafes',
-      'pasteleria',
-      'helados',
-      'sandwiches',
-      'bebidas',
-      'combos',
+      'churrascos',
+      'sandwiches-especiales',
+      'fajitas-vacuno',
+      'fajitas-pollo',
+      'fajitas-especiales',
+      'ensaladas',
+      'pasteles',
     ]);
   });
 
@@ -48,16 +62,17 @@ describe('catalog endpoints', () => {
     const categories = apiSuccessSchema(z.array(CategorySchema)).parse(
       (await request(context.app).get('/api/v1/categories')).body,
     ).data;
-    const helados = categories.find((category) => category.slug === 'helados');
+    const pollo = categories.find((category) => category.slug === 'fajitas-pollo');
 
     const response = await request(context.app)
       .get('/api/v1/products')
-      .query({ categoryId: helados?.id });
+      .query({ categoryId: pollo?.id });
 
-    const body = apiSuccessSchema(z.array(ProductSchema)).parse(response.body);
-    expect(body.data.map((product) => product.name)).toEqual([
-      'Helado 1 sabor',
-      'Helado 2 sabores',
+    const body = apiSuccessSchema(z.array(MenuProductSchema)).parse(response.body);
+    expect(body.data.map((product) => [product.name, product.priceClp])).toEqual([
+      ['Italiana pollo', 4500],
+      ['Pollo 1', 3900],
+      ['Pollo 2', 4200],
     ]);
   });
 
@@ -72,24 +87,38 @@ describe('catalog endpoints', () => {
   it('serves the public menu grouped by category', async () => {
     const response = await request(context.app).get('/api/v1/menu');
     const body = apiSuccessSchema(MenuSchema).parse(response.body);
-    expect(body.data.categories).toHaveLength(6);
+    expect(body.data.categories).toHaveLength(7);
     expect(body.data.categories.every((category) => category.products.length > 0)).toBe(true);
+    expect(body.data.promotions).toEqual([]);
 
     const products = body.data.categories.flatMap((category) => category.products);
-    const capuchino = products.find((product) => product.name === 'Capuchino');
-    expect(capuchino?.modifierGroups.map((group) => group.name)).toEqual([
-      'Tamaño',
-      'Tipo de leche',
-      'Extras',
-    ]);
+    expect(products).toHaveLength(36);
 
-    const once = products.find((product) => product.name === 'Once BIGGER');
-    expect(once?.kind).toBe('combo');
-    expect(once?.comboSlots.map((slot) => slot.name)).toEqual([
-      'Café a elección',
-      'Dulce a elección',
+    const fajita = products.find((product) => product.name === 'Chilena');
+    expect(fajita?.modifierGroups.map((group) => group.name)).toEqual(['Salsas']);
+  });
+
+  it('describes the build-your-own salad: sizes, prices and per-size rules', async () => {
+    const ensalada = await productNamed('Arma tu ensalada');
+    const groupId = (name: string) =>
+      ensalada.modifierGroups.find((group) => group.name === name)?.id;
+
+    expect(ensalada.priceClp).toBe(2500);
+    expect(ensalada.sizes.map((size) => [size.name, size.priceClp])).toEqual([
+      ['Grande', 4900],
+      ['Pequeña', 2500],
     ]);
-    expect(once?.allergens).toEqual(['gluten', 'lacteos', 'huevo']);
+    expect(ensalada.sizes[0]?.groupRules).toEqual(
+      expect.arrayContaining([
+        { groupId: groupId('Proteína'), minSelections: 1, maxSelections: 1 },
+        { groupId: groupId('Vegetales'), minSelections: 4, maxSelections: 4 },
+      ]),
+    );
+    expect(ensalada.sizes[1]?.groupRules).toEqual(
+      expect.arrayContaining([
+        { groupId: groupId('Proteína'), minSelections: 0, maxSelections: 0 },
+      ]),
+    );
   });
 });
 
@@ -106,11 +135,7 @@ describe('GET /api/v1/orders', () => {
       'preparing',
       'new',
     ]);
-    expect(body.data.at(-1)?.items[0]).toMatchObject({
-      productName: 'Capuchino',
-      quantity: 2,
-      quickNotes: ['no-sugar'],
-    });
+    expect(body.data.at(-1)?.items[0]).toMatchObject({ productName: 'Chacarero', quantity: 2 });
   });
 
   it('filters WhatsApp orders', async () => {
@@ -138,18 +163,9 @@ describe('POST /api/v1/orders', () => {
     return table;
   }
 
-  async function capuchino() {
-    const products = apiSuccessSchema(z.array(ProductSchema)).parse(
-      (await request(context.app).get('/api/v1/products')).body,
-    ).data;
-    const product = products.find((candidate) => candidate.name === 'Capuchino');
-    if (!product) throw new Error('El seed no tiene Capuchino');
-    return product;
-  }
-
   it('creates a dine-in order, prices it on the server and publishes it', async () => {
     const table = await freeTable();
-    const product = await capuchino();
+    const product = await productNamed('Chacarero');
     const events: unknown[] = [];
     context.eventHub.subscribe((event) => events.push(event));
 
@@ -158,34 +174,32 @@ describe('POST /api/v1/orders', () => {
       .send({
         channel: 'dine-in',
         tableId: table.id,
-        items: [{ productId: product.id, quantity: 2, quickNotes: ['no-sugar'] }],
+        items: [{ productId: product.id, quantity: 2, quickNotes: ['takeaway'] }],
       });
 
     expect(response.status).toBe(201);
     const order = apiSuccessSchema(OrderSchema).parse(response.body).data;
     expect(order.status).toBe('new');
     expect(order.tableLabel).toBe(table.label);
-    expect(order.totalClp).toBe(product.priceClp * 2);
+    expect(order.totalClp).toBe(4590 * 2);
     expect(order.items[0]).toMatchObject({
-      productName: 'Capuchino',
-      unitPriceClp: product.priceClp,
+      productName: 'Chacarero',
+      unitPriceClp: 4590,
       quantity: 2,
-      quickNotes: ['no-sugar'],
+      quickNotes: ['takeaway'],
     });
     expect(events).toEqual([{ type: 'order.created', payload: order }]);
   });
 
-  it('resolves a chosen option, snapshots it and adds it to the total', async () => {
+  it('prices a salad by size and snapshots size, protein and vegetables', async () => {
     const table = await freeTable();
-    const menu = apiSuccessSchema(MenuSchema).parse(
-      (await request(context.app).get('/api/v1/menu')).body,
-    ).data;
-    const product = menu.categories
-      .flatMap((category) => category.products)
-      .find((candidate) => candidate.name === 'Capuchino');
-    const group = product?.modifierGroups[0];
-    const option = group?.options.find((candidate) => candidate.priceDeltaClp > 0);
-    if (!product || !group || !option) throw new Error('El seed no tiene un extra con precio');
+    const ensalada = await productNamed('Arma tu ensalada');
+    const grande = ensalada.sizes.find((size) => size.name === 'Grande');
+    const group = (name: string) => ensalada.modifierGroups.find((g) => g.name === name);
+    const proteina = group('Proteína');
+    const vegetales = group('Vegetales');
+    const atun = proteina?.options.find((option) => option.name === 'Atún');
+    if (!grande || !proteina || !vegetales || !atun) throw new Error('Seed de ensalada incompleto');
 
     const response = await request(context.app)
       .post('/api/v1/orders')
@@ -194,29 +208,85 @@ describe('POST /api/v1/orders', () => {
         tableId: table.id,
         items: [
           {
-            productId: product.id,
+            productId: ensalada.id,
+            sizeId: grande.id,
             quantity: 1,
-            options: [{ groupId: group.id, optionId: option.id }],
+            options: [
+              { groupId: proteina.id, optionId: atun.id },
+              ...vegetales.options
+                .slice(0, 4)
+                .map((option) => ({ groupId: vegetales.id, optionId: option.id })),
+            ],
           },
         ],
       });
 
     expect(response.status).toBe(201);
     const order = apiSuccessSchema(OrderSchema).parse(response.body).data;
-    expect(order.items[0]?.options).toEqual([
-      {
-        kind: 'modifier',
-        label: group.name,
-        name: option.name,
-        priceDeltaClp: option.priceDeltaClp,
-      },
+    // $4.900 la grande + $500 por atún = $5.400, como en la carta.
+    expect(order.totalClp).toBe(5400);
+    expect(order.items[0]?.options.slice(0, 2)).toEqual([
+      { kind: 'size', label: 'Tamaño', name: 'Grande', priceDeltaClp: 0 },
+      { kind: 'modifier', label: 'Proteína', name: 'Atún', priceDeltaClp: 500 },
     ]);
-    expect(order.totalClp).toBe(product.priceClp + option.priceDeltaClp);
+  });
+
+  it('rejects a small salad with protein: the size does not offer it', async () => {
+    const table = await freeTable();
+    const ensalada = await productNamed('Arma tu ensalada');
+    const pequena = ensalada.sizes.find((size) => size.name === 'Pequeña');
+    const proteina = ensalada.modifierGroups.find((g) => g.name === 'Proteína');
+    const pollo = proteina?.options[0];
+    if (!pequena || !proteina || !pollo) throw new Error('Seed de ensalada incompleto');
+
+    const response = await request(context.app)
+      .post('/api/v1/orders')
+      .send({
+        channel: 'dine-in',
+        tableId: table.id,
+        items: [
+          {
+            productId: ensalada.id,
+            sizeId: pequena.id,
+            quantity: 1,
+            options: [{ groupId: proteina.id, optionId: pollo.id }],
+          },
+        ],
+      });
+
+    expect(response.status).toBe(400);
+    expect(ApiErrorBodySchema.parse(response.body).error.issues).toEqual(
+      expect.arrayContaining([
+        {
+          path: 'items.0.options.0',
+          message: 'Esa personalización no se ofrece en tamaño Pequeña',
+        },
+        { path: 'items.0.options', message: 'Elige al menos 3 en «Vegetales»' },
+      ]),
+    );
+  });
+
+  it('requires the filling of a media luna', async () => {
+    const table = await freeTable();
+    const medialuna = await productNamed('Media luna');
+
+    const response = await request(context.app)
+      .post('/api/v1/orders')
+      .send({
+        channel: 'dine-in',
+        tableId: table.id,
+        items: [{ productId: medialuna.id, quantity: 1 }],
+      });
+
+    expect(response.status).toBe(400);
+    expect(ApiErrorBodySchema.parse(response.body).error.issues).toEqual([
+      { path: 'items.0.options', message: 'Elige al menos 1 en «Relleno»' },
+    ]);
   });
 
   it('marks the table occupied once the order exists', async () => {
     const table = await freeTable();
-    const product = await capuchino();
+    const product = await productNamed('Luco');
 
     await request(context.app)
       .post('/api/v1/orders')
@@ -233,7 +303,7 @@ describe('POST /api/v1/orders', () => {
   });
 
   it('rejects a takeaway order without a customer name', async () => {
-    const product = await capuchino();
+    const product = await productNamed('Luco');
 
     const response = await request(context.app)
       .post('/api/v1/orders')
@@ -245,7 +315,7 @@ describe('POST /api/v1/orders', () => {
   });
 
   it('rejects a dine-in order without a table', async () => {
-    const product = await capuchino();
+    const product = await productNamed('Luco');
 
     const response = await request(context.app)
       .post('/api/v1/orders')
@@ -272,7 +342,8 @@ describe('GET /api/v1/tables', () => {
       5: 'occupied',
       8: 'occupied',
     });
-    expect(body.data.find((table) => table.number === 4)?.openTotalClp).toBe(9800);
+    // 2 × Luco ($3.990) + 1 × Cheesecake Berries ($3.900).
+    expect(body.data.find((table) => table.number === 4)?.openTotalClp).toBe(11880);
   });
 });
 

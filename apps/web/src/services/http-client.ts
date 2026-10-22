@@ -74,6 +74,13 @@ export async function requestJson<T extends z.ZodType>(
     throw new ApiRequestError('NETWORK_ERROR', 'No hay conexión con el servidor del local', null);
   }
 
+  return parseResponse(response, schema);
+}
+
+async function parseResponse<T extends z.ZodType>(
+  response: Response,
+  schema: T,
+): Promise<z.output<T>> {
   const payload = await readJson(response);
 
   if (!response.ok) {
@@ -102,6 +109,26 @@ export async function requestJson<T extends z.ZodType>(
     );
   }
   return parsed.data;
+}
+
+/** Sends a file as the raw request body (the API takes `image/*` bodies, no multipart). */
+export async function uploadFile<T extends z.ZodType>(
+  path: string,
+  file: Blob,
+  schema: T,
+): Promise<z.output<T>> {
+  let response: Response;
+  try {
+    response = await fetch(buildApiUrl(path), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { Accept: 'application/json', 'Content-Type': file.type },
+      body: file,
+    });
+  } catch {
+    throw new ApiRequestError('NETWORK_ERROR', 'No hay conexión con el servidor del local', null);
+  }
+  return parseResponse(response, schema);
 }
 
 export function getJson<T extends z.ZodType>(

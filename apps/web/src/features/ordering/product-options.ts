@@ -1,66 +1,121 @@
-import type { MenuProduct, ModifierGroup, QuickNote } from '@bigger/shared';
+import {
+  resolveGroupRules,
+  type EffectiveGroupRule,
+  type MenuProduct,
+  type ProductSize,
+  type QuickNote,
+} from '@bigger/shared';
 import type { ComboChoice, LineConfig, SelectedOption } from './order-draft';
 
-/** Modifier option ids chosen per group, and the product chosen per combo slot. */
+/** Chosen size, modifier option ids per group, and the product chosen per combo slot. */
 export interface OptionSelection {
+  sizeId: string | null;
   options: Record<string, string[]>;
   combo: Record<string, string>;
   quickNotes: QuickNote[];
   note: string;
 }
 
+export type SelectionRule = Pick<EffectiveGroupRule, 'group' | 'minSelections' | 'maxSelections'>;
+
 /** A product opens the options modal only when it has something to choose. */
 export function needsModal(product: MenuProduct): boolean {
-  return product.modifierGroups.length > 0 || product.comboSlots.length > 0;
+  return (
+    product.sizes.length > 0 || product.modifierGroups.length > 0 || product.comboSlots.length > 0
+  );
 }
 
-/** Required single-choice groups and combo slots start on their first available option. */
-export function initialSelection(product: MenuProduct): OptionSelection {
-  const options: Record<string, string[]> = {};
-  for (const group of product.modifierGroups) {
-    const first = group.options.find((option) => option.isAvailable);
-    options[group.id] =
-      group.minSelections >= 1 && group.maxSelections === 1 && first ? [first.id] : [];
+export function selectedSize(product: MenuProduct, selection: OptionSelection): ProductSize | null {
+  return product.sizes.find((size) => size.id === selection.sizeId) ?? null;
+}
+
+/** Customizations offered for the chosen size, with that size's min/max ("Grande: 1 proteína"). */
+export function effectiveRules(
+  product: MenuProduct,
+  selection: OptionSelection,
+): EffectiveGroupRule[] {
+  return resolveGroupRules(product.modifierGroups, selectedSize(product, selection));
+}
+
+/** Keeps only what the rules allow: drops groups the size does not offer, trims to each maximum
+ * and preselects the first option of a required single choice. */
+function conformToRules(
+  options: Record<string, string[]>,
+  rules: readonly EffectiveGroupRule[],
+): Record<string, string[]> {
+  const next: Record<string, string[]> = {};
+  for (const rule of rules) {
+    const kept = (options[rule.group.id] ?? []).slice(0, rule.maxSelections);
+    const first = rule.group.options.find((option) => option.isAvailable);
+    next[rule.group.id] =
+      kept.length === 0 && rule.minSelections >= 1 && rule.maxSelections === 1 && first
+        ? [first.id]
+        : kept;
   }
+  return next;
+}
+
+/** First size, required single-choice groups and required combo slots start pre-filled. */
+export function initialSelection(product: MenuProduct): OptionSelection {
+  const base: OptionSelection = {
+    sizeId: product.sizes[0]?.id ?? null,
+    options: {},
+    combo: {},
+    quickNotes: [],
+    note: '',
+  };
   const combo: Record<string, string> = {};
   for (const slot of product.comboSlots) {
     const first = slot.options.find((option) => option.isAvailable);
-    if (first) combo[slot.id] = first.productId;
+    if (slot.isRequired && first) combo[slot.id] = first.productId;
   }
-  return { options, combo, quickNotes: [], note: '' };
+  return { ...base, combo, options: conformToRules({}, effectiveRules(product, base)) };
+}
+
+export function chooseSize(
+  product: MenuProduct,
+  selection: OptionSelection,
+  sizeId: string,
+): OptionSelection {
+  const next = { ...selection, sizeId };
+  return { ...next, options: conformToRules(selection.options, effectiveRules(product, next)) };
 }
 
 export function toggleOption(
   selection: OptionSelection,
-  group: ModifierGroup,
+  rule: SelectionRule,
   optionId: string,
 ): OptionSelection {
+  const { group } = rule;
   const current = selection.options[group.id] ?? [];
   const has = current.includes(optionId);
   let next: string[];
-  if (group.maxSelections === 1) {
-    next = has && group.minSelections === 0 ? [] : [optionId];
+  if (rule.maxSelections === 1) {
+    next = has && rule.minSelections === 0 ? [] : [optionId];
   } else if (has) {
     next = current.filter((id) => id !== optionId);
   } else {
-    next = current.length >= group.maxSelections ? current : [...current, optionId];
+    next = current.length >= rule.maxSelections ? current : [...current, optionId];
   }
   return { ...selection, options: { ...selection.options, [group.id]: next } };
 }
 
+/** `null` leaves an optional slot empty ("sin donut"). */
 export function chooseComboOption(
   selection: OptionSelection,
   slotId: string,
-  productId: string,
+  productId: string | null,
 ): OptionSelection {
-  return { ...selection, combo: { ...selection.combo, [slotId]: productId } };
+  const others = Object.entries(selection.combo).filter(([id]) => id !== slotId);
+  const combo = Object.fromEntries(productId === null ? others : [...others, [slotId, productId]]);
+  return { ...selection, combo };
 }
 
 export function selectionPriceClp(product: MenuProduct, selection: OptionSelection): number {
-  let price = product.priceClp;
-  for (const group of product.modifierGroups) {
-    for (const optionId of selection.options[group.id] ?? []) {
-      price += group.options.find((option) => option.id === optionId)?.priceDeltaClp ?? 0;
+  let price = selectedSize(product, selection)?.priceClp ?? product.priceClp;
+  for (const rule of effectiveRules(product, selection)) {
+    for (const optionId of selection.options[rule.group.id] ?? []) {
+      price += rule.group.options.find((option) => option.id === optionId)?.priceDeltaClp ?? 0;
     }
   }
   for (const slot of product.comboSlots) {
@@ -70,24 +125,29 @@ export function selectionPriceClp(product: MenuProduct, selection: OptionSelecti
   return price;
 }
 
-/** Every mandatory group meets its minimum and every combo slot has a choice. */
+/** A size is chosen when needed, every rule is met and every required combo slot has a choice. */
 export function isSelectionComplete(product: MenuProduct, selection: OptionSelection): boolean {
-  const groupsOk = product.modifierGroups.every(
-    (group) => (selection.options[group.id] ?? []).length >= group.minSelections,
+  if (product.sizes.length > 0 && selectedSize(product, selection) === null) return false;
+  const rulesOk = effectiveRules(product, selection).every((rule) => {
+    const chosen = (selection.options[rule.group.id] ?? []).length;
+    return chosen >= rule.minSelections && chosen <= rule.maxSelections;
+  });
+  const combosOk = product.comboSlots.every(
+    (slot) => !slot.isRequired || Boolean(selection.combo[slot.id]),
   );
-  const combosOk = product.comboSlots.every((slot) => Boolean(selection.combo[slot.id]));
-  return groupsOk && combosOk;
+  return rulesOk && combosOk;
 }
 
 export function toLineConfig(product: MenuProduct, selection: OptionSelection): LineConfig {
+  const size = selectedSize(product, selection);
   const options: SelectedOption[] = [];
-  for (const group of product.modifierGroups) {
-    for (const optionId of selection.options[group.id] ?? []) {
-      const option = group.options.find((candidate) => candidate.id === optionId);
+  for (const rule of effectiveRules(product, selection)) {
+    for (const optionId of selection.options[rule.group.id] ?? []) {
+      const option = rule.group.options.find((candidate) => candidate.id === optionId);
       if (option) {
         options.push({
-          groupId: group.id,
-          groupName: group.name,
+          groupId: rule.group.id,
+          groupName: rule.group.name,
           optionId: option.id,
           optionName: option.name,
           priceDeltaClp: option.priceDeltaClp,
@@ -110,5 +170,11 @@ export function toLineConfig(product: MenuProduct, selection: OptionSelection): 
       });
     }
   }
-  return { options, comboChoices, quickNotes: selection.quickNotes, note: selection.note };
+  return {
+    size: size ? { sizeId: size.id, sizeName: size.name, priceClp: size.priceClp } : null,
+    options,
+    comboChoices,
+    quickNotes: selection.quickNotes,
+    note: selection.note,
+  };
 }

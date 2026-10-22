@@ -23,6 +23,7 @@ export function draftToCreateOrder(draft: OrderDraft, target: OrderTarget): Crea
       quantity: line.quantity,
       quickNotes: line.quickNotes,
       note: cleaned(line.note),
+      sizeId: line.size?.sizeId ?? null,
       options: line.options.map((option) => ({
         groupId: option.groupId,
         optionId: option.optionId,

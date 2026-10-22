@@ -2,6 +2,15 @@ import { existsSync } from 'node:fs';
 import { z } from 'zod';
 import { PIN_HASH_PATTERN } from '../modules/admin-auth/pin-hash.js';
 
+function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat('es-CL', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().min(1).default('127.0.0.1'),
@@ -18,6 +27,13 @@ const EnvSchema = z.object({
     )
     .pipe(z.array(z.url()).min(1)),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  /** Where processed product and category pictures are stored. */
+  UPLOADS_DIR: z.string().min(1).default('./data/uploads'),
+  /** The shop's time zone: decides on which calendar day a promotion starts and ends. */
+  BUSINESS_TIMEZONE: z
+    .string()
+    .default('America/Santiago')
+    .refine(isTimeZone, 'Zona horaria IANA inválida (ej.: America/Santiago)'),
   ADMIN_PIN_HASH: z
     .string()
     .regex(PIN_HASH_PATTERN, 'Genera el valor con: pnpm --filter @bigger/api admin:pin'),

@@ -1,20 +1,24 @@
 import type { AdminCategory, CategoryInput } from '@bigger/shared';
 import { AppError } from '../../core/errors/app-error.js';
 import type { RealtimePublisher } from '../../realtime/event-hub.js';
+import type { CatalogLookups } from './catalog-lookups.js';
 import type { CategoriesAdminRepository } from './categories.repository.js';
 import { sameName, slugify } from './slugify.js';
 
 export class CategoriesAdminService {
   readonly #repository: CategoriesAdminRepository;
+  readonly #lookups: CatalogLookups;
   readonly #publisher: RealtimePublisher;
   readonly #now: () => Date;
 
   constructor(
     repository: CategoriesAdminRepository,
+    lookups: CatalogLookups,
     publisher: RealtimePublisher,
     now: () => Date = () => new Date(),
   ) {
     this.#repository = repository;
+    this.#lookups = lookups;
     this.#publisher = publisher;
     this.#now = now;
   }
@@ -23,17 +27,31 @@ export class CategoriesAdminService {
     return this.#repository.list(includeArchived);
   }
 
-  async create({ name }: CategoryInput): Promise<AdminCategory> {
-    await this.#assertNameIsFree(name, null);
-    const id = await this.#repository.create({ name, slug: await this.#uniqueSlug(name) });
+  async create(input: CategoryInput): Promise<AdminCategory> {
+    await this.#assertImageExists(input);
+    await this.#assertNameIsFree(input.name, null);
+    const id = await this.#repository.create({
+      ...input,
+      slug: await this.#uniqueSlug(input.name),
+    });
     return this.#changed(id);
   }
 
-  async rename(id: string, { name }: CategoryInput): Promise<AdminCategory> {
+  /** Renames and/or changes the picture; the slug (used in /carta URLs and QR codes) is kept. */
+  async update(id: string, input: CategoryInput): Promise<AdminCategory> {
     await this.#get(id);
-    await this.#assertNameIsFree(name, id);
-    await this.#repository.rename(id, name);
+    await this.#assertImageExists(input);
+    await this.#assertNameIsFree(input.name, id);
+    await this.#repository.update(id, input);
     return this.#changed(id);
+  }
+
+  async #assertImageExists({ image }: CategoryInput): Promise<void> {
+    if (image && (await this.#lookups.existingImageIds([image.imageId])).length === 0) {
+      throw AppError.validation([
+        { path: 'image.imageId', message: 'La foto ya no existe; súbela de nuevo' },
+      ]);
+    }
   }
 
   async archive(id: string): Promise<AdminCategory> {

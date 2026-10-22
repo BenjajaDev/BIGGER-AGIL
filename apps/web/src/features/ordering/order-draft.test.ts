@@ -11,7 +11,7 @@ import {
 
 const capuchino = { id: 'p-1', name: 'Capuchino', priceClp: 2500 };
 const torta = { id: 'p-2', name: 'Torta mil hojas', priceClp: 3800 };
-const plain: LineConfig = { options: [], comboChoices: [], quickNotes: [], note: '' };
+const plain: LineConfig = { size: null, options: [], comboChoices: [], quickNotes: [], note: '' };
 const withMilk: LineConfig = {
   ...plain,
   options: [
@@ -124,5 +124,29 @@ describe('draftTotalClp', () => {
     );
     // (2500 + 500) × 2 + 3800 = 9800
     expect(draftTotalClp(draft)).toBe(9800);
+  });
+
+  it('prices a sized line by its size and keeps different sizes on separate lines', () => {
+    const ensalada = { id: 'p-9', name: 'Arma tu ensalada', priceClp: 2500 };
+    const grande: LineConfig = {
+      ...plain,
+      size: { sizeId: 's-g', sizeName: 'Grande', priceClp: 4900 },
+    };
+    const pequena: LineConfig = {
+      ...plain,
+      size: { sizeId: 's-p', sizeName: 'Pequeña', priceClp: 2500 },
+    };
+    const draft = draftWith(
+      { type: 'add-line', lineId: 'l-1', product: ensalada, config: grande },
+      { type: 'add-line', lineId: 'l-2', product: ensalada, config: grande },
+      { type: 'add-line', lineId: 'l-3', product: ensalada, config: pequena },
+    );
+    expect(
+      draft.lines.map((line) => [line.size?.sizeName, line.quantity, line.basePriceClp]),
+    ).toEqual([
+      ['Grande', 2, 4900],
+      ['Pequeña', 1, 2500],
+    ]);
+    expect(draftTotalClp(draft)).toBe(4900 * 2 + 2500);
   });
 });

@@ -1,5 +1,5 @@
 import type { AdminModifierGroup, ModifierGroupInput } from '@bigger/shared';
-import { and, count, eq, inArray, isNull } from 'drizzle-orm';
+import { and, count, eq, isNull } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { AppDatabase } from '../../db/client.js';
 import {
@@ -14,7 +14,6 @@ import type { Transaction } from './transaction.js';
 export interface ModifierGroupsAdminRepository {
   list: () => Promise<AdminModifierGroup[]>;
   findById: (id: string) => Promise<AdminModifierGroup | null>;
-  existingIds: (ids: readonly string[]) => Promise<string[]>;
   create: (input: ModifierGroupInput) => Promise<string>;
   update: (id: string, input: ModifierGroupInput) => Promise<void>;
   delete: (id: string) => Promise<void>;
@@ -68,15 +67,6 @@ export class DrizzleModifierGroupsAdminRepository implements ModifierGroupsAdmin
   async findById(id: string): Promise<AdminModifierGroup | null> {
     const all = await this.list();
     return all.find((group) => group.id === id) ?? null;
-  }
-
-  async existingIds(ids: readonly string[]): Promise<string[]> {
-    if (ids.length === 0) return [];
-    const rows = await this.#db
-      .select({ id: modifierGroups.id })
-      .from(modifierGroups)
-      .where(inArray(modifierGroups.id, [...ids]));
-    return rows.map((row) => row.id);
   }
 
   create(input: ModifierGroupInput): Promise<string> {

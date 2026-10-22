@@ -1,35 +1,32 @@
-import type { AdminProduct } from '@bigger/shared';
+import { makeAdminProduct } from '../../test/fixtures';
 import { describeProductConfiguration } from './product-summary';
 
-const base: AdminProduct = {
-  id: 'p-1',
-  categoryId: 'c-1',
-  kind: 'single',
-  name: 'Capuchino',
-  description: '',
-  priceClp: 2500,
-  allergens: [],
-  isAvailable: true,
-  sortOrder: 0,
-  archivedAt: null,
-  modifierGroupIds: ['g-1', 'g-2'],
-  comboSlots: [],
-};
+const base = makeAdminProduct({ modifierGroupIds: ['g-1', 'g-2'] });
 
 describe('describeProductConfiguration', () => {
   it('lists the customizations of a product', () => {
     expect(
       describeProductConfiguration(base, [
-        { id: 'g-1', name: 'Tamaño' },
-        { id: 'g-2', name: 'Tipo de leche' },
+        { id: 'g-1', name: 'Salsas' },
+        { id: 'g-2', name: 'Vegetales' },
       ]),
-    ).toBe('Personalizable: Tamaño, Tipo de leche');
+    ).toBe('Personalizable: Salsas, Vegetales');
     expect(describeProductConfiguration({ ...base, modifierGroupIds: [] }, [])).toBe(
       'Sin personalizaciones',
     );
   });
 
-  it('summarizes what a combo lets the customer choose', () => {
+  it('names the sizes before the customizations', () => {
+    const size = (name: string) => ({ id: name, name, priceClp: 2500, groupRules: [] });
+    expect(
+      describeProductConfiguration(
+        { ...base, modifierGroupIds: ['g-1'], sizes: [size('Grande'), size('Pequeña')] },
+        [{ id: 'g-1', name: 'Vegetales' }],
+      ),
+    ).toBe('Tamaños: Grande / Pequeña · Personalizable: Vegetales');
+  });
+
+  it('summarizes what a combo lets the customer choose and marks optional slots', () => {
     const option = (productName: string) => ({
       productId: productName,
       productName,
@@ -43,12 +40,17 @@ describe('describeProductConfiguration', () => {
           ...base,
           kind: 'combo',
           comboSlots: [
-            { id: 's-1', name: 'Café', options: [option('Americano'), option('Latte')] },
-            { id: 's-2', name: 'Dulce', options: [option('Medialuna')] },
+            {
+              id: 's-1',
+              name: 'Churrasco',
+              isRequired: true,
+              options: [option('Luco'), option('Italiano')],
+            },
+            { id: 's-2', name: 'Pastel', isRequired: false, options: [option('Pie de limón')] },
           ],
         },
         [],
       ),
-    ).toBe('Café: Americano / Latte + Dulce: Medialuna');
+    ).toBe('Churrasco: Luco / Italiano + Pastel (opcional): Pie de limón');
   });
 });

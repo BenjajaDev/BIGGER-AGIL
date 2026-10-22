@@ -1,30 +1,8 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { Link, type LinkProps } from 'react-router';
-import { cx } from '../../lib/cx';
-import styles from './Button.module.css';
+import { buttonClassName, type ButtonStyleProps } from './button-styles';
 
-/** `primary` (rojo BIGGER) is reserved for the main action of each view. */
-export type ButtonVariant = 'primary' | 'secondary' | 'success' | 'warning' | 'ghost';
-export type ButtonSize = 'md' | 'lg';
-
-interface ButtonStyleProps {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  fullWidth?: boolean;
-}
-
-function buttonClassName(
-  { variant = 'secondary', size = 'md', fullWidth = false }: ButtonStyleProps,
-  className?: string,
-): string {
-  return cx(
-    styles.button,
-    styles[variant],
-    size === 'lg' && styles.lg,
-    fullWidth && styles.fullWidth,
-    className,
-  );
-}
+export type { ButtonSize, ButtonVariant } from './button-styles';
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & ButtonStyleProps;
 

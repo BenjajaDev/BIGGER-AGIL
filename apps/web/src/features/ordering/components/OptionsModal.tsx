@@ -7,8 +7,11 @@ import { Chip } from '../../../components/ui/Chip';
 import { formatClp } from '../../../lib/format';
 import type { LineConfig } from '../order-draft';
 import { QUICK_NOTE_LABELS } from '../../orders/order-text';
+import { describeRuleRange, describeSizeRules } from '../../menu/menu-details';
 import {
   chooseComboOption,
+  chooseSize,
+  effectiveRules,
   initialSelection,
   isSelectionComplete,
   selectionPriceClp,
@@ -24,7 +27,7 @@ export interface OptionsModalProps {
   onConfirm: (config: LineConfig) => void;
 }
 
-const EMPTY: OptionSelection = { options: {}, combo: {}, quickNotes: [], note: '' };
+const EMPTY: OptionSelection = { sizeId: null, options: {}, combo: {}, quickNotes: [], note: '' };
 
 export function OptionsModal({ product, onClose, onConfirm }: OptionsModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -47,6 +50,9 @@ export function OptionsModal({ product, onClose, onConfirm }: OptionsModalProps)
 
   const price = selectionPriceClp(product, selection);
   const complete = isSelectionComplete(product, selection);
+  const rules = effectiveRules(product, selection);
+  const basePrice =
+    product.sizes.find((size) => size.id === selection.sizeId)?.priceClp ?? product.priceClp;
 
   return (
     <dialog ref={dialogRef} className={styles.dialog} aria-labelledby={titleId} onClose={onClose}>
@@ -55,7 +61,7 @@ export function OptionsModal({ product, onClose, onConfirm }: OptionsModalProps)
           <h2 id={titleId} className={styles.name}>
             {product.name}
           </h2>
-          <p className={styles.base}>Base {formatClp(product.priceClp)}</p>
+          <p className={styles.base}>Base {formatClp(basePrice)}</p>
         </div>
         <button type="button" className={styles.close} aria-label="Cerrar" onClick={onClose}>
           <X size={20} aria-hidden="true" />
@@ -63,40 +69,95 @@ export function OptionsModal({ product, onClose, onConfirm }: OptionsModalProps)
       </div>
 
       <div className={styles.body}>
-        {product.modifierGroups.map((group) => {
+        {product.sizes.length > 0 && (
+          <fieldset className={styles.group}>
+            <legend className={styles.legend}>Tamaño</legend>
+            {product.sizes.map((size) => {
+              const includes = describeSizeRules(product.modifierGroups, size);
+              return (
+                <label key={size.id} className={styles.option}>
+                  <input
+                    type="radio"
+                    name={`${titleId}-size`}
+                    checked={selection.sizeId === size.id}
+                    onChange={() => {
+                      setSelection((current) => chooseSize(product, current, size.id));
+                    }}
+                  />
+                  <span className={styles.optionName}>
+                    {size.name}
+                    {includes && <span className={styles.optional}> · {includes}</span>}
+                  </span>
+                  <span className={styles.optionPrice}>{formatClp(size.priceClp)}</span>
+                </label>
+              );
+            })}
+          </fieldset>
+        )}
+
+        {rules.map((rule) => {
+          const { group } = rule;
           const selected = selection.options[group.id] ?? [];
-          const multiple = group.maxSelections > 1;
+          const multiple = rule.maxSelections > 1;
           return (
             <fieldset key={group.id} className={styles.group}>
               <legend className={styles.legend}>
                 {group.name}
-                {group.minSelections === 0 && <span className={styles.optional}> · opcional</span>}
+                <span className={styles.optional}>
+                  {' · '}
+                  {rule.minSelections === 0
+                    ? `opcional${multiple ? `, hasta ${rule.maxSelections}` : ''}`
+                    : `elige ${describeRuleRange(rule.minSelections, rule.maxSelections)}`}
+                  {multiple && ` (${selected.length}/${rule.maxSelections})`}
+                </span>
               </legend>
               {group.options
                 .filter((option) => option.isAvailable)
-                .map((option) => (
-                  <label key={option.id} className={styles.option}>
-                    <input
-                      type={multiple ? 'checkbox' : 'radio'}
-                      name={group.id}
-                      checked={selected.includes(option.id)}
-                      onChange={() => {
-                        setSelection((current) => toggleOption(current, group, option.id));
-                      }}
-                    />
-                    <span className={styles.optionName}>{option.name}</span>
-                    {option.priceDeltaClp > 0 && (
-                      <span className={styles.optionPrice}>+{formatClp(option.priceDeltaClp)}</span>
-                    )}
-                  </label>
-                ))}
+                .map((option) => {
+                  const checked = selected.includes(option.id);
+                  return (
+                    <label key={option.id} className={styles.option}>
+                      <input
+                        type={multiple ? 'checkbox' : 'radio'}
+                        name={group.id}
+                        checked={checked}
+                        disabled={multiple && !checked && selected.length >= rule.maxSelections}
+                        onChange={() => {
+                          setSelection((current) => toggleOption(current, rule, option.id));
+                        }}
+                      />
+                      <span className={styles.optionName}>{option.name}</span>
+                      {option.priceDeltaClp > 0 && (
+                        <span className={styles.optionPrice}>
+                          +{formatClp(option.priceDeltaClp)}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
             </fieldset>
           );
         })}
 
         {product.comboSlots.map((slot) => (
           <fieldset key={slot.id} className={styles.group}>
-            <legend className={styles.legend}>{slot.name}</legend>
+            <legend className={styles.legend}>
+              {slot.name}
+              {!slot.isRequired && <span className={styles.optional}> · opcional</span>}
+            </legend>
+            {!slot.isRequired && (
+              <label className={styles.option}>
+                <input
+                  type="radio"
+                  name={slot.id}
+                  checked={!selection.combo[slot.id]}
+                  onChange={() => {
+                    setSelection((current) => chooseComboOption(current, slot.id, null));
+                  }}
+                />
+                <span className={styles.optionName}>Sin {slot.name.toLowerCase()}</span>
+              </label>
+            )}
             {slot.options
               .filter((option) => option.isAvailable)
               .map((option) => (

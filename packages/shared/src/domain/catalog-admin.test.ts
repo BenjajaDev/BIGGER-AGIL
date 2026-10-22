@@ -60,6 +60,10 @@ describe('ProductInputSchema', () => {
     description: '',
     priceClp: 5200,
     isAvailable: true,
+    typeId: null,
+    subtitle: '',
+    image: null,
+    promotion: null,
   };
 
   it('accepts a combo with choice slots', () => {
@@ -69,6 +73,7 @@ describe('ProductInputSchema', () => {
       comboSlots: [
         {
           name: 'Café a elección',
+          isRequired: true,
           options: [
             { productId: capuchinoId, extraPriceClp: 0 },
             { productId: latteId, extraPriceClp: 200 },

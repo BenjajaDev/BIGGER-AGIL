@@ -7,13 +7,20 @@ export function describeProductConfiguration(
 ): string {
   if (product.kind === 'combo') {
     return product.comboSlots
-      .map(
-        (slot) => `${slot.name}: ${slot.options.map((option) => option.productName).join(' / ')}`,
-      )
+      .map((slot) => {
+        const choices = slot.options.map((option) => option.productName).join(' / ');
+        return `${slot.name}${slot.isRequired ? '' : ' (opcional)'}: ${choices}`;
+      })
       .join(' + ');
   }
   const names = product.modifierGroupIds
     .map((id) => groups.find((group) => group.id === id)?.name)
     .filter((name): name is string => name !== undefined);
-  return names.length > 0 ? `Personalizable: ${names.join(', ')}` : 'Sin personalizaciones';
+  const parts = [
+    product.sizes.length > 0
+      ? `Tamaños: ${product.sizes.map((size) => size.name).join(' / ')}`
+      : null,
+    names.length > 0 ? `Personalizable: ${names.join(', ')}` : null,
+  ].filter((part): part is string => part !== null);
+  return parts.length > 0 ? parts.join(' · ') : 'Sin personalizaciones';
 }

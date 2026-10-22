@@ -49,7 +49,7 @@ export const QUICK_NOTES = ['no-sugar', 'takeaway', 'lactose-free', 'sweetener']
 export const QuickNoteSchema = z.enum(QUICK_NOTES);
 export type QuickNote = z.infer<typeof QuickNoteSchema>;
 
-export const ORDER_ITEM_OPTION_KINDS = ['modifier', 'combo'] as const;
+export const ORDER_ITEM_OPTION_KINDS = ['size', 'modifier', 'combo'] as const;
 export const OrderItemOptionKindSchema = z.enum(ORDER_ITEM_OPTION_KINDS);
 export type OrderItemOptionKind = z.infer<typeof OrderItemOptionKindSchema>;
 
@@ -120,6 +120,8 @@ export const CreateOrderItemInputSchema = z.object({
   quantity: z.int().positive().max(99),
   quickNotes: z.array(QuickNoteSchema).default([]),
   note: z.string().trim().max(140).nullable().default(null),
+  /** Required when the product has sizes; the size sets the price and the customization rules. */
+  sizeId: z.uuid().nullable().default(null),
   options: z.array(ChosenModifierSchema).default([]),
   comboChoices: z.array(ChosenComboOptionSchema).default([]),
 });

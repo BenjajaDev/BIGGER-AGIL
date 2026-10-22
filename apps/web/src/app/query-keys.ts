@@ -17,4 +17,6 @@ export const queryKeys = {
   adminProduct: (id: string) => ['admin', 'products', id] as const,
   adminModifierGroups: ['admin', 'modifier-groups'] as const,
   adminModifierGroup: (id: string) => ['admin', 'modifier-groups', id] as const,
+  adminProductTypes: ['admin', 'product-types'] as const,
+  adminProductType: (id: string) => ['admin', 'product-types', id] as const,
 };

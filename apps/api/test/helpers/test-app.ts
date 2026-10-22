@@ -1,4 +1,7 @@
 import type { Express } from 'express';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createApp } from '../../src/app.js';
 import { createLogger } from '../../src/core/logger.js';
 import { openDatabase, runMigrations, type DatabaseConnection } from '../../src/db/client.js';
@@ -13,13 +16,23 @@ export interface TestContext {
   app: Express;
   connection: DatabaseConnection;
   eventHub: EventHub;
+  uploadsDir: string;
 }
 
-export async function createTestContext({ withDemoOrders = true } = {}): Promise<TestContext> {
+export interface TestContextOptions {
+  withDemoOrders?: boolean;
+  now?: () => Date;
+}
+
+export async function createTestContext({
+  withDemoOrders = true,
+  now = () => new Date(),
+}: TestContextOptions = {}): Promise<TestContext> {
   const connection = openDatabase(':memory:');
   runMigrations(connection.db);
   seedDatabase(connection.db, { withDemoOrders });
   const eventHub = new EventHub();
+  const uploadsDir = mkdtempSync(join(tmpdir(), 'bigger-uploads-'));
 
   const app = createApp({
     env: { CORS_ORIGINS: ['http://localhost:5173'] },
@@ -27,7 +40,9 @@ export async function createTestContext({ withDemoOrders = true } = {}): Promise
     db: connection.db,
     eventHub,
     adminAuth: { pinHash: await pinHash, sessionSecret: 'test-session-secret-0123456789abcdef' },
+    uploadsDir,
+    clock: { timeZone: 'America/Santiago', now },
   });
 
-  return { app, connection, eventHub };
+  return { app, connection, eventHub, uploadsDir };
 }
