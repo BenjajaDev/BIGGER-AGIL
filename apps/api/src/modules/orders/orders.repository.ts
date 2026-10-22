@@ -8,6 +8,7 @@ import type {
   OrderItemOptionKind,
   OrderStatus,
   ProductKind,
+  ProductSize,
   QuickNote,
 } from '@bigger/shared';
 import { and, asc, eq, inArray, type SQL } from 'drizzle-orm';
@@ -29,6 +30,7 @@ export interface OrderableProduct {
   priceClp: number;
   isAvailable: boolean;
   archivedAt: Date | null;
+  sizes: ProductSize[];
   modifierGroups: ModifierGroup[];
   comboSlots: ComboSlot[];
 }
@@ -138,6 +140,7 @@ export class DrizzleOrdersRepository implements OrdersRepository {
     const relations = await loadCatalogRelations(this.#db, rows);
     return rows.map((row) => ({
       ...row,
+      sizes: relations.sizesByProduct.get(row.id) ?? [],
       modifierGroups: relations.modifierGroupsByProduct.get(row.id) ?? [],
       comboSlots: relations.comboSlotsByProduct.get(row.id) ?? [],
     }));

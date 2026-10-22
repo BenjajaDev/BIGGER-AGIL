@@ -2,7 +2,7 @@ import { ChevronLeft, SearchX } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { AsyncContent } from '../../components/ui/AsyncContent';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { MenuProductCard } from './components/MenuProductCard';
+import { MenuCard } from './components/MenuCard';
 import styles from './MenuPages.module.css';
 import { useMenu } from './useMenu';
 
@@ -24,7 +24,7 @@ export function MenuCategoryPage() {
           );
         }
         return (
-          <section className={styles.results} aria-labelledby="categoria-titulo">
+          <section className={styles.section} aria-labelledby="categoria-titulo">
             <div className={styles.titleRow}>
               <Link to="/carta" className={styles.back} aria-label="Volver a la carta">
                 <ChevronLeft size={24} aria-hidden="true" />
@@ -33,9 +33,13 @@ export function MenuCategoryPage() {
                 {category.name}
               </h1>
             </div>
-            {category.products.map((product) => (
-              <MenuProductCard key={product.id} product={product} headingLevel="h2" />
-            ))}
+            <ul role="list" className={styles.grid}>
+              {category.products.map((product) => (
+                <li key={product.id}>
+                  <MenuCard product={product} headingLevel="h2" />
+                </li>
+              ))}
+            </ul>
           </section>
         );
       }}

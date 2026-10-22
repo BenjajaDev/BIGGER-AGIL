@@ -3,12 +3,15 @@ import {
   AdminModifierGroupSchema,
   AdminProductSchema,
   AdminSessionSchema,
+  ProductTypeSchema,
+  UploadedImageSchema,
   type CategoryInput,
   type ModifierGroupInput,
   type ProductInput,
+  type ProductTypeInput,
 } from '@bigger/shared';
 import { z } from 'zod';
-import { getJson, requestJson } from './http-client';
+import { getJson, requestJson, uploadFile } from './http-client';
 
 const archivedParam = (includeArchived: boolean) => ({ includeArchived: String(includeArchived) });
 
@@ -28,7 +31,7 @@ export const adminService = {
     ),
   createCategory: (input: CategoryInput) =>
     requestJson('POST', '/admin/categories', AdminCategorySchema, { body: input }),
-  renameCategory: (id: string, input: CategoryInput) =>
+  updateCategory: (id: string, input: CategoryInput) =>
     requestJson('PUT', `/admin/categories/${id}`, AdminCategorySchema, { body: input }),
   archiveCategory: (id: string) =>
     requestJson('DELETE', `/admin/categories/${id}`, AdminCategorySchema),
@@ -58,4 +61,17 @@ export const adminService = {
     requestJson('PUT', `/admin/modifier-groups/${id}`, AdminModifierGroupSchema, { body: input }),
   deleteModifierGroup: (id: string) =>
     requestJson('DELETE', `/admin/modifier-groups/${id}`, AdminModifierGroupSchema),
+
+  listProductTypes: (signal?: AbortSignal) =>
+    getJson('/admin/product-types', z.array(ProductTypeSchema), undefined, signal),
+  getProductType: (id: string, signal?: AbortSignal) =>
+    getJson(`/admin/product-types/${id}`, ProductTypeSchema, undefined, signal),
+  createProductType: (input: ProductTypeInput) =>
+    requestJson('POST', '/admin/product-types', ProductTypeSchema, { body: input }),
+  updateProductType: (id: string, input: ProductTypeInput) =>
+    requestJson('PUT', `/admin/product-types/${id}`, ProductTypeSchema, { body: input }),
+  deleteProductType: (id: string) =>
+    requestJson('DELETE', `/admin/product-types/${id}`, ProductTypeSchema),
+
+  uploadImage: (file: Blob) => uploadFile('/admin/images', file, UploadedImageSchema),
 };

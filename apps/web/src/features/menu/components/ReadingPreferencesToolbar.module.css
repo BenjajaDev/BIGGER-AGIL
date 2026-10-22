@@ -4,6 +4,13 @@
   gap: 0.5em;
 }
 
+@media (min-width: 40rem) {
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+
 .toggle {
   display: inline-flex;
   align-items: center;

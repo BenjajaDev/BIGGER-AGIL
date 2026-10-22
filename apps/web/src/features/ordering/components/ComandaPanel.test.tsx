@@ -6,6 +6,7 @@ import { ComandaPanel, type ComandaPanelProps } from './ComandaPanel';
 
 const capuchino: DraftLine = {
   lineId: 'l-1',
+  size: null,
   productId: 'p-1',
   productName: 'Capuchino',
   basePriceClp: 2500,

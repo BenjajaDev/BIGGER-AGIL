@@ -1,4 +1,4 @@
-import type { ComboSlot, ModifierGroup } from '@bigger/shared';
+import type { ComboSlot, ModifierGroup, ProductSize, SizeGroupRule } from '@bigger/shared';
 import { asc, eq, inArray, isNull } from 'drizzle-orm';
 import type { AppDatabase } from '../../db/client.js';
 import {
@@ -8,11 +8,14 @@ import {
   modifierOptions,
   productModifierGroups,
   products,
+  productSizes,
+  sizeGroupRules,
 } from '../../db/schema.js';
 
 export interface CatalogRelations {
   modifierGroupsByProduct: ReadonlyMap<string, ModifierGroup[]>;
   comboSlotsByProduct: ReadonlyMap<string, ComboSlot[]>;
+  sizesByProduct: ReadonlyMap<string, ProductSize[]>;
 }
 
 function pushTo<K, V>(map: Map<K, V[]>, key: K, value: V): void {
@@ -90,7 +93,12 @@ async function loadComboSlotsByProduct(
   comboIds: readonly string[],
 ): Promise<Map<string, ComboSlot[]>> {
   const slots = await db
-    .select({ id: comboSlots.id, comboId: comboSlots.comboId, name: comboSlots.name })
+    .select({
+      id: comboSlots.id,
+      comboId: comboSlots.comboId,
+      name: comboSlots.name,
+      isRequired: comboSlots.isRequired,
+    })
     .from(comboSlots)
     .where(inArray(comboSlots.comboId, [...comboIds]))
     .orderBy(asc(comboSlots.position));
@@ -132,6 +140,48 @@ async function loadComboSlotsByProduct(
   return result;
 }
 
+async function loadSizesByProduct(
+  db: AppDatabase,
+  productIds: readonly string[],
+): Promise<Map<string, ProductSize[]>> {
+  const sizes = await db
+    .select({
+      id: productSizes.id,
+      productId: productSizes.productId,
+      name: productSizes.name,
+      priceClp: productSizes.priceClp,
+    })
+    .from(productSizes)
+    .where(inArray(productSizes.productId, [...productIds]))
+    .orderBy(asc(productSizes.position));
+
+  if (sizes.length === 0) return new Map();
+
+  const rules = await db
+    .select({
+      sizeId: sizeGroupRules.sizeId,
+      groupId: sizeGroupRules.groupId,
+      minSelections: sizeGroupRules.minSelections,
+      maxSelections: sizeGroupRules.maxSelections,
+    })
+    .from(sizeGroupRules)
+    .where(
+      inArray(
+        sizeGroupRules.sizeId,
+        sizes.map((size) => size.id),
+      ),
+    );
+
+  const rulesBySize = new Map<string, SizeGroupRule[]>();
+  for (const { sizeId, ...rule } of rules) pushTo(rulesBySize, sizeId, rule);
+
+  const result = new Map<string, ProductSize[]>();
+  for (const { productId, ...size } of sizes) {
+    pushTo(result, productId, { ...size, groupRules: rulesBySize.get(size.id) ?? [] });
+  }
+  return result;
+}
+
 export async function loadCatalogRelations(
   db: AppDatabase,
   productRows: readonly { id: string; kind: 'single' | 'combo' }[],
@@ -139,26 +189,14 @@ export async function loadCatalogRelations(
   const singleIds = productRows.filter((row) => row.kind === 'single').map((row) => row.id);
   const comboIds = productRows.filter((row) => row.kind === 'combo').map((row) => row.id);
 
-  const [modifierGroupsByProduct, comboSlotsByProduct] = await Promise.all([
+  const [modifierGroupsByProduct, comboSlotsByProduct, sizesByProduct] = await Promise.all([
     singleIds.length
       ? loadModifierGroupsByProduct(db, singleIds)
       : new Map<string, ModifierGroup[]>(),
     comboIds.length ? loadComboSlotsByProduct(db, comboIds) : new Map<string, ComboSlot[]>(),
+    singleIds.length ? loadSizesByProduct(db, singleIds) : new Map<string, ProductSize[]>(),
   ]);
-  return { modifierGroupsByProduct, comboSlotsByProduct };
+  return { modifierGroupsByProduct, comboSlotsByProduct, sizesByProduct };
 }
-
-/** Columns every product read model shares. */
-export const productColumns = {
-  id: products.id,
-  categoryId: products.categoryId,
-  kind: products.kind,
-  name: products.name,
-  description: products.description,
-  priceClp: products.priceClp,
-  allergens: products.allergens,
-  isAvailable: products.isAvailable,
-  sortOrder: products.sortOrder,
-};
 
 export const activeProduct = () => isNull(products.archivedAt);

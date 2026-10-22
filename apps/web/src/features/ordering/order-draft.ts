@@ -20,7 +20,15 @@ export interface ComboChoice {
   extraPriceClp: number;
 }
 
+/** The chosen size: it sets the line's base price. */
+export interface SelectedSize {
+  sizeId: string;
+  sizeName: string;
+  priceClp: number;
+}
+
 export interface LineConfig {
+  size: SelectedSize | null;
   options: SelectedOption[];
   comboChoices: ComboChoice[];
   quickNotes: QuickNote[];
@@ -55,6 +63,7 @@ export const EMPTY_DRAFT: OrderDraft = { customerName: '', lines: [] };
 
 /** Config for a product added without opening the options modal. */
 export const EMPTY_CONFIG: LineConfig = {
+  size: null,
   options: [],
   comboChoices: [],
   quickNotes: [],
@@ -67,9 +76,9 @@ export function lineUnitPriceClp(line: DraftLine): number {
   return line.basePriceClp + optionsDelta + comboExtra;
 }
 
-/** A line with no options, combo or notes merges with the same product instead of stacking. */
-function isPlain(line: DraftLine): boolean {
-  return line.options.length === 0 && line.comboChoices.length === 0;
+/** Lines with no options or combo choices merge with the same product and size instead of stacking. */
+function isPlain(config: Pick<LineConfig, 'options' | 'comboChoices'>): boolean {
+  return config.options.length === 0 && config.comboChoices.length === 0;
 }
 
 function updateLine(
@@ -92,9 +101,13 @@ export function orderDraftReducer(draft: OrderDraft, action: OrderDraftAction): 
   switch (action.type) {
     case 'add-line': {
       const { product, config } = action;
-      const plainAdd = config.options.length === 0 && config.comboChoices.length === 0;
-      const mergeInto = plainAdd
-        ? draft.lines.find((line) => line.productId === product.id && isPlain(line))
+      const mergeInto = isPlain(config)
+        ? draft.lines.find(
+            (line) =>
+              line.productId === product.id &&
+              line.size?.sizeId === config.size?.sizeId &&
+              isPlain(line),
+          )
         : undefined;
       if (mergeInto)
         return orderDraftReducer(draft, { type: 'increment', lineId: mergeInto.lineId });
@@ -106,7 +119,7 @@ export function orderDraftReducer(draft: OrderDraft, action: OrderDraftAction): 
             lineId: action.lineId,
             productId: product.id,
             productName: product.name,
-            basePriceClp: product.priceClp,
+            basePriceClp: config.size?.priceClp ?? product.priceClp,
             quantity: 1,
             ...config,
           },

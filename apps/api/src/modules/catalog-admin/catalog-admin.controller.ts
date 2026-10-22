@@ -3,6 +3,7 @@ import {
   IncludeArchivedQuerySchema,
   ModifierGroupInputSchema,
   ProductInputSchema,
+  ProductTypeInputSchema,
 } from '@bigger/shared';
 import type { Request, RequestHandler } from 'express';
 import { z } from 'zod';
@@ -10,6 +11,7 @@ import { parseOrThrow } from '../../core/http/parse.js';
 import { sendData } from '../../core/http/respond.js';
 import type { CategoriesAdminService } from './categories.service.js';
 import type { ModifierGroupsAdminService } from './modifier-groups.service.js';
+import type { ProductTypesService } from './product-types.service.js';
 import type { ProductsAdminService } from './products.service.js';
 
 const IdParamsSchema = z.object({ id: z.uuid() });
@@ -33,10 +35,10 @@ export class CategoriesAdminController {
     sendData(res, await this.#service.create(parseOrThrow(CategoryInputSchema, req.body)), 201);
   };
 
-  rename: RequestHandler = async (req, res) => {
+  update: RequestHandler = async (req, res) => {
     sendData(
       res,
-      await this.#service.rename(idOf(req), parseOrThrow(CategoryInputSchema, req.body)),
+      await this.#service.update(idOf(req), parseOrThrow(CategoryInputSchema, req.body)),
     );
   };
 
@@ -111,6 +113,37 @@ export class ModifierGroupsAdminController {
     sendData(
       res,
       await this.#service.update(idOf(req), parseOrThrow(ModifierGroupInputSchema, req.body)),
+    );
+  };
+
+  delete: RequestHandler = async (req, res) => {
+    sendData(res, await this.#service.delete(idOf(req)));
+  };
+}
+
+export class ProductTypesController {
+  readonly #service: ProductTypesService;
+
+  constructor(service: ProductTypesService) {
+    this.#service = service;
+  }
+
+  list: RequestHandler = async (_req, res) => {
+    sendData(res, await this.#service.list());
+  };
+
+  get: RequestHandler = async (req, res) => {
+    sendData(res, await this.#service.get(idOf(req)));
+  };
+
+  create: RequestHandler = async (req, res) => {
+    sendData(res, await this.#service.create(parseOrThrow(ProductTypeInputSchema, req.body)), 201);
+  };
+
+  update: RequestHandler = async (req, res) => {
+    sendData(
+      res,
+      await this.#service.update(idOf(req), parseOrThrow(ProductTypeInputSchema, req.body)),
     );
   };
 

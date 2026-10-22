@@ -75,13 +75,23 @@ erDiagram
   products ||--o{ combo_slots : "combo con"
   combo_slots ||--|{ combo_slot_options : "a elegir"
   products ||--o{ combo_slot_options : "opción de combo"
+  product_types ||--o{ products : "plantilla de"
+  products ||--o{ product_sizes : "se vende en"
+  product_sizes ||--o{ size_group_rules : "reglas por tamaño"
+  modifier_groups ||--o{ size_group_rules : "regla de"
+  images ||--o{ products : foto
+  images ||--o{ categories : foto
 
-  categories { text id PK; text slug UK; text name; int sort_order; ts archived_at }
-  products { text id PK; text category_id FK; text kind; text name; text description; int price_clp; json allergens; bool is_available; int sort_order; ts archived_at }
+  categories { text id PK; text slug UK; text name; int sort_order; text image_id FK; int image_focus_y; ts archived_at }
+  products { text id PK; text category_id FK; text type_id FK; text kind; text name; text subtitle; text description; int price_clp; json allergens; bool is_available; int sort_order; text image_id FK; int image_focus_y; bool is_promotion; date promo_starts_on; date promo_ends_on; ts archived_at }
+  product_types { text id PK; text name; text description; text kind; json template }
+  product_sizes { text id PK; text product_id FK; text name; int price_clp; int position }
+  size_group_rules { text size_id PK; text group_id PK; int min_selections; int max_selections }
+  images { text id PK; int width; int height; ts created_at }
   modifier_groups { text id PK; text name; int min_selections; int max_selections }
   modifier_options { text id PK; text group_id FK; text name; int price_delta_clp; bool is_available; int position }
   product_modifier_groups { text product_id PK; text group_id PK; int position }
-  combo_slots { text id PK; text combo_id FK; text name; int position }
+  combo_slots { text id PK; text combo_id FK; text name; bool is_required; int position }
   combo_slot_options { text slot_id PK; text product_id PK; int extra_price_clp; int position }
   dining_tables { text id PK; int number UK; text label; int sort_order; bool is_active }
   orders { text id PK; text channel; text status; text table_id FK; text customer_name; ts pickup_at; int total_clp; ts created_at }
@@ -115,8 +125,27 @@ Decisiones:
   y se asigna a varios productos; `min_selections ≥ 1` la vuelve obligatoria.
 - **Alérgenos de un combo derivados**: son la unión de los productos que puede incluir, así
   nunca quedan desactualizados.
-- **Carta pública**: oculta opciones agotadas, grupos sin opciones y combos con un espacio
-  sin nada disponible (`apps/api/src/modules/catalog/catalog-product.ts`).
+- **Tamaños con precio propio** (`product_sizes`): «Arma tu ensalada» se vende en Grande
+  ($4.900) y Pequeña ($2.500). Con tamaños, `products.price_clp` guarda el más barato para
+  ordenar y mostrar «desde». Cada tamaño puede reemplazar la regla de una personalización
+  (`size_group_rules`: «Grande: 1 proteína y 4 vegetales; Pequeña: 0 proteínas y 3
+  vegetales»); `max_selections = 0` significa «no se ofrece en este tamaño». La misma función
+  (`resolveGroupRules` en `packages/shared`) aplica las reglas en la API (que las exige al
+  crear el pedido) y en la UI.
+- **Tipos de producto = plantillas** (`product_types.template`): prellenan tamaños,
+  personalizaciones, reglas y espacios de combo al crear un producto. No se heredan en vivo:
+  editar o borrar un tipo no cambia los productos ya creados (`type_id` queda `NULL`).
+- **Espacios de combo obligatorios u opcionales** (`is_required`): un combo necesita al menos
+  uno obligatorio; los opcionales se pueden dejar vacíos («sin pastel»).
+- **Fotos**: se suben como binario, `sharp` valida el contenido real, las re-codifica a WebP
+  (1200 px para tarjeta, 480 px miniatura) y descarta metadatos. Se guardan en disco
+  (`UPLOADS_DIR`) con nombre `<id>-card.webp`; el id nuevo por subida permite caché inmutable.
+  El encuadre vertical (`image_focus_y`) es del producto, no de la foto.
+- **Promociones con vigencia** opcional por fechas (`promo_starts_on/ends_on`), evaluadas en
+  la zona horaria del local (`BUSINESS_TIMEZONE`). La carta las lista primero.
+- **Carta pública**: oculta opciones agotadas, grupos sin opciones, espacios opcionales sin
+  opciones y combos con un espacio obligatorio sin nada disponible
+  (`apps/api/src/modules/catalog/catalog-product.ts`).
 - Todas las tablas tienen `created_at`/`updated_at` como base para Reportes.
 
 ### Ciclo de vida de un pedido
@@ -148,7 +177,8 @@ solo. La barra superior muestra el estado de conexión con ícono y, si se cae, 
 
 - Éxito `{ "data": … }`; error `{ "error": { "code", "message", "issues?" } }`.
 - Códigos: `VALIDATION_ERROR` 400 · `UNAUTHORIZED` 401 · `NOT_FOUND` 404 · `CONFLICT` 409 ·
-  `INVALID_STATE_TRANSITION` 409 · `TOO_MANY_REQUESTS` 429 · `INTERNAL_ERROR` 500 (sin
+  `INVALID_STATE_TRANSITION` 409 · `PAYLOAD_TOO_LARGE` 413 · `TOO_MANY_REQUESTS` 429 ·
+  `INTERNAL_ERROR` 500 (sin
   filtrar detalles internos).
 - Los `issues` usan la misma ruta que el formulario (`comboSlots.0.options.1.productId`), así
   la UI marca el campo exacto sin traducir nada.
@@ -177,6 +207,11 @@ Reglas aplicadas en los componentes:
 - Fraunces para títulos y carta; Inter para el sistema interno. Texto mínimo de 14 px.
 - Animaciones solo con `transform`/`opacity` (baratas en tablets) y anuladas con
   `prefers-reduced-motion`. La carta pública no usa animaciones.
+- Carta responsiva con grilla fluida (`repeat(auto-fill, minmax(min(100%, 18em), 1fr))`):
+  varias columnas en PC, dos en tablet y una en celular, sin breakpoints fijos. Cada tarjeta
+  sigue la plantilla estándar: foto → nombre y subtítulo → tamaños y precios con sus reglas →
+  ingredientes y extras → alérgenos. La foto es decorativa (`alt=""`): el título ya nombra el
+  producto. El editor muestra la misma tarjeta como vista previa en vivo.
 - Carta: orden de lectura lineal (nombre → precio → descripción → alérgenos), precio
   anunciado como «3.200 pesos», alérgenos siempre en texto, modo alto contraste y texto
   grande (persistidos en el dispositivo).
@@ -204,6 +239,9 @@ admin:pin`). Al ingresarlo se emite un token firmado con HMAC (12 h) en una cook
    tokens, componentes base y lecturas (`GET`) funcionando con datos de ejemplo.
    **Configuración de la carta (hecho):** categorías, productos, combos con elección y
    personalizaciones reutilizables, con PIN de administración (P01).
+   **Carta con tarjetas (hecho):** fotos, tamaños con reglas por tamaño, tipos de producto,
+   espacios opcionales, promociones con vigencia, carga rápida y vista previa en vivo. El
+   seed carga el catálogo real de BIGGER.
 2. **Fase 2 · Backend:**
    - **`POST /orders` (hecho):** crea la comanda validando disponibilidad de productos y
      opciones, calcula el total en el servidor (base + extras) y emite `order.created` por

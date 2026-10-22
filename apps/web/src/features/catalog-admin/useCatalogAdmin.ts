@@ -1,4 +1,9 @@
-import type { CategoryInput, ModifierGroupInput, ProductInput } from '@bigger/shared';
+import type {
+  CategoryInput,
+  ModifierGroupInput,
+  ProductInput,
+  ProductTypeInput,
+} from '@bigger/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../app/query-keys';
 import { adminService } from '../../services/admin.service';
@@ -100,7 +105,33 @@ export const useDeleteModifierGroup = () => useCatalogMutation(adminService.dele
 
 export const useSaveCategory = () =>
   useCatalogMutation(({ id, input }: { id: string | undefined; input: CategoryInput }) =>
-    id ? adminService.renameCategory(id, input) : adminService.createCategory(input),
+    id ? adminService.updateCategory(id, input) : adminService.createCategory(input),
   );
 export const useArchiveCategory = () => useCatalogMutation(adminService.archiveCategory);
 export const useRestoreCategory = () => useCatalogMutation(adminService.restoreCategory);
+
+export function useAdminProductTypes() {
+  return useQuery({
+    queryKey: queryKeys.adminProductTypes,
+    queryFn: ({ signal }) => adminService.listProductTypes(signal),
+  });
+}
+
+export function useAdminProductType(id: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.adminProductType(id ?? 'nuevo'),
+    queryFn: ({ signal }) => adminService.getProductType(id ?? '', signal),
+    enabled: id !== undefined,
+  });
+}
+
+export const useSaveProductType = () =>
+  useCatalogMutation(({ id, input }: { id: string | undefined; input: ProductTypeInput }) =>
+    id ? adminService.updateProductType(id, input) : adminService.createProductType(input),
+  );
+export const useDeleteProductType = () => useCatalogMutation(adminService.deleteProductType);
+
+/** Uploads do not change the catalog until the product or category is saved. */
+export function useUploadImage() {
+  return useMutation({ mutationFn: adminService.uploadImage });
+}

@@ -1,26 +1,29 @@
-.list {
-  display: grid;
-  gap: 0.75em;
-}
-
-.link {
+.card {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1em;
+  flex-direction: column;
+  overflow: hidden;
   min-height: var(--touch-target);
-  padding: 1em;
   border: var(--border-width-strong) solid var(--menu-card-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background-color: var(--menu-card-bg);
   color: var(--menu-text);
   text-decoration: none;
+  box-shadow: var(--shadow-card);
+}
+
+.body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75em;
+  padding: 0.875em 1em;
 }
 
 .name {
   font-family: var(--font-display);
   font-size: 1.25em;
   font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
 }
 
 .count {

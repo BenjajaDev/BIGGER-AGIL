@@ -1,19 +1,9 @@
 import type { Product } from '@bigger/shared';
+import { makeMenuProduct } from '../../test/fixtures';
 import { searchProducts } from './search-products';
 
 function product(overrides: Partial<Product>): Product {
-  return {
-    id: 'p-1',
-    categoryId: 'c-1',
-    kind: 'single',
-    name: 'Producto',
-    description: '',
-    priceClp: 1000,
-    allergens: [],
-    isAvailable: true,
-    sortOrder: 0,
-    ...overrides,
-  };
+  return makeMenuProduct({ name: 'Producto', priceClp: 1000, ...overrides });
 }
 
 const capuchino = product({ id: 'p-1', name: 'Capuchino' });

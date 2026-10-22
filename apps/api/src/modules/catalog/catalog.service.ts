@@ -1,12 +1,27 @@
-import type { Category, Menu, MenuProduct, ProductFilter } from '@bigger/shared';
+import {
+  calendarDate,
+  isPromotionActive,
+  type Category,
+  type Menu,
+  type MenuProduct,
+  type ProductFilter,
+} from '@bigger/shared';
 import { toPublicMenuProduct } from './catalog-product.js';
 import type { CatalogRepository } from './catalog.repository.js';
 
+export interface CatalogClock {
+  /** IANA time zone of the shop, used to decide which promotions run today. */
+  timeZone: string;
+  now: () => Date;
+}
+
 export class CatalogService {
   readonly #repository: CatalogRepository;
+  readonly #clock: CatalogClock;
 
-  constructor(repository: CatalogRepository) {
+  constructor(repository: CatalogRepository, clock: CatalogClock) {
     this.#repository = repository;
+    this.#clock = clock;
   }
 
   listCategories(): Promise<Category[]> {
@@ -17,15 +32,19 @@ export class CatalogService {
     return this.#repository.listProducts(filter);
   }
 
-  /** Public menu: only what a customer can order, grouped by category, empty categories hidden. */
+  /**
+   * Public menu: only what a customer can order, grouped by category, empty categories hidden,
+   * and the promotions running today (in the shop's time zone) listed first.
+   */
   async getPublicMenu(): Promise<Menu> {
     const [allCategories, availableProducts] = await Promise.all([
       this.#repository.listCategories(),
       this.#repository.listProducts({ onlyAvailable: true }),
     ]);
 
+    const today = calendarDate(this.#clock.now(), this.#clock.timeZone);
     const publicProducts = availableProducts
-      .map(toPublicMenuProduct)
+      .map((product) => toPublicMenuProduct(product, (p) => isPromotionActive(p.promotion, today)))
       .filter((product): product is MenuProduct => product !== null);
 
     const categoriesWithProducts = allCategories
@@ -35,6 +54,9 @@ export class CatalogService {
       }))
       .filter((category) => category.products.length > 0);
 
-    return { categories: categoriesWithProducts };
+    return {
+      promotions: publicProducts.filter((product) => product.promotion !== null),
+      categories: categoriesWithProducts,
+    };
   }
 }

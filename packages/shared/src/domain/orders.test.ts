@@ -53,6 +53,7 @@ describe('CreateOrderInputSchema', () => {
       quantity: 2,
       quickNotes: ['no-sugar'],
       note: null,
+      sizeId: null,
       options: [],
       comboChoices: [],
     });

@@ -4,6 +4,7 @@ import {
   FolderTree,
   LogOut,
   Package,
+  Shapes,
   SlidersHorizontal,
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router';
@@ -16,6 +17,7 @@ import { useAdminSession, useLogout } from './useCatalogAdmin';
 const SECTIONS = [
   { to: 'productos', label: 'Productos', icon: Package },
   { to: 'combos', label: 'Combos', icon: Combine },
+  { to: 'tipos', label: 'Tipos', icon: Shapes },
   { to: 'personalizaciones', label: 'Personalizaciones', icon: SlidersHorizontal },
   { to: 'categorias', label: 'Categorías', icon: FolderTree },
 ] as const;

@@ -48,3 +48,22 @@
 .status {
   color: var(--menu-text-secondary);
 }
+
+.section {
+  display: grid;
+  gap: 1em;
+}
+
+/* One column on phones, 2–3 on tablets, 3–4 on desktop; large text gets wider cards. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18em), 1fr));
+  align-items: start;
+  gap: 1em;
+}
+
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14em), 1fr));
+  gap: 1em;
+}

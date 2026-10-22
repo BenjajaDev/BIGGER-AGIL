@@ -24,6 +24,15 @@ export function createApp({ env, logger, ...container }: AppDependencies): Expre
   app.use(express.json({ limit: '100kb' }));
   app.use(pinoHttp({ logger }));
 
+  // Image files are immutable (new upload = new id), so they can be cached for a year.
+  app.use(
+    `${API_PREFIX}/media`,
+    (_req, res, next) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      next();
+    },
+    express.static(container.uploadsDir, { immutable: true, maxAge: '365d', index: false }),
+  );
   app.use(API_PREFIX, ...buildApiRouters(container));
 
   app.use(notFoundHandler);

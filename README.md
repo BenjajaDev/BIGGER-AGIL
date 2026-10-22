@@ -20,7 +20,7 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
 pnpm --filter @bigger/api admin:pin   # pide el PIN del encargado y entrega las 2 variables ADMIN_*
                                       # para pegarlas en apps/api/.env
-pnpm db:seed   # aplica migraciones y carga el catálogo y los pedidos de ejemplo
+pnpm db:seed   # aplica migraciones y carga el catálogo real y pedidos de ejemplo
 pnpm dev       # API en :3000 y web en :5173
 ```
 
@@ -33,8 +33,13 @@ pnpm dev       # API en :3000 y web en :5173
 | http://localhost:5173/configuracion | Configuración de la carta (PIN) |
 | http://localhost:5173/bodega        | Módulo «En desarrollo»          |
 
+Las fotos de la carta se guardan en `UPLOADS_DIR` (por defecto `apps/api/data/uploads`);
+respáldalo junto con la base de datos.
+
 Para usar la app desde las tablets del local, define `HOST=0.0.0.0` en `apps/api/.env` y
 agrega el origen de la tablet a `CORS_ORIGINS`.
+
+
 
 ## Scripts
 

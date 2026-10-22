@@ -1,40 +1,15 @@
 import type { Menu } from '@bigger/shared';
+import { makeCategory, makeMenuProduct } from '../../test/fixtures';
 import { searchMenu } from './search-menu';
 
 const menu: Menu = {
+  promotions: [],
   categories: [
     {
-      id: 'c-1',
-      slug: 'pasteleria',
-      name: 'Pastelería',
-      sortOrder: 0,
+      ...makeCategory({ slug: 'pasteles', name: 'Pasteles' }),
       products: [
-        {
-          id: 'p-1',
-          categoryId: 'c-1',
-          kind: 'single',
-          name: 'Pie de limón',
-          description: 'Base crocante y merengue.',
-          priceClp: 3000,
-          allergens: [],
-          isAvailable: true,
-          sortOrder: 0,
-          modifierGroups: [],
-          comboSlots: [],
-        },
-        {
-          id: 'p-2',
-          categoryId: 'c-1',
-          kind: 'single',
-          name: 'Brownie',
-          description: 'Chocolate intenso.',
-          priceClp: 2200,
-          allergens: [],
-          isAvailable: true,
-          sortOrder: 1,
-          modifierGroups: [],
-          comboSlots: [],
-        },
+        makeMenuProduct({ id: 'p-1', name: 'Pie limón', description: 'Base crocante y merengue.' }),
+        makeMenuProduct({ id: 'p-2', name: 'Roll canela', description: 'Glaseado de vainilla.' }),
       ],
     },
   ],
@@ -42,11 +17,11 @@ const menu: Menu = {
 
 describe('searchMenu', () => {
   it('ignores accents and case', () => {
-    expect(searchMenu(menu, 'LIMON').map((product) => product.name)).toEqual(['Pie de limón']);
+    expect(searchMenu(menu, 'LIMON').map((product) => product.name)).toEqual(['Pie limón']);
   });
 
   it('matches descriptions too', () => {
-    expect(searchMenu(menu, 'chocolate').map((product) => product.name)).toEqual(['Brownie']);
+    expect(searchMenu(menu, 'vainilla').map((product) => product.name)).toEqual(['Roll canela']);
   });
 
   it('returns nothing for a blank query', () => {

@@ -17,11 +17,13 @@ export function MenuLayout() {
       data-contrast={preferences.highContrast ? 'high' : 'normal'}
     >
       <header className={styles.header}>
-        <Link to="/carta" className={styles.brand}>
-          BIGGER
-        </Link>
-        <p className={styles.tagline}>Pastelería · Heladería · Café</p>
-        <p className={styles.address}>Calle Carmen 752, Curicó</p>
+        <div className={styles.headerInner}>
+          <Link to="/carta" className={styles.brand}>
+            BIGGER
+          </Link>
+          <p className={styles.tagline}>Sándwiches · Fajitas · Ensaladas · Pasteles</p>
+          <p className={styles.address}>Calle Carmen 752, Curicó</p>
+        </div>
       </header>
 
       <main className={styles.content}>

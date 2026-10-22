@@ -1,9 +1,10 @@
 import type { Category, MenuProduct, ProductFilter } from '@bigger/shared';
 import { and, asc, eq, isNull, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '../../db/client.js';
-import { categories, products } from '../../db/schema.js';
+import { categories, images, products } from '../../db/schema.js';
 import { buildCatalogProduct } from './catalog-product.js';
-import { activeProduct, loadCatalogRelations, productColumns } from './catalog-relations.js';
+import { activeProduct, loadCatalogRelations } from './catalog-relations.js';
+import { categoryRowColumns, productRowColumns, toCategory } from './product-row.js';
 
 /** Read side used by order taking and the public menu: archived rows never appear here. */
 export interface CatalogRepository {
@@ -19,16 +20,13 @@ export class DrizzleCatalogRepository implements CatalogRepository {
   }
 
   async listCategories(): Promise<Category[]> {
-    return this.#db
-      .select({
-        id: categories.id,
-        slug: categories.slug,
-        name: categories.name,
-        sortOrder: categories.sortOrder,
-      })
+    const rows = await this.#db
+      .select(categoryRowColumns)
       .from(categories)
+      .leftJoin(images, eq(categories.imageId, images.id))
       .where(isNull(categories.archivedAt))
       .orderBy(asc(categories.sortOrder), asc(categories.name));
+    return rows.map(toCategory);
   }
 
   async listProducts(filter: ProductFilter): Promise<MenuProduct[]> {
@@ -37,9 +35,10 @@ export class DrizzleCatalogRepository implements CatalogRepository {
     if (filter.onlyAvailable) conditions.push(eq(products.isAvailable, true));
 
     const rows = await this.#db
-      .select(productColumns)
+      .select(productRowColumns)
       .from(products)
       .innerJoin(categories, eq(products.categoryId, categories.id))
+      .leftJoin(images, eq(products.imageId, images.id))
       .where(and(...conditions))
       .orderBy(asc(products.sortOrder), asc(products.name));
 
