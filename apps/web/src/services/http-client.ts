@@ -24,7 +24,7 @@ export class ApiRequestError extends Error {
 }
 
 export type QueryParams = Record<string, string | undefined>;
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 interface RequestOptions {
   params?: QueryParams;

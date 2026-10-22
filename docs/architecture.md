@@ -248,10 +248,15 @@ admin:pin`). Al ingresarlo se emite un token firmado con HMAC (12 h) en una cook
      SSE. Cada línea guarda el snapshot de sus personalizaciones y elecciones de combo
      (`order_item_options`), igual que ya guardaba nombre y precio. Un pedido `takeaway`
      exige nombre. `ComandaPanel.onSubmit` quedó conectado.
-   - **Pendiente:** `PATCH /orders/{id}/status` (con `KitchenBoard.onAdvance`) y la
-     autenticación por dispositivo.
+   - **`PATCH /orders/{id}/status` (backend hecho):** valida las transiciones con
+     `canTransitionOrder`, persiste el estado y la fecha de actualización en SQLite mediante
+     una escritura condicionada al estado leído y emite `order.updated` tras confirmar la
+     escritura. Devuelve 409 ante transiciones inválidas o conflictos de concurrencia.
+   - **Pendiente:** autenticación por dispositivo.
 3. **Fase 3 · Frontend:**
    - **Toma de pedidos (hecho):** catálogo con búsqueda, selector de personalizaciones y
      combos en un modal, y comanda tipo ticket que envía las opciones elegidas.
-   - **Pendiente:** mutaciones optimistas, orden manual de la carta, QR por mesa.
+   - **Pendiente:** conectar los botones de cocina (`KitchenBoard.onAdvance`) al PATCH de
+     estados y recuperar las consultas al reconectar SSE; mutaciones optimistas, orden
+     manual de la carta, QR por mesa.
 4. **Fase 4 · QA:** pruebas P01–P13, TalkBack/VoiceOver, pruebas en horario real.

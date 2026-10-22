@@ -40,3 +40,43 @@
   gap: var(--space-1);
   font-size: var(--text-body);
 }
+
+.dragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragHandle:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.dragging {
+  box-shadow: var(--shadow-raised);
+  outline: 3px solid var(--status-highlight);
+}
+
+.dragging .dragHandle {
+  cursor: grabbing;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -195,9 +195,14 @@ paths:
       summary: Avanza el estado de un pedido (prueba P03)
       description: |
         Transiciones válidas: `new → preparing → ready → delivered → paid`;
-        `new|preparing → cancelled`. Emite `order.updated` por SSE.
+        `new|preparing → cancelled`. Valida el UUID y el cuerpo de la solicitud.
+        Actualiza `status` y `updatedAt` en SQLite conservando los demás datos del pedido.
+        La escritura está condicionada al estado leído: si otro cliente lo cambia entre
+        la lectura y la escritura, responde 409 `CONFLICT` sin reintentar.
+        Una transición no permitida, incluido repetir el estado actual, responde 409
+        `INVALID_STATE_TRANSITION`. Devuelve el pedido completo actualizado y emite
+        `order.updated` por SSE únicamente después de confirmar la escritura.
       operationId: updateOrderStatus
-      x-status: planned
       parameters:
         - name: orderId
           in: path
@@ -222,9 +227,10 @@ paths:
                 required: [data]
                 properties:
                   data: { $ref: '#/components/schemas/Order' }
+        '400': { $ref: '#/components/responses/ValidationError' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: Transición no permitida (`INVALID_STATE_TRANSITION`)
+          description: Transición no permitida (`INVALID_STATE_TRANSITION`) o actualización concurrente (`CONFLICT`)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ApiError' }

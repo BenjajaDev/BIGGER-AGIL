@@ -1,4 +1,4 @@
-import type { KitchenOrderStatus } from '@bigger/shared';
+import type { KitchenOrderStatus, OrderStatus } from '@bigger/shared';
 import { CircleCheck, Flame, Sparkles, type LucideIcon } from 'lucide-react';
 import type { ButtonVariant } from '../../components/ui/Button';
 
@@ -7,7 +7,7 @@ export interface KitchenColumnConfig {
   title: string;
   icon: LucideIcon;
   emptyMessage: string;
-  action: { label: string; variant: ButtonVariant };
+  action: { label: string; variant: ButtonVariant; nextStatus: OrderStatus };
 }
 
 export const KITCHEN_COLUMNS: readonly KitchenColumnConfig[] = [
@@ -16,20 +16,20 @@ export const KITCHEN_COLUMNS: readonly KitchenColumnConfig[] = [
     title: 'Nuevos',
     icon: Sparkles,
     emptyMessage: 'No hay pedidos nuevos',
-    action: { label: 'Empezar', variant: 'primary' },
+    action: { label: 'Empezar', variant: 'primary', nextStatus: 'preparing' },
   },
   {
     status: 'preparing',
     title: 'En preparación',
     icon: Flame,
     emptyMessage: 'Nada en preparación',
-    action: { label: 'Marcar listo', variant: 'warning' },
+    action: { label: 'Marcar listo', variant: 'warning', nextStatus: 'ready' },
   },
   {
     status: 'ready',
     title: 'Listos para entregar',
     icon: CircleCheck,
     emptyMessage: 'Nada esperando entrega',
-    action: { label: 'Entregado', variant: 'success' },
+    action: { label: 'Entregado', variant: 'success', nextStatus: 'delivered' },
   },
 ];

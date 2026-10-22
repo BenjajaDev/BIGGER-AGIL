@@ -66,11 +66,18 @@ export interface NewOrder {
 
 export interface OrdersRepository {
   list: (query: OrderQuery) => Promise<Order[]>;
+  findById: (id: string) => Promise<Order | null>;
+  updateStatus: (
+    id: string,
+    expectedStatus: OrderStatus,
+    nextStatus: OrderStatus,
+  ) => Promise<Order | null>;
   productsForOrder: (ids: readonly string[]) => Promise<OrderableProduct[]>;
   create: (order: NewOrder) => Promise<Order>;
 }
 
 type OrderRow = typeof orders.$inferSelect;
+type OrderReader = Pick<AppDatabase, 'select'>;
 
 function toOrder(order: OrderRow, tableLabel: string | null, items: OrderItem[]): Order {
   return {
@@ -109,7 +116,7 @@ export class DrizzleOrdersRepository implements OrdersRepository {
 
     if (rows.length === 0) return [];
 
-    const itemsByOrder = await this.#listItemsByOrder(rows.map(({ order }) => order.id));
+    const itemsByOrder = this.#listItemsByOrder(rows.map(({ order }) => order.id));
 
     return rows.map(({ order, tableLabel }) =>
       toOrder(order, tableLabel, itemsByOrder.get(order.id) ?? []),
@@ -137,6 +144,31 @@ export class DrizzleOrdersRepository implements OrdersRepository {
       modifierGroups: relations.modifierGroupsByProduct.get(row.id) ?? [],
       comboSlots: relations.comboSlotsByProduct.get(row.id) ?? [],
     }));
+  }
+
+  async findById(id: string): Promise<Order | null> {
+    return Promise.resolve(this.#findById(id));
+  }
+
+  async updateStatus(
+    id: string,
+    expectedStatus: OrderStatus,
+    nextStatus: OrderStatus,
+  ): Promise<Order | null> {
+    // Compare and write atomically; hydrate before committing so the result is this write's snapshot.
+    const updated = this.#db.transaction((tx) => {
+      const result = tx
+        .update(orders)
+        .set({ status: nextStatus, updatedAt: new Date() })
+        .where(and(eq(orders.id, id), eq(orders.status, expectedStatus)))
+        .run();
+      if (result.changes === 0) return null;
+
+      const updated = this.#findById(id, tx);
+      if (!updated) throw new Error(`La orden ${id} no existe tras actualizarla`);
+      return updated;
+    });
+    return Promise.resolve(updated);
   }
 
   async create(order: NewOrder): Promise<Order> {
@@ -184,23 +216,26 @@ export class DrizzleOrdersRepository implements OrdersRepository {
       );
       if (optionRows.length > 0) tx.insert(orderItemOptions).values(optionRows).run();
     });
-    return this.#findById(orderId);
+    const created = this.#findById(orderId);
+    if (!created) throw new Error(`La orden ${orderId} no existe tras crearla`);
+    return Promise.resolve(created);
   }
 
-  async #findById(id: string): Promise<Order> {
-    const [row] = await this.#db
+  #findById(id: string, db: OrderReader = this.#db): Order | null {
+    const row = db
       .select({ order: orders, tableLabel: diningTables.label })
       .from(orders)
       .leftJoin(diningTables, eq(orders.tableId, diningTables.id))
-      .where(eq(orders.id, id));
-    if (!row) throw new Error(`La orden ${id} no existe tras crearla`);
+      .where(eq(orders.id, id))
+      .get();
+    if (!row) return null;
 
-    const itemsByOrder = await this.#listItemsByOrder([id]);
+    const itemsByOrder = this.#listItemsByOrder([id], db);
     return toOrder(row.order, row.tableLabel, itemsByOrder.get(id) ?? []);
   }
 
-  async #listItemsByOrder(orderIds: string[]): Promise<Map<string, OrderItem[]>> {
-    const rows = await this.#db
+  #listItemsByOrder(orderIds: string[], db: OrderReader = this.#db): Map<string, OrderItem[]> {
+    const rows = db
       .select({
         orderId: orderItems.orderId,
         id: orderItems.id,
@@ -213,9 +248,13 @@ export class DrizzleOrdersRepository implements OrdersRepository {
       })
       .from(orderItems)
       .where(inArray(orderItems.orderId, orderIds))
-      .orderBy(asc(orderItems.position));
+      .orderBy(asc(orderItems.position))
+      .all();
 
-    const optionsByItem = await this.#listOptionsByItem(rows.map((row) => row.id));
+    const optionsByItem = this.#listOptionsByItem(
+      rows.map((row) => row.id),
+      db,
+    );
 
     const grouped = new Map<string, OrderItem[]>();
     for (const { orderId, ...item } of rows) {
@@ -226,9 +265,12 @@ export class DrizzleOrdersRepository implements OrdersRepository {
     return grouped;
   }
 
-  async #listOptionsByItem(itemIds: string[]): Promise<Map<string, OrderItemOption[]>> {
+  #listOptionsByItem(
+    itemIds: string[],
+    db: OrderReader = this.#db,
+  ): Map<string, OrderItemOption[]> {
     if (itemIds.length === 0) return new Map();
-    const rows = await this.#db
+    const rows = db
       .select({
         orderItemId: orderItemOptions.orderItemId,
         kind: orderItemOptions.kind,
@@ -238,7 +280,8 @@ export class DrizzleOrdersRepository implements OrdersRepository {
       })
       .from(orderItemOptions)
       .where(inArray(orderItemOptions.orderItemId, itemIds))
-      .orderBy(asc(orderItemOptions.position));
+      .orderBy(asc(orderItemOptions.position))
+      .all();
 
     const grouped = new Map<string, OrderItemOption[]>();
     for (const { orderItemId, ...option } of rows) {

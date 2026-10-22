@@ -1,10 +1,12 @@
 import {
+  canTransitionOrder,
   resolveGroupRules,
   type ApiFieldIssue,
   type CreateOrderInput,
   type CreateOrderItemInput,
   type Order,
   type OrderListFilter,
+  type UpdateOrderStatusInput,
   type ProductSize,
 } from '@bigger/shared';
 import { AppError } from '../../core/errors/app-error.js';
@@ -30,6 +32,28 @@ export class OrdersService {
       ...(filter.status ? { statuses: filter.status } : {}),
       ...(filter.channel ? { channel: filter.channel } : {}),
     });
+  }
+
+  async updateStatus(id: string, input: UpdateOrderStatusInput): Promise<Order> {
+    const current = await this.#repository.findById(id);
+    if (!current) throw AppError.notFound('Pedido');
+    if (!canTransitionOrder(current.status, input.status)) {
+      throw new AppError(
+        'INVALID_STATE_TRANSITION',
+        `No se puede cambiar el pedido de ${current.status} a ${input.status}`,
+      );
+    }
+
+    const updated = await this.#repository.updateStatus(id, current.status, input.status);
+    if (!updated) {
+      throw new AppError(
+        'CONFLICT',
+        'El pedido cambió mientras se actualizaba. Vuelve a consultarlo',
+      );
+    }
+
+    this.#publisher.publish({ type: 'order.updated', payload: updated });
+    return updated;
   }
 
   async create(input: CreateOrderInput): Promise<Order> {
