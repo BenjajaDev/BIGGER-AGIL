@@ -5,21 +5,37 @@ import type { DraftLine } from '../order-draft';
 import { ComandaPanel, type ComandaPanelProps } from './ComandaPanel';
 
 const capuchino: DraftLine = {
+  lineId: 'l-1',
   productId: 'p-1',
   productName: 'Capuchino',
-  unitPriceClp: 2500,
+  basePriceClp: 2500,
   quantity: 2,
   quickNotes: ['no-sugar'],
+  note: '',
+  options: [
+    {
+      groupId: 'g-1',
+      groupName: 'Tipo de leche',
+      optionId: 'o-1',
+      optionName: 'Almendra',
+      priceDeltaClp: 500,
+    },
+  ],
+  comboChoices: [],
 };
 
 function renderPanel(overrides: Partial<ComandaPanelProps> = {}) {
   const props: ComandaPanelProps = {
-    title: 'Comanda · Mesa 2',
+    heading: 'Mesa 2',
+    subtitle: 'Para servir en sala',
+    customerName: '',
+    requireName: false,
     lines: [capuchino],
-    totalClp: 5000,
+    totalClp: 6000,
+    onSetCustomerName: vi.fn(),
     onIncrement: vi.fn(),
     onDecrement: vi.fn(),
-    onToggleNote: vi.fn(),
+    onSetNote: vi.fn(),
     onSubmit: vi.fn(),
     ...overrides,
   };
@@ -27,20 +43,25 @@ function renderPanel(overrides: Partial<ComandaPanelProps> = {}) {
 }
 
 describe('ComandaPanel', () => {
-  it('shows the total and announces it in words', () => {
+  it('shows the subtotal, suggested tip and total with tip', () => {
     renderPanel();
-    const total = screen.getByText('Total').parentElement;
-    expect(total).toHaveTextContent('$ 5.000');
-    expect(total).toHaveTextContent('5.000 pesos');
+    expect(screen.getByText('Subtotal').parentElement).toHaveTextContent('$ 6.000');
+    expect(screen.getByText('Propina sugerida (10%)').parentElement).toHaveTextContent('$ 600');
+    const total = screen.getByText('6.600 pesos').parentElement;
+    expect(total).toHaveTextContent('$ 6.600');
+    expect(total).toHaveTextContent('Total con propina');
   });
 
-  it('exposes quick notes as toggle buttons', async () => {
-    const { props } = renderPanel();
-    const noSugar = screen.getByRole('button', { name: 'Sin azúcar' });
-    expect(noSugar).toHaveAttribute('aria-pressed', 'true');
+  it('lists the chosen options and notes as detail', () => {
+    renderPanel();
+    expect(screen.getByText('• Almendra')).toBeInTheDocument();
+    expect(screen.getByText('• Sin azúcar')).toBeInTheDocument();
+  });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Para llevar' }));
-    expect(props.onToggleNote).toHaveBeenCalledWith('p-1', 'takeaway');
+  it('adjusts the quantity by line', async () => {
+    const { props } = renderPanel();
+    await userEvent.click(screen.getByRole('button', { name: 'Sumar un Capuchino' }));
+    expect(props.onIncrement).toHaveBeenCalledWith('l-1');
   });
 
   it('sends the comanda to the kitchen', async () => {
@@ -53,6 +74,22 @@ describe('ComandaPanel', () => {
     renderPanel({ lines: [], totalClp: 0 });
     expect(screen.getByText('Comanda vacía')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Enviar a cocina' })).toBeDisabled();
+  });
+
+  it('hides the name field for dine-in orders', () => {
+    renderPanel();
+    expect(screen.queryByLabelText('Nombre')).not.toBeInTheDocument();
+  });
+
+  it('requires a name before sending a takeaway order', () => {
+    renderPanel({ requireName: true, customerName: '' });
+    expect(screen.getByLabelText('Nombre')).toBeRequired();
+    expect(screen.getByRole('button', { name: 'Enviar a cocina' })).toBeDisabled();
+  });
+
+  it('enables sending once the takeaway name is filled', () => {
+    renderPanel({ requireName: true, customerName: 'Javier' });
+    expect(screen.getByRole('button', { name: 'Enviar a cocina' })).toBeEnabled();
   });
 
   it('has no detectable accessibility violations', async () => {

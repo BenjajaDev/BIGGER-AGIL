@@ -1,5 +1,9 @@
 import '@fontsource-variable/fraunces';
 import '@fontsource-variable/inter';
+import '@fontsource/anton';
+import '@fontsource/barlow-condensed/500.css';
+import '@fontsource/barlow-condensed/600.css';
+import '@fontsource/barlow-condensed/700.css';
 import './styles/tokens.css';
 import './styles/global.css';
 import { StrictMode } from 'react';

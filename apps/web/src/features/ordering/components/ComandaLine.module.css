@@ -2,23 +2,98 @@
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3) 0;
-  border-bottom: var(--border-width) solid var(--border-subtle);
+  border-bottom: var(--border-width) dashed var(--border-subtle);
   animation: pop-in var(--duration-base) var(--ease-out);
+}
+
+.line:last-child {
+  border-bottom: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: var(--space-3);
+  align-items: start;
 }
 
 .header {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
-  font-weight: var(--weight-semibold);
 }
 
-.subtotal {
-  font-variant-numeric: tabular-nums;
-}
-
-.notes {
-  display: flex;
-  flex-wrap: wrap;
+.cant {
+  display: grid;
+  justify-items: stretch;
   gap: var(--space-2);
+}
+
+.qty {
+  font-family: var(--font-ticket-display);
+  font-size: 1.75rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-1);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 2rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-muted);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.product {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.name {
+  font-family: var(--font-ticket);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-product);
+  letter-spacing: 0.01em;
+  line-height: var(--leading-tight);
+  text-transform: uppercase;
+}
+
+.detail {
+  display: grid;
+  gap: 0.125rem;
+  font-family: var(--font-ticket);
+  font-size: var(--text-body);
+}
+
+.detail li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.detailPrice {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.total {
+  font-family: var(--font-ticket);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-button);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }

@@ -51,6 +51,9 @@
   /* Tipografía */
   --font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
   --font-ui: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Comanda impresa: rótulo condensado tipo ticket. */
+  --font-ticket-display: 'Anton', 'Arial Narrow', sans-serif;
+  --font-ticket: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --text-detail: 0.875rem; /* 14 px, mínimo permitido */
   --text-body: 1rem; /* 16 px */
   --text-button: 1.125rem; /* 18 px */

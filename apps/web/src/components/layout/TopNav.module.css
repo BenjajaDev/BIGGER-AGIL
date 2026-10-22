@@ -6,6 +6,8 @@
   align-items: center;
   gap: var(--space-4);
   padding: 0 var(--space-6);
+  /* Keep the scrollable nav from stretching the page on narrow screens. */
+  overflow-x: hidden;
   background-color: var(--surface-inverse);
   color: var(--text-inverse);
 }
@@ -26,8 +28,15 @@
 }
 
 .nav {
+  min-width: 0;
   margin-left: auto;
   overflow-x: auto;
+  /* Hide the scrollbar chrome but keep the links swipeable when they don't all fit. */
+  scrollbar-width: none;
+}
+
+.nav::-webkit-scrollbar {
+  display: none;
 }
 
 .list {

@@ -1,6 +1,8 @@
 .shell {
   display: grid;
   grid-template-rows: var(--topbar-height) 1fr;
+  /* Clamp the single column to the viewport so wide rows (nav, content) can't stretch the page. */
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100dvh;
 }
 
