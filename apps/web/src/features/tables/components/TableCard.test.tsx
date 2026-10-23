@@ -28,22 +28,38 @@ function renderCard(table: TableOverview) {
 }
 
 describe('TableCard', () => {
-  it('states an occupied table in text, not only with color', () => {
+  it('starts an order from a free table', () => {
+    renderCard(base);
+    expect(screen.getByRole('link', { name: 'Mesa 2, Libre' })).toHaveAttribute(
+      'href',
+      `/pedido?mesa=${base.id}`,
+    );
+  });
+
+  it('states an occupied table in text and opens its bill', () => {
     renderCard({
       ...base,
       status: 'occupied',
+      checkId: '7d6c5b4a-3e2f-4a1b-9c8d-7e6f5a4b3c2d',
       itemCount: 3,
       openSince: '2026-10-21T12:00:00.000Z',
     });
     const link = screen.getByRole('link', { name: 'Mesa 2, Con pedido, 3 productos · 12 min' });
-    expect(link).toHaveAttribute('href', `/pedido?mesa=${base.id}`);
+    expect(link).toHaveAttribute('href', `/mesas/${base.id}`);
     expect(screen.getByText('Con pedido')).toBeVisible();
   });
 
-  it('shows the amount due for a table awaiting payment', () => {
-    renderCard({ ...base, status: 'awaiting-payment', openTotalClp: 9800 });
+  it('shows what is still owed for a table awaiting payment', () => {
+    renderCard({
+      ...base,
+      status: 'awaiting-payment',
+      checkId: '7d6c5b4a-3e2f-4a1b-9c8d-7e6f5a4b3c2d',
+      openTotalClp: 9800,
+      paidClp: 2000,
+      balanceClp: 7800,
+    });
     expect(screen.getByText('Por pagar')).toBeInTheDocument();
-    expect(screen.getByText('$ 9.800')).toBeInTheDocument();
+    expect(screen.getByText(/^Saldo \$\s7\.800$/)).toBeInTheDocument();
   });
 
   it('has no detectable accessibility violations', async () => {

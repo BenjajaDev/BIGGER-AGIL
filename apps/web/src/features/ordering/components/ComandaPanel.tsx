@@ -65,27 +65,27 @@ export function ComandaPanel({
           <time dateTime={openedAt.toISOString()}>{formatClockTime(openedAt.toISOString())}</time>
         </p>
 
-        {requireName && (
-          <div className={styles.name}>
-            <label htmlFor={nameId}>Nombre</label>
-            <input
-              id={nameId}
-              type="text"
-              className={controlClassName}
-              value={customerName}
-              maxLength={60}
-              required
-              aria-describedby={hintId}
-              placeholder="¿Para quién es?"
-              onChange={(event) => {
-                onSetCustomerName(event.target.value);
-              }}
-            />
-            <p id={hintId} className={styles.nameHint}>
-              Obligatorio para pedidos para llevar
-            </p>
-          </div>
-        )}
+        <div className={styles.name}>
+          <label htmlFor={nameId}>{requireName ? 'Nombre' : '¿Para quién? (opcional)'}</label>
+          <input
+            id={nameId}
+            type="text"
+            className={controlClassName}
+            value={customerName}
+            maxLength={60}
+            required={requireName}
+            aria-describedby={hintId}
+            placeholder={requireName ? '¿Para quién es?' : 'Ej.: Juan'}
+            onChange={(event) => {
+              onSetCustomerName(event.target.value);
+            }}
+          />
+          <p id={hintId} className={styles.nameHint}>
+            {requireName
+              ? 'Obligatorio para pedidos para llevar'
+              : 'Ayuda a dividir la cuenta si la mesa paga por separado'}
+          </p>
+        </div>
 
         <p className={styles.columns} aria-hidden="true">
           <span>Cant</span>

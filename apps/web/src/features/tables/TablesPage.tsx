@@ -3,7 +3,7 @@ import { ButtonLink } from '../../components/ui/Button';
 import { AsyncContent } from '../../components/ui/AsyncContent';
 import { Card } from '../../components/ui/Card';
 import { useNow } from '../../hooks/useNow';
-import { WhatsAppOrdersPanel } from '../orders/components/WhatsAppOrdersPanel';
+import { TakeawayOrdersPanel } from '../orders/components/TakeawayOrdersPanel';
 import { TableMap } from './components/TableMap';
 import { TableStatusLegend } from './components/TableStatusLegend';
 import styles from './TablesPage.module.css';
@@ -32,7 +32,7 @@ export function TablesPage() {
           <Plus size={20} aria-hidden="true" />
           Pedido para llevar
         </ButtonLink>
-        <WhatsAppOrdersPanel now={now} />
+        <TakeawayOrdersPanel now={now} />
       </Card>
     </div>
   );

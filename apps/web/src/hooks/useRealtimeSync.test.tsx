@@ -175,6 +175,7 @@ describe('useRealtimeSync with EventSource', () => {
     expect(app.invalidate.mock.calls).toEqual([
       [{ queryKey: queryKeys.orders }],
       [{ queryKey: queryKeys.tables }],
+      [{ queryKey: queryKeys.checks }],
     ]);
     expect(app.calls).toHaveLength(4);
     expect(TestEventSource.instances).toHaveLength(1);

@@ -20,7 +20,7 @@ function describeTable(table: TableOverview, now: Date): string | null {
       return table.openSince ? `${items} · ${minutesSince(table.openSince, now)} min` : items;
     }
     case 'awaiting-payment':
-      return formatClp(table.openTotalClp);
+      return `Saldo ${formatClp(table.balanceClp)}`;
   }
 }
 
@@ -30,7 +30,8 @@ export function TableCard({ table, now }: TableCardProps) {
 
   return (
     <Link
-      to={`/pedido?mesa=${table.id}`}
+      // A free table starts an order; an occupied one opens its bill.
+      to={table.checkId === null ? `/pedido?mesa=${table.id}` : `/mesas/${table.id}`}
       className={cx(styles.card, styles[table.status])}
       aria-label={[table.label, presentation.label, detail].filter(Boolean).join(', ')}
     >

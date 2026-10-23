@@ -17,11 +17,13 @@
   border-top-color: var(--status-success);
 }
 
+/* Title | time | handle on one line, same height with or without the drag handle. */
 .header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--space-2);
+  min-height: var(--touch-target);
 }
 
 .title {
@@ -32,6 +34,7 @@
 .elapsed {
   color: var(--text-secondary);
   font-size: var(--text-detail);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -48,6 +51,7 @@
   flex-shrink: 0;
   min-width: var(--touch-target);
   min-height: var(--touch-target);
+  margin-right: calc(-1 * var(--space-2));
   padding: var(--space-1);
   border: 0;
   border-radius: var(--radius-sm);

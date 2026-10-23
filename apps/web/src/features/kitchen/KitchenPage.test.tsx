@@ -12,7 +12,7 @@ import { queryKeys } from '../../app/query-keys';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { orderFixture as baseOrder } from '../../test/orders';
 import { installKitchenDragGeometry } from '../../test/kitchen-drag';
-import { WhatsAppOrdersPanel } from '../orders/components/WhatsAppOrdersPanel';
+import { TakeawayOrdersPanel } from '../orders/components/TakeawayOrdersPanel';
 import { useTableOverview } from '../tables/useTableOverview';
 import { KitchenPage } from './KitchenPage';
 
@@ -113,7 +113,7 @@ function setup(initialOrders: Order[] = [baseOrder, preparingOrder, readyOrder])
         {withOtherViews && (
           <>
             <TableProbe />
-            <WhatsAppOrdersPanel now={new Date('2026-10-22T12:00:00.000Z')} />
+            <TakeawayOrdersPanel now={new Date('2026-10-22T12:00:00.000Z')} />
           </>
         )}
       </QueryClientProvider>,
@@ -666,7 +666,7 @@ describe('KitchenPage status actions', () => {
     await userEvent.click(
       screen.getByRole('button', { name: 'Marcar listo: WhatsApp · Cliente de prueba' }),
     );
-    const panel = screen.getByRole('region', { name: 'Pedidos por WhatsApp' });
+    const panel = screen.getByRole('region', { name: 'Para llevar y WhatsApp' });
     await waitFor(() => {
       expect(within(panel).getByText('Listo')).toBeInTheDocument();
     });
