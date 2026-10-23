@@ -11,15 +11,23 @@ import type {
   ProductSize,
   QuickNote,
 } from '@bigger/shared';
-import { and, asc, eq, inArray, type SQL } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { AppDatabase } from '../../db/client.js';
-import { diningTables, orderItemOptions, orderItems, orders, products } from '../../db/schema.js';
+import {
+  checks,
+  diningTables,
+  orderItemOptions,
+  orderItems,
+  orders,
+  products,
+} from '../../db/schema.js';
 import { loadCatalogRelations } from '../catalog/catalog-relations.js';
 
 export interface OrderQuery {
   statuses?: readonly OrderStatus[];
   channel?: OrderChannel;
+  checkIds?: readonly string[];
 }
 
 /** Catalog data the order needs to price, validate and snapshot each line at sale time. */
@@ -84,6 +92,7 @@ function toOrder(order: OrderRow, tableLabel: string | null, items: OrderItem[])
     id: order.id,
     channel: order.channel,
     status: order.status,
+    checkId: order.checkId,
     tableId: order.tableId,
     tableLabel,
     customerName: order.customerName,
@@ -93,6 +102,33 @@ function toOrder(order: OrderRow, tableLabel: string | null, items: OrderItem[])
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
   };
+}
+
+type Transaction = Parameters<Parameters<AppDatabase['transaction']>[0]>[0];
+
+/**
+ * A table order joins the table's open check (someone arrived later); otherwise a check is opened.
+ * Takeaway and WhatsApp orders always get their own. Bumping `version` invalidates stale payments.
+ */
+function joinOrOpenCheck(tx: Transaction, tableId: string | null): string {
+  const open =
+    tableId === null
+      ? undefined
+      : tx
+          .select({ id: checks.id })
+          .from(checks)
+          .where(and(eq(checks.tableId, tableId), eq(checks.status, 'open')))
+          .get();
+  if (open) {
+    tx.update(checks)
+      .set({ version: sql`${checks.version} + 1`, updatedAt: new Date() })
+      .where(eq(checks.id, open.id))
+      .run();
+    return open.id;
+  }
+  const [created] = tx.insert(checks).values({ tableId }).returning({ id: checks.id }).all();
+  if (!created) throw new Error('No se pudo abrir la cuenta');
+  return created.id;
 }
 
 export class DrizzleOrdersRepository implements OrdersRepository {
@@ -106,6 +142,10 @@ export class DrizzleOrdersRepository implements OrdersRepository {
     const conditions: SQL[] = [];
     if (query.statuses?.length) conditions.push(inArray(orders.status, [...query.statuses]));
     if (query.channel) conditions.push(eq(orders.channel, query.channel));
+    if (query.checkIds) {
+      if (query.checkIds.length === 0) return [];
+      conditions.push(inArray(orders.checkId, [...query.checkIds]));
+    }
 
     const rows = await this.#db
       .select({ order: orders, tableLabel: diningTables.label })
@@ -180,6 +220,7 @@ export class DrizzleOrdersRepository implements OrdersRepository {
       tx.insert(orders)
         .values({
           id: orderId,
+          checkId: joinOrOpenCheck(tx, order.tableId),
           channel: order.channel,
           tableId: order.tableId,
           customerName: order.customerName,

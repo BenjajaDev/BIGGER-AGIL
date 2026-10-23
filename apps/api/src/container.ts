@@ -27,6 +27,10 @@ import { ModifierGroupsAdminService } from './modules/catalog-admin/modifier-gro
 import { DrizzleProductsAdminRepository } from './modules/catalog-admin/products.repository.js';
 import { ProductsAdminService } from './modules/catalog-admin/products.service.js';
 import { CatalogController } from './modules/catalog/catalog.controller.js';
+import { ChecksController } from './modules/checks/checks.controller.js';
+import { DrizzleChecksRepository } from './modules/checks/checks.repository.js';
+import { createChecksRouter } from './modules/checks/checks.routes.js';
+import { ChecksService } from './modules/checks/checks.service.js';
 import { DrizzleCatalogRepository } from './modules/catalog/catalog.repository.js';
 import { createCatalogRouter } from './modules/catalog/catalog.routes.js';
 import { CatalogService, type CatalogClock } from './modules/catalog/catalog.service.js';
@@ -68,9 +72,16 @@ export function buildApiRouters({
   const catalogController = new CatalogController(
     new CatalogService(new DrizzleCatalogRepository(db), clock),
   );
-  const ordersController = new OrdersController(new OrdersService(ordersRepository, eventHub));
+  const checksService = new ChecksService(
+    new DrizzleChecksRepository(db),
+    ordersRepository,
+    eventHub,
+  );
+  const ordersController = new OrdersController(
+    new OrdersService(ordersRepository, eventHub, checksService),
+  );
   const tablesController = new TablesController(
-    new TablesService(new DrizzleTablesRepository(db), ordersRepository),
+    new TablesService(new DrizzleTablesRepository(db), checksService),
   );
   const catalogAdminControllers = {
     categories: new CategoriesAdminController(
@@ -99,6 +110,7 @@ export function buildApiRouters({
     createCatalogRouter(catalogController),
     createOrdersRouter(ordersController),
     createTablesRouter(tablesController),
+    createChecksRouter(new ChecksController(checksService)),
     createRealtimeRouter(eventHub),
     createAdminAuthRouter(new AdminAuthController(adminAuthService)),
     createCatalogAdminRouter(catalogAdminControllers, requireAdmin(adminAuthService), [

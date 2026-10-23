@@ -8,6 +8,7 @@ const order: Order = {
   id: '0b8f7c6e-5d4c-4b3a-9f2e-1d0c9b8a7f6e',
   channel: 'dine-in',
   status: 'new',
+  checkId: '7d6c5b4a-3e2f-4a1b-9c8d-7e6f5a4b3c2d',
   tableId: '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d',
   tableLabel: 'Mesa 2',
   customerName: null,

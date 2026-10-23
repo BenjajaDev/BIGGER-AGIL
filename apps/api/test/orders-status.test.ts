@@ -74,6 +74,9 @@ afterEach(() => {
   context.connection.close();
 });
 
+/** The check also announces itself; these tests are about the order events. */
+const orderEvents = () => events.filter((event) => event.type.startsWith('order.'));
+
 function orderRows() {
   const db = context.connection.db;
   return {
@@ -90,7 +93,6 @@ describe('PATCH /api/v1/orders/:orderId/status', () => {
     ['preparing', 'ready'],
     ['preparing', 'cancelled'],
     ['ready', 'delivered'],
-    ['delivered', 'paid'],
   ] as const)(
     'persists %s → %s, preserves the order and publishes after saving',
     async (from, to) => {
@@ -123,7 +125,7 @@ describe('PATCH /api/v1/orders/:orderId/status', () => {
       expect(apiSuccessSchema(z.array(OrderSchema)).parse(listResponse.body).data).toEqual([
         updated,
       ]);
-      expect(events).toEqual([{ type: 'order.updated', payload: updated }]);
+      expect(orderEvents()).toEqual([{ type: 'order.updated', payload: updated }]);
       expect(statusAtPublication).toBe(to);
     },
   );
@@ -134,6 +136,8 @@ describe('PATCH /api/v1/orders/:orderId/status', () => {
     ['preparing', 'new'],
     ['ready', 'cancelled'],
     ['delivered', 'preparing'],
+    // Paying is registered on the check, never by hand.
+    ['delivered', 'paid'],
     ['paid', 'new'],
     ['cancelled', 'new'],
   ] as const)('rejects %s → %s without changing SQLite or publishing', async (from, to) => {
@@ -222,7 +226,7 @@ describe('PATCH /api/v1/orders/:orderId/status', () => {
     const updated = apiSuccessSchema(OrderSchema).parse(success.body).data;
     expect(ApiErrorBodySchema.parse(conflict.body).error.code).toBe('CONFLICT');
     expect(orderRows().order?.status).toBe(updated.status);
-    expect(events).toEqual([{ type: 'order.updated', payload: updated }]);
+    expect(orderEvents()).toEqual([{ type: 'order.updated', payload: updated }]);
   });
 
   it('returns a safe 500 and publishes nothing if SQLite rejects the write', async () => {

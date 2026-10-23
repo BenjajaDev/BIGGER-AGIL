@@ -11,6 +11,7 @@ import {
 } from '@bigger/shared';
 import { AppError } from '../../core/errors/app-error.js';
 import type { RealtimePublisher } from '../../realtime/event-hub.js';
+import type { CheckHooks } from './check-hooks.js';
 import type {
   NewOrderItem,
   NewOrderItemOption,
@@ -21,10 +22,12 @@ import type {
 export class OrdersService {
   readonly #repository: OrdersRepository;
   readonly #publisher: RealtimePublisher;
+  readonly #checks: CheckHooks;
 
-  constructor(repository: OrdersRepository, publisher: RealtimePublisher) {
+  constructor(repository: OrdersRepository, publisher: RealtimePublisher, checks: CheckHooks) {
     this.#repository = repository;
     this.#publisher = publisher;
+    this.#checks = checks;
   }
 
   list(filter: OrderListFilter): Promise<Order[]> {
@@ -37,12 +40,21 @@ export class OrdersService {
   async updateStatus(id: string, input: UpdateOrderStatusInput): Promise<Order> {
     const current = await this.#repository.findById(id);
     if (!current) throw AppError.notFound('Pedido');
+    // Settling is the check's job: a payment that leaves nothing owed closes it.
+    if (input.status === 'paid') {
+      throw new AppError(
+        'INVALID_STATE_TRANSITION',
+        'El pago se registra con «Cobrar» en la cuenta de la mesa',
+      );
+    }
     if (!canTransitionOrder(current.status, input.status)) {
       throw new AppError(
         'INVALID_STATE_TRANSITION',
         `No se puede cambiar el pedido de ${current.status} a ${input.status}`,
       );
     }
+
+    if (input.status === 'cancelled') await this.#checks.assertCanCancel(current);
 
     const updated = await this.#repository.updateStatus(id, current.status, input.status);
     if (!updated) {
@@ -53,6 +65,7 @@ export class OrdersService {
     }
 
     this.#publisher.publish({ type: 'order.updated', payload: updated });
+    await this.#checks.afterOrderChange(updated.checkId);
     return updated;
   }
 
@@ -76,6 +89,7 @@ export class OrdersService {
     });
 
     this.#publisher.publish({ type: 'order.created', payload: order });
+    await this.#checks.afterOrderChange(order.checkId);
     return order;
   }
 

@@ -40,6 +40,10 @@ tags:
     description: Mapa del salón con estado derivado de los pedidos.
   - name: Pedidos
     description: Comandas de mesa, para llevar y WhatsApp.
+  - name: Cobro
+    description: |
+      Cuenta de la mesa (una abierta por mesa; los pedidos de quien llega después se suman a
+      ella) y pagos con efectivo, débito o JUNAEB: completo, por productos o en partes iguales.
   - name: Tiempo real
     description: Notificaciones de cambios por Server-Sent Events.
   - name: Administración
@@ -194,8 +198,11 @@ paths:
       tags: [Pedidos]
       summary: Avanza el estado de un pedido (prueba P03)
       description: |
-        Transiciones válidas: `new → preparing → ready → delivered → paid`;
-        `new|preparing → cancelled`. Valida el UUID y el cuerpo de la solicitud.
+        Transiciones válidas: `new → preparing → ready → delivered`;
+        `new|preparing → cancelled`. `paid` no se fija a mano: lo aplica la cuenta al cerrarse
+        (saldo 0 y todo entregado), así que pedirlo responde 409. Anular un pedido con pagos
+        en la cuenta responde 409 `CONFLICT` hasta anular el pago. Tras cada cambio se evalúa
+        el cierre de la cuenta y se emite `check.updated`. Valida el UUID y el cuerpo de la solicitud.
         Actualiza `status` y `updatedAt` en SQLite conservando los demás datos del pedido.
         La escritura está condicionada al estado leído: si otro cliente lo cambia entre
         la lectura y la escritura, responde 409 `CONFLICT` sin reintentar.
@@ -234,6 +241,97 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ApiError' }
+
+  /tables/{tableId}/check:
+    get:
+      tags: [Cobro]
+      summary: Cuenta abierta de una mesa
+      operationId: getTableCheck
+      parameters:
+        - { name: tableId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { $ref: '#/components/responses/Check' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /checks/{checkId}:
+    get:
+      tags: [Cobro]
+      summary: Cuenta por id (también las de para llevar y WhatsApp)
+      operationId: getCheck
+      parameters: [{ $ref: '#/components/parameters/CheckId' }]
+      responses:
+        '200': { $ref: '#/components/responses/Check' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /checks/{checkId}/split:
+    put:
+      tags: [Cobro]
+      summary: Divide la cuenta en partes iguales (o quita la división con `null`)
+      description: Reinicia el conteo de partes pagadas. Emite `check.updated`.
+      operationId: setCheckSplit
+      parameters: [{ $ref: '#/components/parameters/CheckId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [parts]
+              properties:
+                parts: { type: [integer, 'null'], minimum: 2, maximum: 20 }
+      responses:
+        '200': { $ref: '#/components/responses/Check' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /checks/{checkId}/payments:
+    post:
+      tags: [Cobro]
+      summary: Registra un pago
+      description: |
+        El servidor calcula el monto según `mode`: `full` = saldo, `equal` = siguiente parte
+        (requiere división), `items` = unidades elegidas × (precio base + extras). Si difiere de
+        `expectedAmountClp` (la cuenta cambió mientras se cobraba) responde 409 sin cobrar.
+        Efectivo exige `receivedClp ≥ monto + propina` y devuelve el vuelto en `changeClp`;
+        JUNAEB no admite propina. Si el saldo queda en 0 y todo está entregado, la cuenta se
+        cierra, sus pedidos pasan a `paid` y la mesa queda libre. Emite `check.updated`.
+      operationId: createPayment
+      parameters: [{ $ref: '#/components/parameters/CheckId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePaymentInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Check' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /payments/{paymentId}/void:
+    post:
+      tags: [Cobro]
+      summary: Anula un pago de una cuenta abierta (queda registrado con motivo)
+      operationId: voidPayment
+      parameters:
+        - { name: paymentId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 140 }
+      responses:
+        '200': { $ref: '#/components/responses/Check' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
 
   /events:
     get:
@@ -637,6 +735,11 @@ components:
       description: Cookie httpOnly emitida por `POST /admin/session`; dura 12 h.
 
   parameters:
+    CheckId:
+      name: checkId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     Id:
       name: id
       in: path
@@ -680,6 +783,15 @@ components:
           schema: { $ref: '#/components/schemas/ProductTypeInput' }
 
   responses:
+    Check:
+      description: Cuenta con sus pedidos, pagos y saldo
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: { $ref: '#/components/schemas/Check' }
     ValidationError:
       description: Datos de entrada inválidos (`VALIDATION_ERROR`)
       content:
@@ -1217,15 +1329,31 @@ components:
 
     TableOverview:
       type: object
-      required: [id, number, label, sortOrder, status, itemCount, openTotalClp, openSince]
+      required:
+        [
+          id,
+          number,
+          label,
+          sortOrder,
+          status,
+          checkId,
+          itemCount,
+          openTotalClp,
+          paidClp,
+          balanceClp,
+          openSince,
+        ]
       properties:
         id: { type: string, format: uuid }
         number: { type: integer, minimum: 1 }
         label: { type: string }
         sortOrder: { type: integer }
         status: { $ref: '#/components/schemas/TableStatus' }
+        checkId: { type: [string, 'null'], format: uuid, description: Cuenta abierta }
         itemCount: { type: integer, minimum: 0 }
         openTotalClp: { type: integer, minimum: 0 }
+        paidClp: { type: integer, minimum: 0 }
+        balanceClp: { type: integer, minimum: 0 }
         openSince: { type: [string, 'null'], format: date-time }
 
     OrderStatus:
@@ -1278,6 +1406,7 @@ components:
           id,
           channel,
           status,
+          checkId,
           tableId,
           tableLabel,
           customerName,
@@ -1291,6 +1420,10 @@ components:
         id: { type: string, format: uuid }
         channel: { $ref: '#/components/schemas/OrderChannel' }
         status: { $ref: '#/components/schemas/OrderStatus' }
+        checkId:
+          type: string
+          format: uuid
+          description: Cuenta a la que pertenece; los pedidos de una mesa ocupada comparten la misma.
         tableId: { type: [string, 'null'], format: uuid }
         tableLabel: { type: [string, 'null'] }
         customerName: { type: [string, 'null'], maxLength: 60 }
@@ -1353,6 +1486,128 @@ components:
                     slotId: { type: string, format: uuid }
                     productId: { type: string, format: uuid }
 
+    PaymentMethod:
+      type: string
+      enum: [cash, debit, junaeb]
+
+    Payment:
+      type: object
+      required:
+        [
+          id,
+          method,
+          mode,
+          amountClp,
+          tipClp,
+          receivedClp,
+          changeClp,
+          items,
+          createdAt,
+          voidedAt,
+          voidReason,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        method: { $ref: '#/components/schemas/PaymentMethod' }
+        mode: { type: string, enum: [full, items, equal] }
+        amountClp: { type: integer, minimum: 0, description: 'Consumo pagado, sin propina' }
+        tipClp: { type: integer, minimum: 0 }
+        receivedClp: { type: [integer, 'null'], minimum: 0, description: Solo efectivo }
+        changeClp: { type: [integer, 'null'], minimum: 0, description: Vuelto entregado }
+        items:
+          type: array
+          description: Unidades pagadas en un pago por productos.
+          items:
+            type: object
+            required: [orderItemId, quantity, amountClp]
+            properties:
+              orderItemId: { type: string, format: uuid }
+              quantity: { type: integer, minimum: 1 }
+              amountClp: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+        voidedAt: { type: [string, 'null'], format: date-time }
+        voidReason: { type: [string, 'null'] }
+
+    Check:
+      type: object
+      description: |
+        Cuenta de una mesa (o de un pedido para llevar). `version` cambia con cada escritura.
+        `lines` lista cada línea cobrable con sus unidades ya pagadas.
+      required:
+        [
+          id,
+          tableId,
+          tableLabel,
+          status,
+          version,
+          splitParts,
+          orders,
+          payments,
+          lines,
+          totalClp,
+          paidClp,
+          tipClp,
+          balanceClp,
+          remainingParts,
+          nextPartClp,
+          openedAt,
+          closedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        tableId: { type: [string, 'null'], format: uuid }
+        tableLabel: { type: [string, 'null'] }
+        status: { type: string, enum: [open, closed] }
+        version: { type: integer, minimum: 0 }
+        splitParts: { type: [integer, 'null'], minimum: 2, maximum: 20 }
+        orders: { type: array, items: { $ref: '#/components/schemas/Order' } }
+        payments: { type: array, items: { $ref: '#/components/schemas/Payment' } }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [orderId, orderItemId, productName, unitTotalClp, quantity, paidQuantity]
+            properties:
+              orderId: { type: string, format: uuid }
+              orderItemId: { type: string, format: uuid }
+              productName: { type: string }
+              unitTotalClp: { type: integer, minimum: 0, description: Precio base + extras }
+              quantity: { type: integer, minimum: 1 }
+              paidQuantity: { type: integer, minimum: 0 }
+        totalClp: { type: integer, minimum: 0, description: Pedidos no anulados }
+        paidClp: { type: integer, minimum: 0, description: 'Pagos vigentes, sin propina' }
+        tipClp: { type: integer, minimum: 0 }
+        balanceClp: { type: integer, minimum: 0 }
+        remainingParts: { type: [integer, 'null'], minimum: 0 }
+        nextPartClp:
+          type: [integer, 'null']
+          minimum: 0
+          description: Siguiente parte igual; el resto de la división va a la última.
+        openedAt: { type: string, format: date-time }
+        closedAt: { type: [string, 'null'], format: date-time }
+
+    CreatePaymentInput:
+      type: object
+      required: [mode, method, expectedAmountClp]
+      description: |
+        `receivedClp` es obligatorio con efectivo y no se admite con otros medios. JUNAEB no
+        admite propina. `items` solo en `mode: items`, sin repetir líneas.
+      properties:
+        mode: { type: string, enum: [full, items, equal] }
+        method: { $ref: '#/components/schemas/PaymentMethod' }
+        expectedAmountClp: { type: integer, minimum: 0, description: Monto que vio quien cobra }
+        tipClp: { type: integer, minimum: 0, default: 0 }
+        receivedClp: { type: [integer, 'null'], minimum: 0, default: null }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [orderItemId, quantity]
+            properties:
+              orderItemId: { type: string, format: uuid }
+              quantity: { type: integer, minimum: 1, maximum: 99 }
+
     RealtimeEvent:
       oneOf:
         - type: object
@@ -1365,6 +1620,12 @@ components:
           properties:
             type: { const: order.updated }
             payload: { $ref: '#/components/schemas/Order' }
+        - type: object
+          description: Un pago, una división o un pedido nuevo cambió una cuenta.
+          required: [type, payload]
+          properties:
+            type: { const: check.updated }
+            payload: { $ref: '#/components/schemas/Check' }
         - type: object
           description: La carta cambió; los clientes vuelven a pedirla.
           required: [type]

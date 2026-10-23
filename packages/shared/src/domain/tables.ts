@@ -15,8 +15,12 @@ export type DiningTable = z.infer<typeof DiningTableSchema>;
 
 export const TableOverviewSchema = DiningTableSchema.extend({
   status: TableStatusSchema,
+  /** The open check, `null` when the table is free. */
+  checkId: z.uuid().nullable(),
   itemCount: z.int().nonnegative(),
   openTotalClp: PriceClpSchema,
+  paidClp: PriceClpSchema,
+  balanceClp: PriceClpSchema,
   openSince: z.iso.datetime().nullable(),
 });
 export type TableOverview = z.infer<typeof TableOverviewSchema>;

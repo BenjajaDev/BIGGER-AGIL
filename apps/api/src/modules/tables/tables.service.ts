@@ -1,31 +1,27 @@
-import { OPEN_ORDER_STATUSES, type Order, type TableOverview } from '@bigger/shared';
-import type { OrdersRepository } from '../orders/orders.repository.js';
+import type { Check, TableOverview } from '@bigger/shared';
 import { buildTableOverview } from './table-overview.js';
 import type { TablesRepository } from './tables.repository.js';
 
+/** The open checks of the tables (one per occupied table). */
+export interface OpenTableChecks {
+  listOpenForTables: () => Promise<Check[]>;
+}
+
 export class TablesService {
   readonly #tables: TablesRepository;
-  readonly #orders: OrdersRepository;
+  readonly #checks: OpenTableChecks;
 
-  constructor(tables: TablesRepository, orders: OrdersRepository) {
+  constructor(tables: TablesRepository, checks: OpenTableChecks) {
     this.#tables = tables;
-    this.#orders = orders;
+    this.#checks = checks;
   }
 
   async listOverview(): Promise<TableOverview[]> {
-    const [tables, openOrders] = await Promise.all([
+    const [tables, openChecks] = await Promise.all([
       this.#tables.listActive(),
-      this.#orders.list({ statuses: OPEN_ORDER_STATUSES, channel: 'dine-in' }),
+      this.#checks.listOpenForTables(),
     ]);
-
-    const ordersByTable = new Map<string, Order[]>();
-    for (const order of openOrders) {
-      if (order.tableId === null) continue;
-      const bucket = ordersByTable.get(order.tableId) ?? [];
-      bucket.push(order);
-      ordersByTable.set(order.tableId, bucket);
-    }
-
-    return tables.map((table) => buildTableOverview(table, ordersByTable.get(table.id) ?? []));
+    const checkByTable = new Map(openChecks.map((check) => [check.tableId, check]));
+    return tables.map((table) => buildTableOverview(table, checkByTable.get(table.id) ?? null));
   }
 }

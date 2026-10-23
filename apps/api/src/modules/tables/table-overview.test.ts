@@ -52,23 +52,32 @@ describe('deriveTableStatus', () => {
 });
 
 describe('buildTableOverview', () => {
-  it('aggregates items, totals and the oldest open order', () => {
-    const overview = buildTableOverview(table, [
-      openOrder('preparing', '2026-10-21T12:05:00.000Z', [item(2)]),
-      openOrder('new', '2026-10-21T12:00:00.000Z', [item(1)]),
-    ]);
+  it('aggregates items, totals, payments and the oldest open order', () => {
+    const overview = buildTableOverview(table, {
+      id: 'c-1',
+      paidClp: 2500,
+      balanceClp: 5000,
+      orders: [
+        openOrder('preparing', '2026-10-21T12:05:00.000Z', [item(2)]),
+        openOrder('new', '2026-10-21T12:00:00.000Z', [item(1)]),
+      ],
+    });
 
     expect(overview).toMatchObject({
       status: 'occupied',
+      checkId: 'c-1',
       itemCount: 3,
       openTotalClp: 7500,
+      paidClp: 2500,
+      balanceClp: 5000,
       openSince: '2026-10-21T12:00:00.000Z',
     });
   });
 
   it('returns an empty summary for a free table', () => {
-    expect(buildTableOverview(table, [])).toMatchObject({
+    expect(buildTableOverview(table, null)).toMatchObject({
       status: 'free',
+      checkId: null,
       itemCount: 0,
       openTotalClp: 0,
       openSince: null,
