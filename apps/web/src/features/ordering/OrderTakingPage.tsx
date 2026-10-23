@@ -21,7 +21,9 @@ import { useCategories, useProducts } from './useCatalog';
 import { useOrderDraft } from './useOrderDraft';
 
 type Target =
-  { kind: 'table'; label: string; tableId: string } | { kind: 'takeaway' } | { kind: 'none' };
+  | { kind: 'table'; label: string; tableId: string; hasOpenCheck: boolean }
+  | { kind: 'takeaway' }
+  | { kind: 'none' };
 
 function useOrderTarget(): Target | null {
   const [searchParams] = useSearchParams();
@@ -33,7 +35,9 @@ function useOrderTarget(): Target | null {
   if (tablesQuery.isPending) return null;
 
   const table = tablesQuery.data?.find((candidate) => candidate.id === tableId);
-  return table ? { kind: 'table', label: table.label, tableId: table.id } : { kind: 'none' };
+  return table
+    ? { kind: 'table', label: table.label, tableId: table.id, hasOpenCheck: table.checkId !== null }
+    : { kind: 'none' };
 }
 
 function ChooseTarget() {
@@ -76,7 +80,10 @@ export function OrderTakingPage() {
   if (target.kind === 'none') return <ChooseTarget />;
 
   const targetLabel = target.kind === 'table' ? target.label : 'Para llevar';
-  const targetSubtitle = 'Detalle del pedido';
+  const targetSubtitle =
+    target.kind === 'table' && target.hasOpenCheck
+      ? 'Se suma a la cuenta abierta de la mesa'
+      : 'Detalle del pedido';
 
   const handleSubmit = () => {
     const orderTarget: OrderTarget =

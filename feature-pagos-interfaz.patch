@@ -1,0 +1,2597 @@
+diff --git a/apps/web/src/app/query-keys.ts b/apps/web/src/app/query-keys.ts
+index f1be73c..c0ffb25 100644
+--- a/apps/web/src/app/query-keys.ts
++++ b/apps/web/src/app/query-keys.ts
+@@ -7,6 +7,9 @@ export const queryKeys = {
+   products: ['catalog', 'products'] as const,
+   menu: ['catalog', 'menu'] as const,
+   tables: ['tables'] as const,
++  checks: ['checks'] as const,
++  tableCheck: (tableId: string) => ['checks', 'table', tableId] as const,
++  check: (checkId: string) => ['checks', checkId] as const,
+   orders: ['orders'] as const,
+   orderList: (params: OrderListParams) => ['orders', params] as const,
+   admin: ['admin'] as const,
+diff --git a/apps/web/src/app/router.tsx b/apps/web/src/app/router.tsx
+index f98016b..c69c959 100644
+--- a/apps/web/src/app/router.tsx
++++ b/apps/web/src/app/router.tsx
+@@ -70,6 +70,11 @@ const internalRoutes: RouteObject[] = [
+     path: '/mesas',
+     lazy: () => import('../features/tables/TablesPage').then((m) => ({ Component: m.TablesPage })),
+   },
++  {
++    path: '/mesas/:tableId',
++    lazy: () =>
++      import('../features/checks/TableCheckPage').then((m) => ({ Component: m.TableCheckPage })),
++  },
+   {
+     path: '/pedido',
+     lazy: () =>
+diff --git a/apps/web/src/components/ui/ConfirmDialog.tsx b/apps/web/src/components/ui/ConfirmDialog.tsx
+index 8955770..cfc5e58 100644
+--- a/apps/web/src/components/ui/ConfirmDialog.tsx
++++ b/apps/web/src/components/ui/ConfirmDialog.tsx
+@@ -1,4 +1,4 @@
+-import { useEffect, useId, useRef } from 'react';
++import { useEffect, useId, useRef, type ReactNode } from 'react';
+ import { FieldError } from '../form/Field';
+ import { Button } from './Button';
+ import styles from './ConfirmDialog.module.css';
+@@ -9,7 +9,11 @@ export interface ConfirmDialogProps {
+   description: string;
+   confirmLabel: string;
+   isPending?: boolean;
++  /** Blocks the confirmation until the extra fields are valid. */
++  confirmDisabled?: boolean;
+   error?: string | null;
++  /** Extra fields, e.g. the reason for voiding a payment. */
++  children?: ReactNode;
+   onConfirm: () => void;
+   onClose: () => void;
+ }
+@@ -24,7 +28,9 @@ export function ConfirmDialog({
+   description,
+   confirmLabel,
+   isPending = false,
++  confirmDisabled = false,
+   error = null,
++  children,
+   onConfirm,
+   onClose,
+ }: ConfirmDialogProps) {
+@@ -54,6 +60,7 @@ export function ConfirmDialog({
+         <p id={descriptionId} className={styles.description}>
+           {description}
+         </p>
++        {children}
+         {error && (
+           <div role="alert">
+             <FieldError message={error} />
+@@ -64,7 +71,7 @@ export function ConfirmDialog({
+           <Button variant="secondary" onClick={onClose} autoFocus>
+             Cancelar
+           </Button>
+-          <Button variant="primary" onClick={onConfirm} disabled={isPending}>
++          <Button variant="primary" onClick={onConfirm} disabled={isPending || confirmDisabled}>
+             {isPending ? 'Procesando…' : confirmLabel}
+           </Button>
+         </div>
+diff --git a/apps/web/src/features/checks/TableCheckPage.module.css b/apps/web/src/features/checks/TableCheckPage.module.css
+new file mode 100644
+index 0000000..a1656e9
+--- /dev/null
++++ b/apps/web/src/features/checks/TableCheckPage.module.css
+@@ -0,0 +1,216 @@
++.page {
++  display: grid;
++  gap: var(--space-5);
++  max-width: var(--content-max-width);
++  margin: 0 auto;
++  padding: var(--space-6);
++}
++
++.header {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  gap: var(--space-3);
++}
++
++.title {
++  font-size: var(--text-heading);
++  font-weight: var(--weight-bold);
++}
++
++.layout {
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) 22rem;
++  align-items: start;
++  gap: var(--space-6);
++}
++
++.section {
++  display: grid;
++  gap: var(--space-3);
++}
++
++.sectionTitle {
++  font-size: var(--text-button);
++  font-weight: var(--weight-bold);
++}
++
++.muted {
++  color: var(--text-secondary);
++  font-size: var(--text-detail);
++}
++
++.aside {
++  position: sticky;
++  top: calc(var(--topbar-height) + var(--space-4));
++  display: grid;
++  gap: var(--space-4);
++}
++
++/* ---- Summary ---- */
++
++.summary {
++  display: grid;
++  gap: var(--space-2);
++}
++
++.summary > div {
++  display: flex;
++  justify-content: space-between;
++  gap: var(--space-3);
++  font-variant-numeric: tabular-nums;
++}
++
++.summary dt {
++  color: var(--text-secondary);
++}
++
++.summary dd {
++  font-weight: var(--weight-semibold);
++}
++
++.summary .balance {
++  padding-top: var(--space-3);
++  border-top: var(--border-width) solid var(--border-subtle);
++  font-size: var(--text-heading);
++}
++
++.summary .balance dt {
++  color: var(--text-primary);
++  font-weight: var(--weight-bold);
++}
++
++.summary .balance dd {
++  color: var(--accent);
++  font-weight: var(--weight-bold);
++}
++
++.split {
++  color: var(--text-secondary);
++  font-size: var(--text-detail);
++}
++
++.closed {
++  display: flex;
++  align-items: center;
++  gap: var(--space-2);
++  padding: var(--space-3);
++  border-radius: var(--radius-sm);
++  background-color: var(--surface-muted);
++  font-weight: var(--weight-semibold);
++}
++
++/* ---- Orders ---- */
++
++.orders {
++  display: grid;
++  gap: var(--space-3);
++}
++
++.order {
++  display: grid;
++  gap: var(--space-3);
++}
++
++.orderHead {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  gap: var(--space-2) var(--space-3);
++}
++
++.orderTitle {
++  font-size: var(--text-button);
++  font-weight: var(--weight-bold);
++}
++
++.orderHead > :last-child {
++  margin-left: auto;
++}
++
++.lines {
++  display: grid;
++  gap: var(--space-2);
++}
++
++.line,
++.cancelled {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  justify-content: space-between;
++  gap: var(--space-2) var(--space-3);
++}
++
++.cancelled {
++  color: var(--text-secondary);
++  text-decoration: line-through;
++}
++
++.lineMeta {
++  display: flex;
++  align-items: center;
++  gap: var(--space-2);
++  margin-left: auto;
++}
++
++.amount {
++  font-weight: var(--weight-semibold);
++  font-variant-numeric: tabular-nums;
++  white-space: nowrap;
++}
++
++/* ---- Payments ---- */
++
++.payments {
++  display: grid;
++  gap: var(--space-2);
++}
++
++.payment,
++.voided {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  gap: var(--space-2) var(--space-3);
++  padding: var(--space-3) var(--space-4);
++  border: var(--border-width) solid var(--border-subtle);
++  border-radius: var(--radius-md);
++  background-color: var(--surface-card);
++}
++
++.voided {
++  background-color: var(--surface-muted);
++  color: var(--text-secondary);
++}
++
++.voided .amount {
++  text-decoration: line-through;
++}
++
++.paymentMain {
++  display: grid;
++  flex: 1 1 12rem;
++  min-width: 0;
++}
++
++.paymentTitle {
++  font-weight: var(--weight-semibold);
++}
++
++@media (max-width: 960px) {
++  .layout {
++    grid-template-columns: 1fr;
++  }
++
++  .aside {
++    position: static;
++    order: -1;
++  }
++}
++
++@media (max-width: 40rem) {
++  .page {
++    padding: var(--space-4);
++  }
++}
+diff --git a/apps/web/src/features/checks/TableCheckPage.test.tsx b/apps/web/src/features/checks/TableCheckPage.test.tsx
+new file mode 100644
+index 0000000..49d0440
+--- /dev/null
++++ b/apps/web/src/features/checks/TableCheckPage.test.tsx
+@@ -0,0 +1,155 @@
++import { summarizeCheck, type Check, type Order } from '@bigger/shared';
++import { screen, waitFor, within } from '@testing-library/react';
++import userEvent from '@testing-library/user-event';
++import { expectNoA11yViolations } from '../../test/a11y';
++import { orderFixture } from '../../test/orders';
++import { mockFetch, renderRoute } from '../../test/render';
++import { TableCheckPage } from './TableCheckPage';
++
++const tableId = orderFixture.tableId ?? '';
++const route = { path: '/mesas/:tableId', route: `/mesas/${tableId}` };
++
++const juan: Order = { ...orderFixture, customerName: 'Juan' };
++const [capuchino] = orderFixture.items;
++if (!capuchino) throw new Error('El pedido de prueba no tiene líneas');
++const ana: Order = {
++  ...orderFixture,
++  id: '2b8f7c6e-5d4c-4b3a-9f2e-1d0c9b8a7f6e',
++  customerName: 'Ana',
++  items: [
++    {
++      ...capuchino,
++      id: '3c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
++      productName: 'Pie limón',
++      unitPriceClp: 1300,
++      quantity: 1,
++    },
++  ],
++  totalClp: 1300,
++};
++
++function buildCheck(overrides: Partial<Pick<Check, 'payments' | 'status'>> = {}): Check {
++  const orders = [juan, ana];
++  const payments = overrides.payments ?? [];
++  return {
++    id: orderFixture.checkId,
++    tableId,
++    tableLabel: 'Mesa 2',
++    status: overrides.status ?? 'open',
++    version: payments.length,
++    splitParts: null,
++    orders,
++    payments,
++    ...summarizeCheck(orders, payments, { parts: null, paidParts: 0 }),
++    openedAt: orderFixture.createdAt,
++    closedAt: null,
++  };
++}
++
++function setup(check: Check | null = buildCheck()) {
++  return mockFetch((method, url, body) => {
++    if (method === 'GET' && url.pathname === `/api/v1/tables/${tableId}/check`) {
++      return check
++        ? { body: { data: check } }
++        : { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Sin cuenta' } } };
++    }
++    if (method === 'POST' && url.pathname.endsWith('/payments')) {
++      const input = body as { items?: { orderItemId: string; quantity: number }[]; tipClp: number };
++      const paid = buildCheck({
++        payments: [
++          {
++            id: '5d2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
++            method: 'debit',
++            mode: 'items',
++            amountClp: 1300,
++            tipClp: input.tipClp,
++            receivedClp: null,
++            changeClp: null,
++            items: (input.items ?? []).map((item) => ({ ...item, amountClp: 1300 })),
++            createdAt: '2026-10-21T12:10:00.000Z',
++            voidedAt: null,
++            voidReason: null,
++          },
++        ],
++      });
++      return { status: 201, body: { data: paid } };
++    }
++    return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'No encontrado' } } };
++  });
++}
++
++afterEach(() => {
++  vi.unstubAllGlobals();
++});
++
++describe('TableCheckPage', () => {
++  it('shows what each person ordered, the balance and the actions', async () => {
++    setup();
++    const { container } = renderRoute(<TableCheckPage />, route);
++
++    expect(await screen.findByRole('heading', { name: 'Cuenta · Mesa 2' })).toBeInTheDocument();
++    expect(screen.getByRole('heading', { name: 'Juan' })).toBeInTheDocument();
++    expect(screen.getByRole('heading', { name: 'Ana' })).toBeInTheDocument();
++    const summary = screen.getByRole('complementary', { name: 'Resumen de la cuenta' });
++    expect(within(summary).getByText('Saldo').nextSibling).toHaveTextContent('6.300');
++    expect(screen.getByRole('link', { name: 'Agregar pedido' })).toHaveAttribute(
++      'href',
++      `/pedido?mesa=${tableId}`,
++    );
++    await expectNoA11yViolations(container);
++  });
++
++  it('lets Ana pay only her items with debit and confirms the payment', async () => {
++    const calls = setup();
++    renderRoute(<TableCheckPage />, route);
++    await userEvent.click(await screen.findByRole('button', { name: 'Cobrar' }));
++
++    const dialog = screen.getByRole('dialog', { name: 'Cobrar Mesa 2' });
++    await userEvent.click(within(dialog).getByRole('radio', { name: 'Por productos' }));
++    await userEvent.click(within(dialog).getByRole('button', { name: 'Todo lo de Ana' }));
++    await userEvent.click(within(dialog).getByRole('radio', { name: 'Débito' }));
++    await userEvent.click(within(dialog).getByRole('checkbox', { name: /Agregar propina/ }));
++    await userEvent.click(
++      within(dialog).getByRole('button', { name: /^Cobrar \$\s1\.300 con Débito$/ }),
++    );
++
++    await waitFor(() => {
++      expect(calls.find((call) => call.method === 'POST')?.body).toEqual({
++        mode: 'items',
++        method: 'debit',
++        tipClp: 0,
++        receivedClp: null,
++        expectedAmountClp: 1300,
++        items: [{ orderItemId: ana.items[0]?.id, quantity: 1 }],
++      });
++    });
++    expect(await within(dialog).findByText(/Pago registrado/)).toBeInTheDocument();
++    expect(within(dialog).getByText(/Queda un saldo de/)).toBeInTheDocument();
++  });
++
++  it('computes the change in cash and blocks charging until enough is received', async () => {
++    setup();
++    renderRoute(<TableCheckPage />, route);
++    await userEvent.click(await screen.findByRole('button', { name: 'Cobrar' }));
++    const dialog = screen.getByRole('dialog', { name: 'Cobrar Mesa 2' });
++
++    await userEvent.click(within(dialog).getByRole('radio', { name: 'Efectivo' }));
++    const charge = within(dialog).getByRole('button', { name: /^Cobrar \$\s6\.930 con Efectivo$/ });
++    expect(charge).toBeDisabled();
++    expect(within(dialog).getByRole('status')).toHaveTextContent('Ingresa cuánto recibes');
++
++    await userEvent.type(within(dialog).getByLabelText('Recibido en efectivo'), '10000');
++    expect(charge).toBeEnabled();
++    expect(within(dialog).getByText('Vuelto').nextSibling).toHaveTextContent('3.070');
++  });
++
++  it('says the table is free when it has no open check', async () => {
++    setup(null);
++    renderRoute(<TableCheckPage />, route);
++    expect(await screen.findByText('La mesa está libre')).toBeInTheDocument();
++    expect(screen.getByRole('link', { name: 'Tomar pedido' })).toHaveAttribute(
++      'href',
++      `/pedido?mesa=${tableId}`,
++    );
++  });
++});
+diff --git a/apps/web/src/features/checks/TableCheckPage.tsx b/apps/web/src/features/checks/TableCheckPage.tsx
+new file mode 100644
+index 0000000..7361921
+--- /dev/null
++++ b/apps/web/src/features/checks/TableCheckPage.tsx
+@@ -0,0 +1,255 @@
++import type { Check, Payment } from '@bigger/shared';
++import { ArrowLeft, CircleCheck, Plus, ReceiptText, Undo2, UtensilsCrossed } from 'lucide-react';
++import { useState } from 'react';
++import { useParams } from 'react-router';
++import { RouteFallback } from '../../app/RouteFallback';
++import { Button, ButtonLink } from '../../components/ui/Button';
++import { Card } from '../../components/ui/Card';
++import { EmptyState } from '../../components/ui/EmptyState';
++import { StatusBadge } from '../../components/ui/StatusBadge';
++import { ApiRequestError } from '../../services/http-client';
++import { formatClockTime, formatClp } from '../../lib/format';
++import { ORDER_STATUS_PRESENTATION } from '../orders/order-status';
++import { describeOrderItem } from '../orders/order-text';
++import { PaymentDialog } from './components/PaymentDialog';
++import { VoidPaymentDialog } from './components/VoidPaymentDialog';
++import {
++  orderLabel,
++  PAYMENT_METHOD_PRESENTATION,
++  PAYMENT_MODE_LABEL,
++} from './payment-presentation';
++import styles from './TableCheckPage.module.css';
++import { useTableCheck } from './useChecks';
++
++function BackToTables() {
++  return (
++    <ButtonLink to="/mesas" variant="ghost">
++      <ArrowLeft size={18} aria-hidden="true" />
++      Mesas
++    </ButtonLink>
++  );
++}
++
++function CheckSummary({ check }: { check: Check }) {
++  return (
++    <dl className={styles.summary}>
++      <div>
++        <dt>Total</dt>
++        <dd>{formatClp(check.totalClp)}</dd>
++      </div>
++      <div>
++        <dt>Pagado</dt>
++        <dd>{formatClp(check.paidClp)}</dd>
++      </div>
++      {check.tipClp > 0 && (
++        <div>
++          <dt>Propinas</dt>
++          <dd>{formatClp(check.tipClp)}</dd>
++        </div>
++      )}
++      <div className={styles.balance}>
++        <dt>Saldo</dt>
++        <dd>{formatClp(check.balanceClp)}</dd>
++      </div>
++      {check.splitParts !== null && check.remainingParts !== null && (
++        <p className={styles.split}>
++          Dividida en {check.splitParts} partes · faltan {check.remainingParts}
++        </p>
++      )}
++    </dl>
++  );
++}
++
++function OrdersList({ check }: { check: Check }) {
++  return (
++    <ul role="list" className={styles.orders}>
++      {check.orders.map((order, index) => {
++        const status = ORDER_STATUS_PRESENTATION[order.status];
++        const cancelled = order.status === 'cancelled';
++        return (
++          <Card as="li" key={order.id} className={styles.order}>
++            <div className={styles.orderHead}>
++              <h3 className={styles.orderTitle}>{orderLabel(order, index)}</h3>
++              <span className={styles.muted}>{formatClockTime(order.createdAt)}</span>
++              <StatusBadge tone={status.tone} icon={status.icon} label={status.label} />
++            </div>
++            <ul role="list" className={styles.lines}>
++              {order.items.map((item) => {
++                const line = check.lines.find((candidate) => candidate.orderItemId === item.id);
++                const paid = line?.paidQuantity ?? 0;
++                return (
++                  <li key={item.id} className={cancelled ? styles.cancelled : styles.line}>
++                    <span>{describeOrderItem(item)}</span>
++                    <span className={styles.lineMeta}>
++                      {paid > 0 && (
++                        <StatusBadge
++                          tone="success"
++                          icon={CircleCheck}
++                          label={paid === item.quantity ? 'Pagado' : `${paid} pagado`}
++                        />
++                      )}
++                      <span className={styles.amount}>
++                        {formatClp((line?.unitTotalClp ?? item.unitPriceClp) * item.quantity)}
++                      </span>
++                    </span>
++                  </li>
++                );
++              })}
++            </ul>
++          </Card>
++        );
++      })}
++    </ul>
++  );
++}
++
++function PaymentsList({
++  payments,
++  onVoid,
++}: {
++  payments: Payment[];
++  onVoid: (payment: Payment) => void;
++}) {
++  if (payments.length === 0) return null;
++  return (
++    <section className={styles.section} aria-labelledby="pagos-titulo">
++      <h2 id="pagos-titulo" className={styles.sectionTitle}>
++        Pagos
++      </h2>
++      <ul role="list" className={styles.payments}>
++        {payments.map((payment) => {
++          const { label, icon: Icon } = PAYMENT_METHOD_PRESENTATION[payment.method];
++          const voided = payment.voidedAt !== null;
++          return (
++            <li key={payment.id} className={voided ? styles.voided : styles.payment}>
++              <Icon size={22} aria-hidden="true" />
++              <span className={styles.paymentMain}>
++                <span className={styles.paymentTitle}>
++                  {label} · {PAYMENT_MODE_LABEL[payment.mode]}
++                  {voided && ' · anulado'}
++                </span>
++                <span className={styles.muted}>
++                  {formatClockTime(payment.createdAt)}
++                  {payment.tipClp > 0 && ` · propina ${formatClp(payment.tipClp)}`}
++                  {payment.changeClp !== null && ` · vuelto ${formatClp(payment.changeClp)}`}
++                  {voided && payment.voidReason && ` · ${payment.voidReason}`}
++                </span>
++              </span>
++              <span className={styles.amount}>{formatClp(payment.amountClp)}</span>
++              {!voided && (
++                <Button
++                  variant="ghost"
++                  onClick={() => {
++                    onVoid(payment);
++                  }}
++                >
++                  <Undo2 size={18} aria-hidden="true" />
++                  Anular
++                  <span className="visually-hidden"> pago de {formatClp(payment.amountClp)}</span>
++                </Button>
++              )}
++            </li>
++          );
++        })}
++      </ul>
++    </section>
++  );
++}
++
++/** The bill of a table: what each person ordered, what was paid and what is still owed. */
++export function TableCheckPage() {
++  const { tableId = '' } = useParams();
++  const checkQuery = useTableCheck(tableId);
++  const [paying, setPaying] = useState(false);
++  const [voiding, setVoiding] = useState<Payment | null>(null);
++
++  if (checkQuery.isPending) return <RouteFallback />;
++  // After the last payment the table's check closes: keep showing it with a «free» notice.
++  if (checkQuery.isError && checkQuery.data === undefined) {
++    const free =
++      checkQuery.error instanceof ApiRequestError && checkQuery.error.code === 'NOT_FOUND';
++    return (
++      <div className={styles.page}>
++        <BackToTables />
++        <EmptyState
++          icon={free ? CircleCheck : ReceiptText}
++          title={free ? 'La mesa está libre' : 'No pudimos abrir la cuenta'}
++          description={free ? 'No tiene una cuenta abierta.' : checkQuery.error.message}
++          action={
++            <ButtonLink to={`/pedido?mesa=${tableId}`} variant="primary">
++              <UtensilsCrossed size={18} aria-hidden="true" />
++              Tomar pedido
++            </ButtonLink>
++          }
++        />
++      </div>
++    );
++  }
++
++  const check = checkQuery.data;
++  const closed = checkQuery.isError || check.status === 'closed';
++  const settledButOpen = !closed && check.balanceClp === 0;
++  return (
++    <div className={styles.page}>
++      <div className={styles.header}>
++        <BackToTables />
++        <h1 className={styles.title}>Cuenta · {check.tableLabel}</h1>
++      </div>
++
++      <div className={styles.layout}>
++        <section className={styles.section} aria-labelledby="pedidos-titulo">
++          <h2 id="pedidos-titulo" className={styles.sectionTitle}>
++            Pedidos de la mesa
++          </h2>
++          <OrdersList check={check} />
++          <PaymentsList payments={check.payments} onVoid={setVoiding} />
++        </section>
++
++        <Card as="aside" className={styles.aside} aria-label="Resumen de la cuenta">
++          <CheckSummary check={check} />
++          {closed && (
++            <p className={styles.closed} role="status">
++              <CircleCheck size={20} aria-hidden="true" />
++              Cuenta pagada: la mesa quedó libre.
++            </p>
++          )}
++          <Button
++            variant="primary"
++            size="lg"
++            fullWidth
++            disabled={closed || settledButOpen}
++            onClick={() => {
++              setPaying(true);
++            }}
++          >
++            Cobrar
++          </Button>
++          {settledButOpen && (
++            <p className={styles.muted} role="status">
++              Cuenta pagada. La mesa se libera cuando cocina entregue todo.
++            </p>
++          )}
++          <ButtonLink to={`/pedido?mesa=${tableId}`} variant="secondary" fullWidth>
++            <Plus size={18} aria-hidden="true" />
++            Agregar pedido
++          </ButtonLink>
++          <p className={styles.muted}>¿Llegó alguien más? Su pedido se suma a esta misma cuenta.</p>
++        </Card>
++      </div>
++
++      <PaymentDialog
++        check={check}
++        open={paying}
++        onClose={() => {
++          setPaying(false);
++        }}
++      />
++      <VoidPaymentDialog
++        payment={voiding}
++        onClose={() => {
++          setVoiding(null);
++        }}
++      />
++    </div>
++  );
++}
+diff --git a/apps/web/src/features/checks/components/PaymentDialog.module.css b/apps/web/src/features/checks/components/PaymentDialog.module.css
+new file mode 100644
+index 0000000..04737bd
+--- /dev/null
++++ b/apps/web/src/features/checks/components/PaymentDialog.module.css
+@@ -0,0 +1,353 @@
++.dialog {
++  width: min(40rem, calc(100vw - 2rem));
++  max-height: min(52rem, calc(100dvh - 2rem));
++  padding: 0;
++  border: none;
++  border-radius: var(--radius-lg);
++  background-color: var(--surface-card);
++  color: var(--text-primary);
++  box-shadow: var(--shadow-raised);
++  overflow: hidden;
++}
++
++.dialog[open] {
++  display: flex;
++  flex-direction: column;
++  animation: pop-in var(--duration-base) var(--ease-out);
++}
++
++.dialog::backdrop {
++  background-color: rgb(30 30 30 / 55%);
++}
++
++.head {
++  display: flex;
++  align-items: flex-start;
++  justify-content: space-between;
++  gap: var(--space-3);
++  padding: var(--space-5);
++  border-bottom: var(--border-width) solid var(--border-subtle);
++}
++
++.title {
++  font-size: var(--text-heading);
++  font-weight: var(--weight-bold);
++  line-height: var(--leading-tight);
++}
++
++.balance {
++  margin-top: var(--space-1);
++  color: var(--accent);
++  font-weight: var(--weight-semibold);
++  font-variant-numeric: tabular-nums;
++}
++
++.close {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  flex-shrink: 0;
++  width: var(--touch-target);
++  height: var(--touch-target);
++  border: none;
++  border-radius: var(--radius-sm);
++  background-color: var(--surface-muted);
++  color: var(--text-primary);
++  cursor: pointer;
++}
++
++.body {
++  flex: 1;
++  overflow-y: auto;
++  overscroll-behavior: contain;
++  display: grid;
++  align-content: start;
++  gap: var(--space-6);
++  padding: var(--space-5);
++}
++
++.group {
++  display: grid;
++  gap: var(--space-3);
++  min-width: 0;
++  margin: 0;
++  padding: 0;
++  border: none;
++}
++
++.legend {
++  padding: 0;
++  margin-bottom: var(--space-2);
++  font-weight: var(--weight-semibold);
++}
++
++.field {
++  display: grid;
++  gap: var(--space-1);
++}
++
++.field .legend {
++  margin-bottom: 0;
++}
++
++.muted {
++  color: var(--text-secondary);
++}
++
++.note {
++  padding: var(--space-3) var(--space-4);
++  border-radius: var(--radius-sm);
++  background-color: var(--surface-muted);
++  color: var(--text-secondary);
++  font-size: var(--text-detail);
++}
++
++/* ---- Radio cards (mode and method) ---- */
++
++.segmented {
++  display: grid;
++  grid-template-columns: repeat(3, minmax(0, 1fr));
++  gap: var(--space-2);
++}
++
++.segment,
++.method {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  gap: var(--space-2);
++  min-height: var(--touch-target);
++  padding: var(--space-2) var(--space-3);
++  border: var(--border-width-strong) solid var(--border-subtle);
++  border-radius: var(--radius-sm);
++  background-color: var(--surface-card);
++  font-weight: var(--weight-semibold);
++  text-align: center;
++  cursor: pointer;
++  transition: border-color var(--duration-fast) var(--ease-out);
++}
++
++.segment:has(input:checked),
++.method:has(input:checked) {
++  border-color: var(--accent);
++  background-color: var(--surface-muted);
++  box-shadow: inset 0 0 0 1px var(--accent);
++}
++
++.segment:has(input:focus-visible),
++.method:has(input:focus-visible) {
++  outline: 3px solid var(--focus-ring);
++  outline-offset: 2px;
++}
++
++/* The native radio stays in the accessibility tree; the card is its visible target. */
++.segment input,
++.method input {
++  position: absolute;
++  width: 1px;
++  height: 1px;
++  opacity: 0;
++}
++
++.methods {
++  display: grid;
++  grid-template-columns: repeat(3, minmax(0, 1fr));
++  gap: var(--space-3);
++}
++
++.method {
++  flex-direction: column;
++  min-height: 6rem;
++  font-size: var(--text-button);
++}
++
++/* ---- Items ---- */
++
++.person {
++  display: grid;
++  gap: var(--space-2);
++  padding: var(--space-3);
++  border: var(--border-width) solid var(--border-subtle);
++  border-radius: var(--radius-md);
++}
++
++.personHead {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: var(--space-2);
++}
++
++.personName {
++  font-weight: var(--weight-bold);
++}
++
++.lines {
++  display: grid;
++  gap: var(--space-2);
++}
++
++.line {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: var(--space-3);
++}
++
++.lineName {
++  min-width: 0;
++}
++
++.stepper {
++  display: flex;
++  align-items: center;
++  flex-shrink: 0;
++  border: var(--border-width-strong) solid var(--border-subtle);
++  border-radius: var(--radius-pill);
++}
++
++.step {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  width: var(--touch-target);
++  height: var(--touch-target);
++  border: none;
++  border-radius: var(--radius-pill);
++  background: none;
++  color: var(--text-primary);
++  cursor: pointer;
++}
++
++.step:disabled {
++  color: var(--text-secondary);
++  opacity: 0.45;
++  cursor: not-allowed;
++}
++
++.stepValue {
++  min-width: 4.5rem;
++  text-align: center;
++  font-weight: var(--weight-semibold);
++  font-variant-numeric: tabular-nums;
++}
++
++/* ---- Split, tip, cash ---- */
++
++.chips {
++  display: flex;
++  flex-wrap: wrap;
++  gap: var(--space-2);
++}
++
++.splitSummary {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  justify-content: space-between;
++  gap: var(--space-3);
++  padding: var(--space-4);
++  border-radius: var(--radius-md);
++  background-color: var(--surface-muted);
++}
++
++.splitPart {
++  font-weight: var(--weight-semibold);
++}
++
++.splitAmount {
++  font-size: var(--text-heading);
++  font-weight: var(--weight-bold);
++  font-variant-numeric: tabular-nums;
++}
++
++.tip {
++  display: grid;
++  gap: var(--space-3);
++}
++
++/* ---- Footer and result ---- */
++
++.footer {
++  display: grid;
++  gap: var(--space-3);
++  padding: var(--space-4) var(--space-5) var(--space-5);
++  border-top: var(--border-width) solid var(--border-subtle);
++}
++
++.totals {
++  display: grid;
++  gap: var(--space-1);
++}
++
++.totals > div {
++  display: flex;
++  justify-content: space-between;
++  gap: var(--space-3);
++  color: var(--text-secondary);
++  font-variant-numeric: tabular-nums;
++}
++
++.totals .due {
++  color: var(--text-primary);
++  font-size: var(--text-button);
++  font-weight: var(--weight-bold);
++}
++
++.blocker {
++  color: var(--text-secondary);
++  font-size: var(--text-detail);
++}
++
++.done {
++  display: grid;
++  justify-items: center;
++  gap: var(--space-3);
++  padding: var(--space-8) var(--space-5);
++  text-align: center;
++}
++
++.doneIcon {
++  color: var(--status-success);
++}
++
++.doneTitle {
++  font-size: var(--text-heading);
++  font-weight: var(--weight-bold);
++}
++
++.doneChange {
++  font-size: var(--text-button);
++}
++
++.doneChange strong {
++  font-size: var(--text-title);
++  font-variant-numeric: tabular-nums;
++}
++
++.doneActions {
++  display: flex;
++  flex-wrap: wrap;
++  justify-content: center;
++  gap: var(--space-3);
++  margin-top: var(--space-3);
++}
++
++@media (max-width: 40rem) {
++  .dialog {
++    width: 100vw;
++    max-width: 100vw;
++    height: 100dvh;
++    max-height: 100dvh;
++    border-radius: 0;
++  }
++
++  .methods {
++    grid-template-columns: 1fr;
++  }
++
++  .method {
++    flex-direction: row;
++    min-height: var(--touch-target);
++  }
++}
+diff --git a/apps/web/src/features/checks/components/PaymentDialog.tsx b/apps/web/src/features/checks/components/PaymentDialog.tsx
+new file mode 100644
+index 0000000..bcfb7ed
+--- /dev/null
++++ b/apps/web/src/features/checks/components/PaymentDialog.tsx
+@@ -0,0 +1,250 @@
++import type { Check } from '@bigger/shared';
++import { CircleCheck, X } from 'lucide-react';
++import { useEffect, useId, useRef, useState } from 'react';
++import { FieldError } from '../../../components/form/Field';
++import { Button } from '../../../components/ui/Button';
++import { formatClp } from '../../../lib/format';
++import {
++  INITIAL_PAYMENT_DRAFT,
++  paymentBlocker,
++  paymentTotals,
++  toPaymentInput,
++  type PaymentDraft,
++} from '../payment-draft';
++import { PAYMENT_METHOD_PRESENTATION } from '../payment-presentation';
++import { usePay, useSetSplit } from '../useChecks';
++import styles from './PaymentDialog.module.css';
++import {
++  CashField,
++  ItemPicker,
++  MethodPicker,
++  ModePicker,
++  SplitPicker,
++  TipField,
++} from './PaymentSections';
++
++export interface PaymentDialogProps {
++  check: Check;
++  open: boolean;
++  onClose: () => void;
++}
++
++interface PaymentResult {
++  check: Check;
++  changeClp: number | null;
++  totalClp: number;
++}
++
++/**
++ * Native modal `<dialog>`: focus trap, inert background and Esc come from the browser. The
++ * draft only holds choices; every amount is recalculated from the live check.
++ */
++export function PaymentDialog({ check, open, onClose }: PaymentDialogProps) {
++  const dialogRef = useRef<HTMLDialogElement>(null);
++  const titleId = useId();
++
++  useEffect(() => {
++    const dialog = dialogRef.current;
++    if (!dialog) return;
++    if (open && !dialog.open) dialog.showModal();
++    if (!open && dialog.open) dialog.close();
++  }, [open]);
++
++  const title = check.tableLabel ? `Cobrar ${check.tableLabel}` : 'Cobrar pedido';
++
++  return (
++    <dialog ref={dialogRef} className={styles.dialog} aria-labelledby={titleId} onClose={onClose}>
++      <div className={styles.head}>
++        <div>
++          <h2 id={titleId} className={styles.title}>
++            {title}
++          </h2>
++          <p className={styles.balance}>Saldo {formatClp(check.balanceClp)}</p>
++        </div>
++        <button type="button" className={styles.close} onClick={onClose} aria-label="Cerrar">
++          <X size={22} aria-hidden="true" />
++        </button>
++      </div>
++      {open && <PaymentForm check={check} onClose={onClose} />}
++    </dialog>
++  );
++}
++
++function PaymentForm({ check, onClose }: { check: Check; onClose: () => void }) {
++  const pay = usePay();
++  const split = useSetSplit();
++  const [draft, setDraft] = useState<PaymentDraft>(INITIAL_PAYMENT_DRAFT);
++  const [result, setResult] = useState<PaymentResult | null>(null);
++  const update = (change: Partial<PaymentDraft>) => {
++    setDraft((current) => ({ ...current, ...change }));
++  };
++
++  if (result) {
++    return (
++      <PaymentDone
++        result={result}
++        onAnother={() => {
++          setResult(null);
++          setDraft(INITIAL_PAYMENT_DRAFT);
++          pay.reset();
++        }}
++        onClose={onClose}
++      />
++    );
++  }
++
++  const totals = paymentTotals(check, draft);
++  const blocker = paymentBlocker(check, draft);
++  const error = pay.error?.message ?? split.error?.message ?? null;
++
++  const submit = () => {
++    pay.mutate(
++      { checkId: check.id, input: toPaymentInput(check, draft) },
++      {
++        onSuccess: (updated) => {
++          setResult({ check: updated, changeClp: totals.changeClp, totalClp: totals.dueClp });
++        },
++      },
++    );
++  };
++
++  return (
++    <>
++      <div className={styles.body}>
++        <ModePicker
++          value={draft.mode}
++          onChange={(mode) => {
++            update({ mode });
++          }}
++        />
++        {draft.mode === 'items' && (
++          <ItemPicker
++            check={check}
++            units={draft.units}
++            onChange={(units) => {
++              update({ units });
++            }}
++          />
++        )}
++        {draft.mode === 'equal' && (
++          <SplitPicker
++            check={check}
++            isPending={split.isPending}
++            onSplit={(parts) => {
++              split.mutate({ checkId: check.id, parts });
++            }}
++          />
++        )}
++        <MethodPicker
++          value={draft.method}
++          onChange={(method) => {
++            update({ method });
++          }}
++        />
++        <TipField
++          method={draft.method}
++          enabled={draft.tipEnabled}
++          tipClp={totals.tipClp}
++          onToggle={(tipEnabled) => {
++            update({ tipEnabled, customTipClp: null });
++          }}
++          onChange={(customTipClp) => {
++            update({ customTipClp });
++          }}
++        />
++        {draft.method === 'cash' && (
++          <CashField
++            dueClp={totals.dueClp}
++            receivedClp={draft.receivedClp}
++            changeClp={totals.changeClp}
++            onChange={(receivedClp) => {
++              update({ receivedClp });
++            }}
++          />
++        )}
++      </div>
++
++      <div className={styles.footer}>
++        <dl className={styles.totals}>
++          <div>
++            <dt>Consumo</dt>
++            <dd>{formatClp(totals.amountClp)}</dd>
++          </div>
++          <div>
++            <dt>Propina</dt>
++            <dd>{formatClp(totals.tipClp)}</dd>
++          </div>
++          <div className={styles.due}>
++            <dt>Total a cobrar</dt>
++            <dd>{formatClp(totals.dueClp)}</dd>
++          </div>
++          {totals.changeClp !== null && (
++            <div className={styles.due}>
++              <dt>Vuelto</dt>
++              <dd>{formatClp(totals.changeClp)}</dd>
++            </div>
++          )}
++        </dl>
++        {error && (
++          <div role="alert">
++            <FieldError message={error} />
++          </div>
++        )}
++        <p className={styles.blocker} role="status">
++          {blocker ?? ''}
++        </p>
++        <Button
++          variant="primary"
++          size="lg"
++          fullWidth
++          disabled={blocker !== null || pay.isPending}
++          onClick={submit}
++        >
++          {pay.isPending
++            ? 'Cobrando…'
++            : `Cobrar ${formatClp(totals.dueClp)}${draft.method ? ` con ${PAYMENT_METHOD_PRESENTATION[draft.method].label}` : ''}`}
++        </Button>
++      </div>
++    </>
++  );
++}
++
++interface PaymentDoneProps {
++  result: PaymentResult;
++  onAnother: () => void;
++  onClose: () => void;
++}
++
++function PaymentDone({ result, onAnother, onClose }: PaymentDoneProps) {
++  const { check, changeClp, totalClp } = result;
++  const closed = check.status === 'closed';
++  return (
++    <div className={styles.done} role="status">
++      <CircleCheck className={styles.doneIcon} size={48} aria-hidden="true" />
++      <p className={styles.doneTitle}>Pago registrado: {formatClp(totalClp)}</p>
++      {changeClp !== null && (
++        <p className={styles.doneChange}>
++          Vuelto <strong>{formatClp(changeClp)}</strong>
++        </p>
++      )}
++      <p className={styles.muted}>
++        {closed
++          ? 'La cuenta quedó pagada y la mesa está libre.'
++          : check.balanceClp === 0
++            ? 'Cuenta pagada: la mesa se libera cuando se entregue todo.'
++            : `Queda un saldo de ${formatClp(check.balanceClp)}.`}
++      </p>
++      <div className={styles.doneActions}>
++        {check.balanceClp > 0 && (
++          <Button variant="secondary" onClick={onAnother}>
++            Cobrar otra parte
++          </Button>
++        )}
++        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- the dialog's next step after paying */}
++        <Button variant="primary" onClick={onClose} autoFocus>
++          Listo
++        </Button>
++      </div>
++    </div>
++  );
++}
+diff --git a/apps/web/src/features/checks/components/PaymentSections.tsx b/apps/web/src/features/checks/components/PaymentSections.tsx
+new file mode 100644
+index 0000000..3c2e1b8
+--- /dev/null
++++ b/apps/web/src/features/checks/components/PaymentSections.tsx
+@@ -0,0 +1,328 @@
++import {
++  MAX_SPLIT_PARTS,
++  PAYMENT_METHODS,
++  PAYMENT_MODES,
++  type Check,
++  type PaymentMethod,
++  type PaymentMode,
++} from '@bigger/shared';
++import { Minus, Plus } from 'lucide-react';
++import { useId } from 'react';
++import { Checkbox } from '../../../components/form/Checkbox';
++import { MoneyInput } from '../../../components/form/MoneyInput';
++import { Button } from '../../../components/ui/Button';
++import { Chip } from '../../../components/ui/Chip';
++import { formatClp, formatClpSpoken } from '../../../lib/format';
++import { cashShortcuts, selectWholeOrder, tipAllowed } from '../payment-draft';
++import {
++  orderLabel,
++  PAYMENT_METHOD_PRESENTATION,
++  PAYMENT_MODE_LABEL,
++} from '../payment-presentation';
++import styles from './PaymentDialog.module.css';
++
++const toAmount = (value: string): number | null => {
++  const parsed = Number.parseInt(value, 10);
++  return Number.isNaN(parsed) ? null : Math.max(parsed, 0);
++};
++
++export function ModePicker({
++  value,
++  onChange,
++}: {
++  value: PaymentMode;
++  onChange: (mode: PaymentMode) => void;
++}) {
++  const name = useId();
++  return (
++    <fieldset className={styles.group}>
++      <legend className={styles.legend}>¿Qué se paga?</legend>
++      <div className={styles.segmented}>
++        {PAYMENT_MODES.map((mode) => (
++          <label key={mode} className={styles.segment}>
++            <input
++              type="radio"
++              name={name}
++              checked={value === mode}
++              onChange={() => {
++                onChange(mode);
++              }}
++            />
++            {PAYMENT_MODE_LABEL[mode]}
++          </label>
++        ))}
++      </div>
++    </fieldset>
++  );
++}
++
++export interface ItemPickerProps {
++  check: Pick<Check, 'orders' | 'lines'>;
++  units: Readonly<Record<string, number>>;
++  onChange: (units: Record<string, number>) => void;
++}
++
++/** Each person's lines with what is still unpaid; one tap selects everything of an order. */
++export function ItemPicker({ check, units, onChange }: ItemPickerProps) {
++  const billable = check.orders.filter((order) => order.status !== 'cancelled');
++  return (
++    <div className={styles.group}>
++      {billable.map((order, index) => {
++        const lines = check.lines.filter(
++          (line) => line.orderId === order.id && line.paidQuantity < line.quantity,
++        );
++        if (lines.length === 0) return null;
++        const label = orderLabel(order, index);
++        return (
++          <section key={order.id} className={styles.person} aria-label={label}>
++            <div className={styles.personHead}>
++              <span className={styles.personName}>{label}</span>
++              <Button
++                variant="ghost"
++
++                onClick={() => {
++                  onChange(selectWholeOrder(check, units, order.id));
++                }}
++              >
++                Todo lo de {label}
++              </Button>
++            </div>
++            <ul role="list" className={styles.lines}>
++              {lines.map((line) => {
++                const pending = line.quantity - line.paidQuantity;
++                const chosen = units[line.orderItemId] ?? 0;
++                const set = (quantity: number) => {
++                  onChange({ ...units, [line.orderItemId]: quantity });
++                };
++                return (
++                  <li key={line.orderItemId} className={styles.line}>
++                    <span className={styles.lineName}>
++                      {line.productName}
++                      <span className={styles.muted}>
++                        {' '}
++                        · {formatClp(line.unitTotalClp)} c/u
++                        {line.paidQuantity > 0 && ` · ${line.paidQuantity} ya pagado`}
++                      </span>
++                    </span>
++                    <div
++                      className={styles.stepper}
++                      role="group"
++                      aria-label={`Unidades de ${line.productName} a pagar`}
++                    >
++                      <button
++                        type="button"
++                        className={styles.step}
++                        disabled={chosen === 0}
++                        aria-label={`Quitar un ${line.productName}`}
++                        onClick={() => {
++                          set(chosen - 1);
++                        }}
++                      >
++                        <Minus size={18} aria-hidden="true" />
++                      </button>
++                      <output className={styles.stepValue} aria-live="polite">
++                        {chosen} de {pending}
++                      </output>
++                      <button
++                        type="button"
++                        className={styles.step}
++                        disabled={chosen >= pending}
++                        aria-label={`Agregar un ${line.productName}`}
++                        onClick={() => {
++                          set(chosen + 1);
++                        }}
++                      >
++                        <Plus size={18} aria-hidden="true" />
++                      </button>
++                    </div>
++                  </li>
++                );
++              })}
++            </ul>
++          </section>
++        );
++      })}
++    </div>
++  );
++}
++
++const QUICK_PARTS = [2, 3, 4, 5, 6];
++
++export interface SplitPickerProps {
++  check: Pick<Check, 'splitParts' | 'remainingParts' | 'nextPartClp'>;
++  isPending: boolean;
++  onSplit: (parts: number | null) => void;
++}
++
++export function SplitPicker({ check, isPending, onSplit }: SplitPickerProps) {
++  const { splitParts, remainingParts, nextPartClp } = check;
++  if (splitParts !== null && remainingParts !== null && nextPartClp !== null) {
++    const current = Math.min(splitParts - remainingParts + 1, splitParts);
++    return (
++      <div className={styles.splitSummary}>
++        <p>
++          <span className={styles.splitPart}>
++            Parte {current} de {splitParts}
++          </span>{' '}
++          <span className={styles.splitAmount}>{formatClp(nextPartClp)}</span>
++        </p>
++        <Button
++          variant="ghost"
++
++          disabled={isPending}
++          onClick={() => {
++            onSplit(null);
++          }}
++        >
++          Cambiar división
++        </Button>
++      </div>
++    );
++  }
++  return (
++    <fieldset className={styles.group}>
++      <legend className={styles.legend}>¿En cuántas partes?</legend>
++      <div className={styles.chips}>
++        {QUICK_PARTS.filter((parts) => parts <= MAX_SPLIT_PARTS).map((parts) => (
++          <Chip
++            key={parts}
++            pressed={false}
++            disabled={isPending}
++            onClick={() => {
++              onSplit(parts);
++            }}
++          >
++            {parts} personas
++          </Chip>
++        ))}
++      </div>
++    </fieldset>
++  );
++}
++
++export function MethodPicker({
++  value,
++  onChange,
++}: {
++  value: PaymentMethod | null;
++  onChange: (method: PaymentMethod) => void;
++}) {
++  const name = useId();
++  return (
++    <fieldset className={styles.group}>
++      <legend className={styles.legend}>Medio de pago</legend>
++      <div className={styles.methods}>
++        {PAYMENT_METHODS.map((method) => {
++          const { label, icon: Icon } = PAYMENT_METHOD_PRESENTATION[method];
++          return (
++            <label key={method} className={styles.method}>
++              <input
++                type="radio"
++                name={name}
++                checked={value === method}
++                onChange={() => {
++                  onChange(method);
++                }}
++              />
++              <Icon size={28} aria-hidden="true" />
++              {label}
++            </label>
++          );
++        })}
++      </div>
++    </fieldset>
++  );
++}
++
++export interface TipFieldProps {
++  method: PaymentMethod | null;
++  enabled: boolean;
++  tipClp: number;
++  onToggle: (enabled: boolean) => void;
++  onChange: (tipClp: number | null) => void;
++}
++
++export function TipField({ method, enabled, tipClp, onToggle, onChange }: TipFieldProps) {
++  const inputId = useId();
++  if (!tipAllowed(method)) {
++    return (
++      <p className={styles.note}>
++        JUNAEB no admite propina. Si quieren dejarla, regístrala como otro pago en efectivo o
++        débito.
++      </p>
++    );
++  }
++  return (
++    <div className={styles.tip}>
++      <Checkbox
++        label="Agregar propina"
++        description="Sugerida: 10 % de lo que se paga. Puedes cambiar el monto."
++        checked={enabled}
++        onChange={(event) => {
++          onToggle(event.target.checked);
++        }}
++      />
++      {enabled && (
++        <div className={styles.field}>
++          <label htmlFor={inputId} className={styles.legend}>
++            Propina
++          </label>
++          <MoneyInput
++            id={inputId}
++            value={tipClp}
++            onChange={(event) => {
++              onChange(toAmount(event.target.value));
++            }}
++          />
++        </div>
++      )}
++    </div>
++  );
++}
++
++export interface CashFieldProps {
++  dueClp: number;
++  receivedClp: number | null;
++  changeClp: number | null;
++  onChange: (receivedClp: number | null) => void;
++}
++
++export function CashField({ dueClp, receivedClp, changeClp, onChange }: CashFieldProps) {
++  const inputId = useId();
++  return (
++    <div className={styles.group}>
++      <div className={styles.field}>
++        <label htmlFor={inputId} className={styles.legend}>
++          Recibido en efectivo
++        </label>
++        <MoneyInput
++          id={inputId}
++          value={receivedClp ?? ''}
++          onChange={(event) => {
++            onChange(toAmount(event.target.value));
++          }}
++        />
++      </div>
++      <div className={styles.chips} aria-label="Montos rápidos">
++        {cashShortcuts(dueClp).map((amount, index) => (
++          <Chip
++            key={amount}
++            pressed={receivedClp === amount}
++            onClick={() => {
++              onChange(amount);
++            }}
++            aria-label={
++              index === 0 ? `Exacto, ${formatClpSpoken(amount)}` : formatClpSpoken(amount)
++            }
++          >
++            {index === 0 ? 'Exacto' : formatClp(amount)}
++          </Chip>
++        ))}
++      </div>
++      {/* The change is shown in the footer; this only announces it. */}
++      <p className="visually-hidden" aria-live="polite">
++        {changeClp === null ? '' : `Vuelto: ${formatClpSpoken(changeClp)}`}
++      </p>
++    </div>
++  );
++}
+diff --git a/apps/web/src/features/checks/components/VoidPaymentDialog.tsx b/apps/web/src/features/checks/components/VoidPaymentDialog.tsx
+new file mode 100644
+index 0000000..158c9f5
+--- /dev/null
++++ b/apps/web/src/features/checks/components/VoidPaymentDialog.tsx
+@@ -0,0 +1,60 @@
++import type { Payment } from '@bigger/shared';
++import { useId, useState } from 'react';
++import { controlClassName } from '../../../components/form/control';
++import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
++import { formatClp } from '../../../lib/format';
++import { PAYMENT_METHOD_PRESENTATION } from '../payment-presentation';
++import { useVoidPayment } from '../useChecks';
++
++const MIN_REASON = 3;
++
++export interface VoidPaymentDialogProps {
++  payment: Payment | null;
++  onClose: () => void;
++}
++
++/** A voided payment stays in the history with its reason; the balance goes back up. */
++export function VoidPaymentDialog({ payment, onClose }: VoidPaymentDialogProps) {
++  const voidPayment = useVoidPayment();
++  const [reason, setReason] = useState('');
++  const reasonId = useId();
++
++  const close = () => {
++    setReason('');
++    voidPayment.reset();
++    onClose();
++  };
++
++  const method = payment ? PAYMENT_METHOD_PRESENTATION[payment.method].label : '';
++  return (
++    <ConfirmDialog
++      open={payment !== null}
++      title="¿Anular este pago?"
++      description={
++        payment
++          ? `${method} por ${formatClp(payment.amountClp + payment.tipClp)}. El saldo de la cuenta vuelve a subir; el pago queda en el historial como anulado.`
++          : ''
++      }
++      confirmLabel="Anular pago"
++      isPending={voidPayment.isPending}
++      confirmDisabled={reason.trim().length < MIN_REASON}
++      error={voidPayment.error?.message ?? null}
++      onClose={close}
++      onConfirm={() => {
++        if (payment) voidPayment.mutate({ paymentId: payment.id, reason }, { onSuccess: close });
++      }}
++    >
++      <label htmlFor={reasonId}>Motivo</label>
++      <input
++        id={reasonId}
++        className={controlClassName}
++        value={reason}
++        maxLength={140}
++        placeholder="Ej.: se pasó la tarjeta equivocada"
++        onChange={(event) => {
++          setReason(event.target.value);
++        }}
++      />
++    </ConfirmDialog>
++  );
++}
+diff --git a/apps/web/src/features/checks/payment-draft.test.ts b/apps/web/src/features/checks/payment-draft.test.ts
+new file mode 100644
+index 0000000..75c75d6
+--- /dev/null
++++ b/apps/web/src/features/checks/payment-draft.test.ts
+@@ -0,0 +1,117 @@
++import type { CheckLine } from '@bigger/shared';
++import {
++  cashShortcuts,
++  INITIAL_PAYMENT_DRAFT,
++  paymentBlocker,
++  paymentTotals,
++  selectWholeOrder,
++  toPaymentInput,
++  type PaymentDraft,
++} from './payment-draft';
++
++const line = (
++  orderItemId: string,
++  orderId: string,
++  unitTotalClp: number,
++  quantity: number,
++  paidQuantity = 0,
++): CheckLine => ({
++  orderId,
++  orderItemId,
++  productName: orderItemId,
++  unitTotalClp,
++  quantity,
++  paidQuantity,
++});
++
++// Juan: 2 cafés ($1.500) and a Luco ($3.990); Ana: a pie ($2.500).
++const check = {
++  balanceClp: 9490,
++  nextPartClp: null,
++  lines: [
++    line('cafe', 'juan', 1500, 2),
++    line('luco', 'juan', 3990, 1),
++    line('pie', 'ana', 2500, 1),
++  ],
++};
++
++const draft = (overrides: Partial<PaymentDraft>): PaymentDraft => ({
++  ...INITIAL_PAYMENT_DRAFT,
++  ...overrides,
++});
++
++describe('payment draft', () => {
++  it('charges the whole balance with a suggested 10 % tip and computes the change', () => {
++    expect(paymentTotals(check, draft({ method: 'cash', receivedClp: 20_000 }))).toEqual({
++      amountClp: 9490,
++      tipClp: 950,
++      dueClp: 10_440,
++      changeClp: 9560,
++    });
++  });
++
++  it('never adds a tip with JUNAEB and lets the tip be edited or removed', () => {
++    expect(paymentTotals(check, draft({ method: 'junaeb' })).tipClp).toBe(0);
++    expect(paymentTotals(check, draft({ method: 'debit', customTipClp: 2000 })).tipClp).toBe(2000);
++    expect(paymentTotals(check, draft({ method: 'debit', tipEnabled: false })).tipClp).toBe(0);
++  });
++
++  it('prices only the chosen units when someone pays their own items', () => {
++    const units = selectWholeOrder(check, {}, 'ana');
++    expect(units).toEqual({ pie: 1 });
++    const itemsDraft = draft({
++      mode: 'items',
++      units: { ...units, cafe: 1 },
++      method: 'debit',
++      tipEnabled: false,
++    });
++    expect(paymentTotals(check, itemsDraft).amountClp).toBe(4000);
++    expect(toPaymentInput(check, itemsDraft)).toEqual({
++      mode: 'items',
++      method: 'debit',
++      tipClp: 0,
++      receivedClp: null,
++      expectedAmountClp: 4000,
++      items: [
++        { orderItemId: 'pie', quantity: 1 },
++        { orderItemId: 'cafe', quantity: 1 },
++      ],
++    });
++  });
++
++  it('selects only what is still unpaid of a person’s order', () => {
++    const partlyPaid = {
++      lines: [line('cafe', 'juan', 1500, 2, 1), line('luco', 'juan', 3990, 1, 1)],
++    };
++    expect(selectWholeOrder(partlyPaid, {}, 'juan')).toEqual({ cafe: 1, luco: 0 });
++  });
++
++  it('says what is missing before the charge can be made', () => {
++    expect(paymentBlocker(check, draft({ mode: 'items' }))).toBe('Elige qué productos se pagan');
++    expect(paymentBlocker(check, draft({ mode: 'equal' }))).toBe('Elige en cuántas partes');
++    expect(paymentBlocker(check, draft({}))).toBe('Elige el medio de pago');
++    expect(paymentBlocker(check, draft({ method: 'cash', receivedClp: 5000 }))).toBe(
++      'Ingresa cuánto recibes: al menos $ 10.440',
++    );
++    expect(paymentBlocker(check, draft({ method: 'debit' }))).toBeNull();
++  });
++
++  it('charges the next equal part when the bill is split', () => {
++    const split = { ...check, nextPartClp: 4745 };
++    expect(
++      toPaymentInput(split, draft({ mode: 'equal', method: 'debit', tipEnabled: false })),
++    ).toEqual({
++      mode: 'equal',
++      method: 'debit',
++      tipClp: 0,
++      receivedClp: null,
++      expectedAmountClp: 4745,
++    });
++  });
++
++  it('offers the exact amount and the bills a customer usually hands over', () => {
++    expect(cashShortcuts(10_440)).toEqual([10_440, 11_000, 12_000, 15_000]);
++    expect(cashShortcuts(4000)).toEqual([4000, 5000, 10_000, 20_000]);
++    expect(cashShortcuts(0)).toEqual([]);
++  });
++});
+diff --git a/apps/web/src/features/checks/payment-draft.ts b/apps/web/src/features/checks/payment-draft.ts
+new file mode 100644
+index 0000000..39e080d
+--- /dev/null
++++ b/apps/web/src/features/checks/payment-draft.ts
+@@ -0,0 +1,128 @@
++import {
++  suggestedTipClp,
++  type Check,
++  type CreatePaymentInput,
++  type PaymentMethod,
++  type PaymentMode,
++} from '@bigger/shared';
++import { formatClp } from '../../lib/format';
++
++/** What the cashier is filling in; every amount is derived from the live check. */
++export interface PaymentDraft {
++  mode: PaymentMode;
++  /** Units chosen per order line, for `items`. */
++  units: Readonly<Record<string, number>>;
++  method: PaymentMethod | null;
++  tipEnabled: boolean;
++  /** `null` keeps the suggested 10 %. */
++  customTipClp: number | null;
++  receivedClp: number | null;
++}
++
++export const INITIAL_PAYMENT_DRAFT: PaymentDraft = {
++  mode: 'full',
++  units: {},
++  method: null,
++  tipEnabled: true,
++  customTipClp: null,
++  receivedClp: null,
++};
++
++type CheckAmounts = Pick<Check, 'balanceClp' | 'nextPartClp' | 'lines'>;
++
++export function paymentAmountClp(check: CheckAmounts, draft: PaymentDraft): number {
++  switch (draft.mode) {
++    case 'full':
++      return check.balanceClp;
++    case 'equal':
++      return check.nextPartClp ?? 0;
++    case 'items':
++      return check.lines.reduce(
++        (sum, line) => sum + line.unitTotalClp * (draft.units[line.orderItemId] ?? 0),
++        0,
++      );
++  }
++}
++
++/** JUNAEB only covers food, so it never carries a tip. */
++export function tipAllowed(method: PaymentMethod | null): boolean {
++  return method !== 'junaeb';
++}
++
++export function paymentTipClp(amountClp: number, draft: PaymentDraft): number {
++  if (!draft.tipEnabled || !tipAllowed(draft.method)) return 0;
++  return draft.customTipClp ?? suggestedTipClp(amountClp);
++}
++
++export interface PaymentTotals {
++  amountClp: number;
++  tipClp: number;
++  dueClp: number;
++  /** Cash only, once enough was received. */
++  changeClp: number | null;
++}
++
++export function paymentTotals(check: CheckAmounts, draft: PaymentDraft): PaymentTotals {
++  const amountClp = paymentAmountClp(check, draft);
++  const tipClp = paymentTipClp(amountClp, draft);
++  const dueClp = amountClp + tipClp;
++  const changeClp =
++    draft.method === 'cash' && draft.receivedClp !== null && draft.receivedClp >= dueClp
++      ? draft.receivedClp - dueClp
++      : null;
++  return { amountClp, tipClp, dueClp, changeClp };
++}
++
++/** The first thing still missing before charging, in the words shown under the button. */
++export function paymentBlocker(check: CheckAmounts, draft: PaymentDraft): string | null {
++  const { amountClp, dueClp } = paymentTotals(check, draft);
++  if (draft.mode === 'items' && amountClp === 0) return 'Elige qué productos se pagan';
++  if (draft.mode === 'equal' && check.nextPartClp === null) return 'Elige en cuántas partes';
++  if (amountClp > check.balanceClp) return `Supera el saldo de ${formatClp(check.balanceClp)}`;
++  if (draft.method === null) return 'Elige el medio de pago';
++  if (draft.method === 'cash' && (draft.receivedClp ?? 0) < dueClp) {
++    return `Ingresa cuánto recibes: al menos ${formatClp(dueClp)}`;
++  }
++  return null;
++}
++
++export function toPaymentInput(check: CheckAmounts, draft: PaymentDraft): CreatePaymentInput {
++  const { amountClp, tipClp } = paymentTotals(check, draft);
++  const method = draft.method ?? 'cash';
++  const base = {
++    method,
++    tipClp,
++    receivedClp: method === 'cash' ? draft.receivedClp : null,
++    expectedAmountClp: amountClp,
++  };
++  if (draft.mode !== 'items') return { mode: draft.mode, ...base };
++  return {
++    mode: 'items',
++    ...base,
++    items: Object.entries(draft.units)
++      .filter(([, quantity]) => quantity > 0)
++      .map(([orderItemId, quantity]) => ({ orderItemId, quantity })),
++  };
++}
++
++const CASH_STEPS = [1000, 2000, 5000, 10_000, 20_000];
++
++/** Exact amount plus the bills a customer is likely to hand over. */
++export function cashShortcuts(dueClp: number): number[] {
++  if (dueClp <= 0) return [];
++  const rounded = CASH_STEPS.map((step) => Math.ceil(dueClp / step) * step);
++  return [...new Set([dueClp, ...rounded])].sort((a, b) => a - b).slice(0, 4);
++}
++
++/** Selects every unit still unpaid of one order ("Juan pays what he ordered"). */
++export function selectWholeOrder(
++  check: Pick<Check, 'lines'>,
++  units: Readonly<Record<string, number>>,
++  orderId: string,
++): Record<string, number> {
++  const next = { ...units };
++  for (const line of check.lines.filter((candidate) => candidate.orderId === orderId)) {
++    next[line.orderItemId] = line.quantity - line.paidQuantity;
++  }
++  return next;
++}
+diff --git a/apps/web/src/features/checks/payment-presentation.ts b/apps/web/src/features/checks/payment-presentation.ts
+new file mode 100644
+index 0000000..7fbdd51
+--- /dev/null
++++ b/apps/web/src/features/checks/payment-presentation.ts
+@@ -0,0 +1,21 @@
++import type { Order, PaymentMethod, PaymentMode } from '@bigger/shared';
++import { Banknote, CreditCard, GraduationCap, type LucideIcon } from 'lucide-react';
++
++export const PAYMENT_METHOD_PRESENTATION: Readonly<
++  Record<PaymentMethod, { label: string; icon: LucideIcon }>
++> = {
++  cash: { label: 'Efectivo', icon: Banknote },
++  debit: { label: 'Débito', icon: CreditCard },
++  junaeb: { label: 'JUNAEB', icon: GraduationCap },
++};
++
++export const PAYMENT_MODE_LABEL: Readonly<Record<PaymentMode, string>> = {
++  full: 'Todo',
++  items: 'Por productos',
++  equal: 'Partes iguales',
++};
++
++/** "Juan" when the waiter wrote a name, otherwise "Pedido 2" in the order it was taken. */
++export function orderLabel(order: Pick<Order, 'customerName'>, index: number): string {
++  return order.customerName ?? `Pedido ${index + 1}`;
++}
+diff --git a/apps/web/src/features/checks/useChecks.ts b/apps/web/src/features/checks/useChecks.ts
+new file mode 100644
+index 0000000..dec09aa
+--- /dev/null
++++ b/apps/web/src/features/checks/useChecks.ts
+@@ -0,0 +1,47 @@
++import type { Check } from '@bigger/shared';
++import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
++import { queryKeys } from '../../app/query-keys';
++import { checksService } from '../../services/checks.service';
++
++export function useTableCheck(tableId: string) {
++  return useQuery({
++    queryKey: queryKeys.tableCheck(tableId),
++    queryFn: ({ signal }) => checksService.forTable(tableId, signal),
++    retry: false,
++  });
++}
++
++export function useCheck(checkId: string | null) {
++  return useQuery({
++    queryKey: queryKeys.check(checkId ?? ''),
++    queryFn: ({ signal }) => checksService.get(checkId ?? '', signal),
++    enabled: checkId !== null,
++  });
++}
++
++/**
++ * A payment changes the bill, the orders (closing marks them paid) and the table map. The
++ * returned bill is cached first: once closed, the table has no open check to refetch.
++ */
++function useCheckMutation<TParams>(mutationFn: (params: TParams) => Promise<Check>) {
++  const queryClient = useQueryClient();
++  return useMutation({
++    mutationFn,
++    retry: false,
++    onSuccess: (check) => {
++      queryClient.setQueryData(queryKeys.check(check.id), check);
++      if (check.tableId) queryClient.setQueryData(queryKeys.tableCheck(check.tableId), check);
++    },
++    onSettled: async () => {
++      await Promise.all(
++        [queryKeys.checks, queryKeys.tables, queryKeys.orders].map((queryKey) =>
++          queryClient.invalidateQueries({ queryKey }),
++        ),
++      );
++    },
++  });
++}
++
++export const usePay = () => useCheckMutation(checksService.pay);
++export const useSetSplit = () => useCheckMutation(checksService.setSplit);
++export const useVoidPayment = () => useCheckMutation(checksService.voidPayment);
+diff --git a/apps/web/src/features/kitchen/KitchenPage.test.tsx b/apps/web/src/features/kitchen/KitchenPage.test.tsx
+index f88eb13..f00063c 100644
+--- a/apps/web/src/features/kitchen/KitchenPage.test.tsx
++++ b/apps/web/src/features/kitchen/KitchenPage.test.tsx
+@@ -12,7 +12,7 @@ import { queryKeys } from '../../app/query-keys';
+ import { expectNoA11yViolations } from '../../test/a11y';
+ import { orderFixture as baseOrder } from '../../test/orders';
+ import { installKitchenDragGeometry } from '../../test/kitchen-drag';
+-import { WhatsAppOrdersPanel } from '../orders/components/WhatsAppOrdersPanel';
++import { TakeawayOrdersPanel } from '../orders/components/TakeawayOrdersPanel';
+ import { useTableOverview } from '../tables/useTableOverview';
+ import { KitchenPage } from './KitchenPage';
+ 
+@@ -113,7 +113,7 @@ function setup(initialOrders: Order[] = [baseOrder, preparingOrder, readyOrder])
+         {withOtherViews && (
+           <>
+             <TableProbe />
+-            <WhatsAppOrdersPanel now={new Date('2026-10-22T12:00:00.000Z')} />
++            <TakeawayOrdersPanel now={new Date('2026-10-22T12:00:00.000Z')} />
+           </>
+         )}
+       </QueryClientProvider>,
+@@ -666,7 +666,7 @@ describe('KitchenPage status actions', () => {
+     await userEvent.click(
+       screen.getByRole('button', { name: 'Marcar listo: WhatsApp · Cliente de prueba' }),
+     );
+-    const panel = screen.getByRole('region', { name: 'Pedidos por WhatsApp' });
++    const panel = screen.getByRole('region', { name: 'Para llevar y WhatsApp' });
+     await waitFor(() => {
+       expect(within(panel).getByText('Listo')).toBeInTheDocument();
+     });
+diff --git a/apps/web/src/features/kitchen/components/KitchenTicket.module.css b/apps/web/src/features/kitchen/components/KitchenTicket.module.css
+index 3865c60..469b956 100644
+--- a/apps/web/src/features/kitchen/components/KitchenTicket.module.css
++++ b/apps/web/src/features/kitchen/components/KitchenTicket.module.css
+@@ -17,11 +17,13 @@
+   border-top-color: var(--status-success);
+ }
+ 
++/* Title | time | handle on one line, same height with or without the drag handle. */
+ .header {
+-  display: flex;
+-  align-items: baseline;
+-  justify-content: space-between;
+-  gap: var(--space-2);
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) auto auto;
++  align-items: center;
++  column-gap: var(--space-2);
++  min-height: var(--touch-target);
+ }
+ 
+ .title {
+@@ -32,6 +34,7 @@
+ .elapsed {
+   color: var(--text-secondary);
+   font-size: var(--text-detail);
++  font-variant-numeric: tabular-nums;
+   white-space: nowrap;
+ }
+ 
+@@ -48,6 +51,7 @@
+   flex-shrink: 0;
+   min-width: var(--touch-target);
+   min-height: var(--touch-target);
++  margin-right: calc(-1 * var(--space-2));
+   padding: var(--space-1);
+   border: 0;
+   border-radius: var(--radius-sm);
+diff --git a/apps/web/src/features/ordering/OrderTakingPage.tsx b/apps/web/src/features/ordering/OrderTakingPage.tsx
+index dbfe527..2e1c1fa 100644
+--- a/apps/web/src/features/ordering/OrderTakingPage.tsx
++++ b/apps/web/src/features/ordering/OrderTakingPage.tsx
+@@ -21,7 +21,9 @@ import { useCategories, useProducts } from './useCatalog';
+ import { useOrderDraft } from './useOrderDraft';
+ 
+ type Target =
+-  { kind: 'table'; label: string; tableId: string } | { kind: 'takeaway' } | { kind: 'none' };
++  | { kind: 'table'; label: string; tableId: string; hasOpenCheck: boolean }
++  | { kind: 'takeaway' }
++  | { kind: 'none' };
+ 
+ function useOrderTarget(): Target | null {
+   const [searchParams] = useSearchParams();
+@@ -33,7 +35,9 @@ function useOrderTarget(): Target | null {
+   if (tablesQuery.isPending) return null;
+ 
+   const table = tablesQuery.data?.find((candidate) => candidate.id === tableId);
+-  return table ? { kind: 'table', label: table.label, tableId: table.id } : { kind: 'none' };
++  return table
++    ? { kind: 'table', label: table.label, tableId: table.id, hasOpenCheck: table.checkId !== null }
++    : { kind: 'none' };
+ }
+ 
+ function ChooseTarget() {
+@@ -76,7 +80,10 @@ export function OrderTakingPage() {
+   if (target.kind === 'none') return <ChooseTarget />;
+ 
+   const targetLabel = target.kind === 'table' ? target.label : 'Para llevar';
+-  const targetSubtitle = 'Detalle del pedido';
++  const targetSubtitle =
++    target.kind === 'table' && target.hasOpenCheck
++      ? 'Se suma a la cuenta abierta de la mesa'
++      : 'Detalle del pedido';
+ 
+   const handleSubmit = () => {
+     const orderTarget: OrderTarget =
+diff --git a/apps/web/src/features/ordering/components/ComandaPanel.tsx b/apps/web/src/features/ordering/components/ComandaPanel.tsx
+index f967ecb..239d04f 100644
+--- a/apps/web/src/features/ordering/components/ComandaPanel.tsx
++++ b/apps/web/src/features/ordering/components/ComandaPanel.tsx
+@@ -65,27 +65,27 @@ export function ComandaPanel({
+           <time dateTime={openedAt.toISOString()}>{formatClockTime(openedAt.toISOString())}</time>
+         </p>
+ 
+-        {requireName && (
+-          <div className={styles.name}>
+-            <label htmlFor={nameId}>Nombre</label>
+-            <input
+-              id={nameId}
+-              type="text"
+-              className={controlClassName}
+-              value={customerName}
+-              maxLength={60}
+-              required
+-              aria-describedby={hintId}
+-              placeholder="¿Para quién es?"
+-              onChange={(event) => {
+-                onSetCustomerName(event.target.value);
+-              }}
+-            />
+-            <p id={hintId} className={styles.nameHint}>
+-              Obligatorio para pedidos para llevar
+-            </p>
+-          </div>
+-        )}
++        <div className={styles.name}>
++          <label htmlFor={nameId}>{requireName ? 'Nombre' : '¿Para quién? (opcional)'}</label>
++          <input
++            id={nameId}
++            type="text"
++            className={controlClassName}
++            value={customerName}
++            maxLength={60}
++            required={requireName}
++            aria-describedby={hintId}
++            placeholder={requireName ? '¿Para quién es?' : 'Ej.: Juan'}
++            onChange={(event) => {
++              onSetCustomerName(event.target.value);
++            }}
++          />
++          <p id={hintId} className={styles.nameHint}>
++            {requireName
++              ? 'Obligatorio para pedidos para llevar'
++              : 'Ayuda a dividir la cuenta si la mesa paga por separado'}
++          </p>
++        </div>
+ 
+         <p className={styles.columns} aria-hidden="true">
+           <span>Cant</span>
+diff --git a/apps/web/src/features/orders/components/WhatsAppOrdersPanel.module.css b/apps/web/src/features/orders/components/TakeawayOrdersPanel.module.css
+similarity index 73%
+rename from apps/web/src/features/orders/components/WhatsAppOrdersPanel.module.css
+rename to apps/web/src/features/orders/components/TakeawayOrdersPanel.module.css
+index a3eb361..43c3ebb 100644
+--- a/apps/web/src/features/orders/components/WhatsAppOrdersPanel.module.css
++++ b/apps/web/src/features/orders/components/TakeawayOrdersPanel.module.css
+@@ -38,3 +38,16 @@
+   color: var(--text-secondary);
+   font-size: var(--text-detail);
+ }
++
++.itemFooter {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: var(--space-2);
++  margin-top: var(--space-1);
++}
++
++.total {
++  font-weight: var(--weight-semibold);
++  font-variant-numeric: tabular-nums;
++}
+diff --git a/apps/web/src/features/orders/components/TakeawayOrdersPanel.tsx b/apps/web/src/features/orders/components/TakeawayOrdersPanel.tsx
+new file mode 100644
+index 0000000..0e9dcf2
+--- /dev/null
++++ b/apps/web/src/features/orders/components/TakeawayOrdersPanel.tsx
+@@ -0,0 +1,92 @@
++import { OPEN_ORDER_STATUSES } from '@bigger/shared';
++import { MessageCircle, Wallet } from 'lucide-react';
++import { useState } from 'react';
++import { AsyncContent } from '../../../components/ui/AsyncContent';
++import { Button } from '../../../components/ui/Button';
++import { EmptyState } from '../../../components/ui/EmptyState';
++import { StatusBadge } from '../../../components/ui/StatusBadge';
++import { formatClockTime, formatClp } from '../../../lib/format';
++import { PaymentDialog } from '../../checks/components/PaymentDialog';
++import { useCheck } from '../../checks/useChecks';
++import { ORDER_STATUS_PRESENTATION } from '../order-status';
++import { describeOrderItem, orderTitle } from '../order-text';
++import { useOrders } from '../useOrders';
++import styles from './TakeawayOrdersPanel.module.css';
++
++const OPEN_ORDERS_QUERY = { statuses: OPEN_ORDER_STATUSES } as const;
++
++/** Each takeaway or WhatsApp order has its own bill; it loads only when someone pays. */
++function TakeawayPayment({ checkId, onClose }: { checkId: string; onClose: () => void }) {
++  const checkQuery = useCheck(checkId);
++  if (!checkQuery.data) return null;
++  return <PaymentDialog check={checkQuery.data} open onClose={onClose} />;
++}
++
++export interface TakeawayOrdersPanelProps {
++  now: Date;
++}
++
++export function TakeawayOrdersPanel({ now }: TakeawayOrdersPanelProps) {
++  const ordersQuery = useOrders(OPEN_ORDERS_QUERY);
++  const [payingCheckId, setPayingCheckId] = useState<string | null>(null);
++
++  return (
++    <section className={styles.panel} aria-labelledby="para-llevar-titulo">
++      <h2 id="para-llevar-titulo" className={styles.title}>
++        Para llevar y WhatsApp
++      </h2>
++      <AsyncContent query={ordersQuery} loadingLabel="Cargando pedidos para llevar…">
++        {(allOrders) => {
++          const orders = allOrders.filter((order) => order.channel !== 'dine-in');
++          if (orders.length === 0) {
++            return <EmptyState icon={MessageCircle} title="Sin pedidos para llevar" />;
++          }
++          return (
++            <ul role="list" className={styles.list}>
++              {orders.map((order) => {
++                const status = ORDER_STATUS_PRESENTATION[order.status];
++                const title = orderTitle(order);
++                const pickup =
++                  order.pickupAt && new Date(order.pickupAt) > now
++                    ? ` · retira ${formatClockTime(order.pickupAt)}`
++                    : '';
++                return (
++                  <li key={order.id} className={styles.item}>
++                    <div className={styles.itemHeader}>
++                      <span className={styles.customer}>{title}</span>
++                      <StatusBadge tone={status.tone} icon={status.icon} label={status.label} />
++                    </div>
++                    <p className={styles.summary}>
++                      {order.items.map(describeOrderItem).join(', ')}
++                      {pickup}
++                    </p>
++                    <div className={styles.itemFooter}>
++                      <span className={styles.total}>{formatClp(order.totalClp)}</span>
++                      <Button
++                        variant="secondary"
++                        onClick={() => {
++                          setPayingCheckId(order.checkId);
++                        }}
++                      >
++                        <Wallet size={18} aria-hidden="true" />
++                        Cobrar<span className="visually-hidden"> {title}</span>
++                      </Button>
++                    </div>
++                  </li>
++                );
++              })}
++            </ul>
++          );
++        }}
++      </AsyncContent>
++      {payingCheckId && (
++        <TakeawayPayment
++          checkId={payingCheckId}
++          onClose={() => {
++            setPayingCheckId(null);
++          }}
++        />
++      )}
++    </section>
++  );
++}
+diff --git a/apps/web/src/features/orders/components/WhatsAppOrdersPanel.tsx b/apps/web/src/features/orders/components/WhatsAppOrdersPanel.tsx
+deleted file mode 100644
+index e7c4d4e..0000000
+--- a/apps/web/src/features/orders/components/WhatsAppOrdersPanel.tsx
++++ /dev/null
+@@ -1,57 +0,0 @@
+-import { OPEN_ORDER_STATUSES } from '@bigger/shared';
+-import { MessageCircle } from 'lucide-react';
+-import { AsyncContent } from '../../../components/ui/AsyncContent';
+-import { EmptyState } from '../../../components/ui/EmptyState';
+-import { StatusBadge } from '../../../components/ui/StatusBadge';
+-import { formatClockTime } from '../../../lib/format';
+-import { ORDER_STATUS_PRESENTATION } from '../order-status';
+-import { describeOrderItem } from '../order-text';
+-import { useOrders } from '../useOrders';
+-import styles from './WhatsAppOrdersPanel.module.css';
+-
+-const WHATSAPP_QUERY = { statuses: OPEN_ORDER_STATUSES, channel: 'whatsapp' } as const;
+-
+-export interface WhatsAppOrdersPanelProps {
+-  now: Date;
+-}
+-
+-export function WhatsAppOrdersPanel({ now }: WhatsAppOrdersPanelProps) {
+-  const ordersQuery = useOrders(WHATSAPP_QUERY);
+-
+-  return (
+-    <section className={styles.panel} aria-labelledby="whatsapp-titulo">
+-      <h2 id="whatsapp-titulo" className={styles.title}>
+-        Pedidos por WhatsApp
+-      </h2>
+-      <AsyncContent query={ordersQuery} loadingLabel="Cargando pedidos por WhatsApp…">
+-        {(orders) =>
+-          orders.length === 0 ? (
+-            <EmptyState icon={MessageCircle} title="Sin pedidos por WhatsApp" />
+-          ) : (
+-            <ul role="list" className={styles.list}>
+-              {orders.map((order) => {
+-                const status = ORDER_STATUS_PRESENTATION[order.status];
+-                const pickup =
+-                  order.pickupAt && new Date(order.pickupAt) > now
+-                    ? ` · retira ${formatClockTime(order.pickupAt)}`
+-                    : '';
+-                return (
+-                  <li key={order.id} className={styles.item}>
+-                    <div className={styles.itemHeader}>
+-                      <span className={styles.customer}>{order.customerName}</span>
+-                      <StatusBadge tone={status.tone} icon={status.icon} label={status.label} />
+-                    </div>
+-                    <p className={styles.summary}>
+-                      {order.items.map(describeOrderItem).join(', ')}
+-                      {pickup}
+-                    </p>
+-                  </li>
+-                );
+-              })}
+-            </ul>
+-          )
+-        }
+-      </AsyncContent>
+-    </section>
+-  );
+-}
+diff --git a/apps/web/src/features/tables/TablesPage.tsx b/apps/web/src/features/tables/TablesPage.tsx
+index f202655..4aac25d 100644
+--- a/apps/web/src/features/tables/TablesPage.tsx
++++ b/apps/web/src/features/tables/TablesPage.tsx
+@@ -3,7 +3,7 @@ import { ButtonLink } from '../../components/ui/Button';
+ import { AsyncContent } from '../../components/ui/AsyncContent';
+ import { Card } from '../../components/ui/Card';
+ import { useNow } from '../../hooks/useNow';
+-import { WhatsAppOrdersPanel } from '../orders/components/WhatsAppOrdersPanel';
++import { TakeawayOrdersPanel } from '../orders/components/TakeawayOrdersPanel';
+ import { TableMap } from './components/TableMap';
+ import { TableStatusLegend } from './components/TableStatusLegend';
+ import styles from './TablesPage.module.css';
+@@ -32,7 +32,7 @@ export function TablesPage() {
+           <Plus size={20} aria-hidden="true" />
+           Pedido para llevar
+         </ButtonLink>
+-        <WhatsAppOrdersPanel now={now} />
++        <TakeawayOrdersPanel now={now} />
+       </Card>
+     </div>
+   );
+diff --git a/apps/web/src/features/tables/components/TableCard.test.tsx b/apps/web/src/features/tables/components/TableCard.test.tsx
+index d9fea48..acb17a2 100644
+--- a/apps/web/src/features/tables/components/TableCard.test.tsx
++++ b/apps/web/src/features/tables/components/TableCard.test.tsx
+@@ -28,22 +28,38 @@ function renderCard(table: TableOverview) {
+ }
+ 
+ describe('TableCard', () => {
+-  it('states an occupied table in text, not only with color', () => {
++  it('starts an order from a free table', () => {
++    renderCard(base);
++    expect(screen.getByRole('link', { name: 'Mesa 2, Libre' })).toHaveAttribute(
++      'href',
++      `/pedido?mesa=${base.id}`,
++    );
++  });
++
++  it('states an occupied table in text and opens its bill', () => {
+     renderCard({
+       ...base,
+       status: 'occupied',
++      checkId: '7d6c5b4a-3e2f-4a1b-9c8d-7e6f5a4b3c2d',
+       itemCount: 3,
+       openSince: '2026-10-21T12:00:00.000Z',
+     });
+     const link = screen.getByRole('link', { name: 'Mesa 2, Con pedido, 3 productos · 12 min' });
+-    expect(link).toHaveAttribute('href', `/pedido?mesa=${base.id}`);
++    expect(link).toHaveAttribute('href', `/mesas/${base.id}`);
+     expect(screen.getByText('Con pedido')).toBeVisible();
+   });
+ 
+-  it('shows the amount due for a table awaiting payment', () => {
+-    renderCard({ ...base, status: 'awaiting-payment', openTotalClp: 9800 });
++  it('shows what is still owed for a table awaiting payment', () => {
++    renderCard({
++      ...base,
++      status: 'awaiting-payment',
++      checkId: '7d6c5b4a-3e2f-4a1b-9c8d-7e6f5a4b3c2d',
++      openTotalClp: 9800,
++      paidClp: 2000,
++      balanceClp: 7800,
++    });
+     expect(screen.getByText('Por pagar')).toBeInTheDocument();
+-    expect(screen.getByText('$ 9.800')).toBeInTheDocument();
++    expect(screen.getByText(/^Saldo \$\s7\.800$/)).toBeInTheDocument();
+   });
+ 
+   it('has no detectable accessibility violations', async () => {
+diff --git a/apps/web/src/features/tables/components/TableCard.tsx b/apps/web/src/features/tables/components/TableCard.tsx
+index edf4450..415c2a1 100644
+--- a/apps/web/src/features/tables/components/TableCard.tsx
++++ b/apps/web/src/features/tables/components/TableCard.tsx
+@@ -20,7 +20,7 @@ function describeTable(table: TableOverview, now: Date): string | null {
+       return table.openSince ? `${items} · ${minutesSince(table.openSince, now)} min` : items;
+     }
+     case 'awaiting-payment':
+-      return formatClp(table.openTotalClp);
++      return `Saldo ${formatClp(table.balanceClp)}`;
+   }
+ }
+ 
+@@ -30,7 +30,8 @@ export function TableCard({ table, now }: TableCardProps) {
+ 
+   return (
+     <Link
+-      to={`/pedido?mesa=${table.id}`}
++      // A free table starts an order; an occupied one opens its bill.
++      to={table.checkId === null ? `/pedido?mesa=${table.id}` : `/mesas/${table.id}`}
+       className={cx(styles.card, styles[table.status])}
+       aria-label={[table.label, presentation.label, detail].filter(Boolean).join(', ')}
+     >
+diff --git a/apps/web/src/hooks/useRealtimeSync.test.tsx b/apps/web/src/hooks/useRealtimeSync.test.tsx
+index ea8aac7..af392fa 100644
+--- a/apps/web/src/hooks/useRealtimeSync.test.tsx
++++ b/apps/web/src/hooks/useRealtimeSync.test.tsx
+@@ -175,6 +175,7 @@ describe('useRealtimeSync with EventSource', () => {
+     expect(app.invalidate.mock.calls).toEqual([
+       [{ queryKey: queryKeys.orders }],
+       [{ queryKey: queryKeys.tables }],
++      [{ queryKey: queryKeys.checks }],
+     ]);
+     expect(app.calls).toHaveLength(4);
+     expect(TestEventSource.instances).toHaveLength(1);
+diff --git a/apps/web/src/hooks/useRealtimeSync.ts b/apps/web/src/hooks/useRealtimeSync.ts
+index b948166..c1af62c 100644
+--- a/apps/web/src/hooks/useRealtimeSync.ts
++++ b/apps/web/src/hooks/useRealtimeSync.ts
+@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
+ import { queryKeys } from '../app/query-keys';
+ import { subscribeToRealtime, type RealtimeConnectionState } from '../services/realtime.service';
+ 
+-/** Keeps tables and orders fresh across every tablet without reloading the page. */
++const ORDER_VIEWS = [queryKeys.orders, queryKeys.tables, queryKeys.checks];
++
++/** Keeps tables, orders and bills fresh across every tablet without reloading the page. */
+ export function useRealtimeSync(): RealtimeConnectionState {
+   const queryClient = useQueryClient();
+   const [state, setState] = useState<RealtimeConnectionState>('connecting');
+@@ -14,8 +16,7 @@ export function useRealtimeSync(): RealtimeConnectionState {
+       onStateChange: (nextState) => {
+         // The initial page queries already load data; only recover a broken connection.
+         if (nextState === 'open' && previousState === 'reconnecting') {
+-          void queryClient.invalidateQueries({ queryKey: queryKeys.orders });
+-          void queryClient.invalidateQueries({ queryKey: queryKeys.tables });
++          for (const queryKey of ORDER_VIEWS) void queryClient.invalidateQueries({ queryKey });
+         }
+         previousState = nextState;
+         setState(nextState);
+@@ -24,8 +25,8 @@ export function useRealtimeSync(): RealtimeConnectionState {
+         switch (event.type) {
+           case 'order.created':
+           case 'order.updated':
+-            void queryClient.invalidateQueries({ queryKey: queryKeys.orders });
+-            void queryClient.invalidateQueries({ queryKey: queryKeys.tables });
++          case 'check.updated':
++            for (const queryKey of ORDER_VIEWS) void queryClient.invalidateQueries({ queryKey });
+             break;
+           case 'catalog.updated':
+             void queryClient.invalidateQueries({ queryKey: queryKeys.catalog });
+diff --git a/apps/web/src/services/checks.service.ts b/apps/web/src/services/checks.service.ts
+new file mode 100644
+index 0000000..c8882ed
+--- /dev/null
++++ b/apps/web/src/services/checks.service.ts
+@@ -0,0 +1,30 @@
++import { CheckSchema, type CreatePaymentInput } from '@bigger/shared';
++import { getJson, requestJson } from './http-client';
++
++export interface PayParams {
++  checkId: string;
++  input: CreatePaymentInput;
++}
++
++export interface SplitParams {
++  checkId: string;
++  parts: number | null;
++}
++
++export interface VoidPaymentParams {
++  paymentId: string;
++  reason: string;
++}
++
++export const checksService = {
++  forTable: (tableId: string, signal?: AbortSignal) =>
++    getJson(`/tables/${tableId}/check`, CheckSchema, {}, signal),
++  get: (checkId: string, signal?: AbortSignal) =>
++    getJson(`/checks/${checkId}`, CheckSchema, {}, signal),
++  setSplit: ({ checkId, parts }: SplitParams) =>
++    requestJson('PUT', `/checks/${checkId}/split`, CheckSchema, { body: { parts } }),
++  pay: ({ checkId, input }: PayParams) =>
++    requestJson('POST', `/checks/${checkId}/payments`, CheckSchema, { body: input }),
++  voidPayment: ({ paymentId, reason }: VoidPaymentParams) =>
++    requestJson('POST', `/payments/${paymentId}/void`, CheckSchema, { body: { reason } }),
++};

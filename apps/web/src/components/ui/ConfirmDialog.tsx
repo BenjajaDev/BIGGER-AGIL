@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { FieldError } from '../form/Field';
 import { Button } from './Button';
 import styles from './ConfirmDialog.module.css';
@@ -9,7 +9,11 @@ export interface ConfirmDialogProps {
   description: string;
   confirmLabel: string;
   isPending?: boolean;
+  /** Blocks the confirmation until the extra fields are valid. */
+  confirmDisabled?: boolean;
   error?: string | null;
+  /** Extra fields, e.g. the reason for voiding a payment. */
+  children?: ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -24,7 +28,9 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   isPending = false,
+  confirmDisabled = false,
   error = null,
+  children,
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
@@ -54,6 +60,7 @@ export function ConfirmDialog({
         <p id={descriptionId} className={styles.description}>
           {description}
         </p>
+        {children}
         {error && (
           <div role="alert">
             <FieldError message={error} />
@@ -64,7 +71,7 @@ export function ConfirmDialog({
           <Button variant="secondary" onClick={onClose} autoFocus>
             Cancelar
           </Button>
-          <Button variant="primary" onClick={onConfirm} disabled={isPending}>
+          <Button variant="primary" onClick={onConfirm} disabled={isPending || confirmDisabled}>
             {isPending ? 'Procesando…' : confirmLabel}
           </Button>
         </div>

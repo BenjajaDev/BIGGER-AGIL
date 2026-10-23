@@ -71,6 +71,11 @@ const internalRoutes: RouteObject[] = [
     lazy: () => import('../features/tables/TablesPage').then((m) => ({ Component: m.TablesPage })),
   },
   {
+    path: '/mesas/:tableId',
+    lazy: () =>
+      import('../features/checks/TableCheckPage').then((m) => ({ Component: m.TableCheckPage })),
+  },
+  {
     path: '/pedido',
     lazy: () =>
       import('../features/ordering/OrderTakingPage').then((m) => ({
