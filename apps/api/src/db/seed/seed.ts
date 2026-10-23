@@ -5,6 +5,7 @@ import {
   comboSlotOptions,
   comboSlots,
   diningTables,
+  images,
   modifierGroups,
   modifierOptions,
   orderItemOptions,
@@ -29,10 +30,12 @@ import {
 
 export interface SeedOptions {
   withDemoOrders: boolean;
+  /** Deletes every row first (catalog, tables and orders) to load the catalog again. */
+  reset?: boolean;
   now?: Date;
 }
 
-export type SeedResult = 'seeded' | 'skipped';
+export type SeedResult = 'seeded' | 'reset' | 'skipped';
 
 const MINUTE_MS = 60_000;
 
@@ -42,6 +45,29 @@ interface SeededProduct {
   id: string;
   priceClp: number;
   firstSize: { id: string; name: string } | null;
+}
+
+/** Children before parents, so foreign keys never block a delete. */
+function clearDatabase(tx: Transaction): void {
+  for (const table of [
+    orderItemOptions,
+    orderItems,
+    orders,
+    diningTables,
+    sizeGroupRules,
+    productSizes,
+    comboSlotOptions,
+    comboSlots,
+    productModifierGroups,
+    products,
+    productTypes,
+    modifierOptions,
+    modifierGroups,
+    categories,
+    images,
+  ]) {
+    tx.delete(table).run();
+  }
 }
 
 function lookup<T>(map: ReadonlyMap<string, T>, name: string, what: string): T {
@@ -93,13 +119,15 @@ function insertSizes(
 /** Idempotent: a database that already has a catalog is left untouched. */
 export function seedDatabase(db: AppDatabase, options: SeedOptions): SeedResult {
   const [existing] = db.select({ total: count() }).from(categories).all();
-  if (existing && existing.total > 0) {
+  const hasData = (existing?.total ?? 0) > 0;
+  if (hasData && options.reset !== true) {
     return 'skipped';
   }
 
   const now = options.now ?? new Date();
 
   db.transaction((tx) => {
+    if (hasData) clearDatabase(tx);
     const groupIds = new Map<string, string>();
     for (const group of SEED_MODIFIER_GROUPS) {
       const [created] = tx
@@ -310,5 +338,5 @@ export function seedDatabase(db: AppDatabase, options: SeedOptions): SeedResult 
     }
   });
 
-  return 'seeded';
+  return hasData ? 'reset' : 'seeded';
 }

@@ -12,6 +12,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:seed": "tsx src/scripts/seed.ts",
+    "db:reset": "tsx src/scripts/seed.ts --reset",
     "admin:pin": "tsx src/scripts/hash-admin-pin.ts"
   },
   "dependencies": {

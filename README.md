@@ -21,6 +21,7 @@ cp apps/web/.env.example apps/web/.env.local
 pnpm --filter @bigger/api admin:pin   # pide el PIN del encargado y entrega las 2 variables ADMIN_*
                                       # para pegarlas en apps/api/.env
 pnpm db:seed   # aplica migraciones y carga el catálogo real y pedidos de ejemplo
+               # (si la base ya tiene datos no hace nada: usa pnpm db:reset)
 pnpm dev       # API en :3000 y web en :5173
 ```
 
@@ -39,8 +40,6 @@ respáldalo junto con la base de datos.
 Para usar la app desde las tablets del local, define `HOST=0.0.0.0` en `apps/api/.env` y
 agrega el origen de la tablet a `CORS_ORIGINS`.
 
-
-
 ## Scripts
 
 | Comando                                 | Qué hace                                           |
@@ -51,6 +50,7 @@ agrega el origen de la tablet a `CORS_ORIGINS`.
 | `pnpm test`                             | Vitest en todos los paquetes                       |
 | `pnpm db:migrate`                       | Aplica migraciones pendientes                      |
 | `pnpm db:seed`                          | Carga datos de ejemplo (bloqueado en producción)   |
+| `pnpm db:reset`                         | Borra todo y vuelve a cargar el catálogo y pedidos |
 | `pnpm --filter @bigger/api db:generate` | Genera una migración desde `schema.ts`             |
 | `pnpm --filter @bigger/api admin:pin`   | Genera el hash del PIN y el secreto de sesión      |
 
