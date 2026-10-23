@@ -81,6 +81,8 @@ export const OrderSchema = z.object({
   id: z.uuid(),
   channel: OrderChannelSchema,
   status: OrderStatusSchema,
+  /** The bill it belongs to: a table's orders share one open check. */
+  checkId: z.uuid(),
   tableId: z.uuid().nullable(),
   tableLabel: z.string().nullable(),
   customerName: z.string().max(60).nullable(),

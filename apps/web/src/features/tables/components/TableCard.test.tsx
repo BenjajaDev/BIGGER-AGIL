@@ -10,8 +10,11 @@ const base: TableOverview = {
   label: 'Mesa 2',
   sortOrder: 2,
   status: 'free',
+  checkId: null,
   itemCount: 0,
   openTotalClp: 0,
+  paidClp: 0,
+  balanceClp: 0,
   openSince: null,
 };
 const now = new Date('2026-10-21T12:12:00.000Z');

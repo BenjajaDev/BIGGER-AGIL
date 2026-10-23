@@ -1,6 +1,6 @@
 # Cuentas, pagos y pedidos compartidos por mesa
 
-Estado: **propuesta (Fase 1)** · pendiente de aprobación.
+Estado: **aprobado** · Fase 2 (backend) implementada · Fase 3 (interfaz) pendiente.
 
 ## 1. Objetivo
 
@@ -97,6 +97,7 @@ queda `NOT NULL` desde el inicio.
   "items": [{ "orderItemId": "…", "quantity": 1 }], // solo en items
   "tipClp": 270,
   "receivedClp": 5000, // solo en efectivo
+  "expectedAmountClp": 2700, // el monto que vio quien cobra; si cambió → 409
 }
 ```
 

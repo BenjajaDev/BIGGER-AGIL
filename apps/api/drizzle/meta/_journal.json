@@ -29,6 +29,13 @@
       "when": 1792695790355,
       "tag": "0003_menu_cards",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792716684772,
+      "tag": "0004_checks_and_payments",
+      "breakpoints": true
     }
   ]
 }

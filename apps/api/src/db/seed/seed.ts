@@ -2,6 +2,7 @@ import { count } from 'drizzle-orm';
 import type { AppDatabase } from '../client.js';
 import {
   categories,
+  checks,
   comboSlotOptions,
   comboSlots,
   diningTables,
@@ -11,6 +12,8 @@ import {
   orderItemOptions,
   orderItems,
   orders,
+  paymentItems,
+  payments,
   productModifierGroups,
   products,
   productSizes,
@@ -50,9 +53,12 @@ interface SeededProduct {
 /** Children before parents, so foreign keys never block a delete. */
 function clearDatabase(tx: Transaction): void {
   for (const table of [
+    paymentItems,
+    payments,
     orderItemOptions,
     orderItems,
     orders,
+    checks,
     diningTables,
     sizeGroupRules,
     productSizes,
@@ -278,21 +284,38 @@ export function seedDatabase(db: AppDatabase, options: SeedOptions): SeedResult 
 
     if (!options.withDemoOrders) return;
 
+    // Demo orders are still open: each table's orders share its open check.
+    const checkIdsByTable = new Map<string | null, string>();
+    const openCheck = (tableId: string | null, createdAt: Date): string => {
+      const existing = tableId === null ? undefined : checkIdsByTable.get(tableId);
+      if (existing) return existing;
+      const [check] = tx
+        .insert(checks)
+        .values({ tableId, createdAt, updatedAt: createdAt })
+        .returning({ id: checks.id })
+        .all();
+      if (!check) throw new Error('No se pudo abrir la cuenta de ejemplo');
+      if (tableId !== null) checkIdsByTable.set(tableId, check.id);
+      return check.id;
+    };
+
     for (const seedOrder of SEED_DEMO_ORDERS) {
       const lines = seedOrder.items.map((item) => ({
         ...item,
         product: lookup(productsByName, item.productName, 'Producto'),
       }));
       const createdAt = new Date(now.getTime() - seedOrder.minutesAgo * MINUTE_MS);
+      const tableId =
+        seedOrder.tableNumber === undefined
+          ? null
+          : (tableIdsByNumber.get(seedOrder.tableNumber) ?? null);
       const [order] = tx
         .insert(orders)
         .values({
+          checkId: openCheck(tableId, createdAt),
           channel: seedOrder.channel,
           status: seedOrder.status,
-          tableId:
-            seedOrder.tableNumber === undefined
-              ? null
-              : (tableIdsByNumber.get(seedOrder.tableNumber) ?? null),
+          tableId,
           customerName: seedOrder.customerName ?? null,
           pickupAt:
             seedOrder.pickupInMinutes === undefined

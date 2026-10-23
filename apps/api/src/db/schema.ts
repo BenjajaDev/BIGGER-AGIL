@@ -1,7 +1,10 @@
 import {
+  CHECK_STATUSES,
   ORDER_CHANNELS,
   ORDER_ITEM_OPTION_KINDS,
   ORDER_STATUSES,
+  PAYMENT_METHODS,
+  PAYMENT_MODES,
   PRODUCT_KINDS,
   type Allergen,
   type ProductSize,
@@ -9,7 +12,15 @@ import {
   type TemplateComboSlot,
 } from '@bigger/shared';
 import { randomUUID } from 'node:crypto';
-import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 const id = () =>
   text()
@@ -215,10 +226,78 @@ export const diningTables = sqliteTable('dining_tables', {
   ...timestamps,
 });
 
+/**
+ * A bill: every order of a table while it is occupied (or a single takeaway order) and the
+ * payments made against it. `version` grows on every write so stale tablets cannot double-charge.
+ */
+export const checks = sqliteTable(
+  'checks',
+  {
+    id: id(),
+    tableId: text().references(() => diningTables.id, { onDelete: 'restrict' }),
+    status: text({ enum: CHECK_STATUSES }).notNull().default('open'),
+    version: integer().notNull().default(0),
+    /** Equal split: in how many parts, and how many of them are already paid. */
+    splitParts: integer(),
+    splitPaidParts: integer().notNull().default(0),
+    closedAt: integer({ mode: 'timestamp_ms' }),
+    ...timestamps,
+  },
+  (table) => [
+    // At most one open check per table: later orders join it.
+    uniqueIndex('checks_open_table_uq')
+      .on(table.tableId)
+      .where(sql`${table.status} = 'open' and ${table.tableId} is not null`),
+    index('checks_status_idx').on(table.status),
+  ],
+);
+
+/** Payments are never deleted: a mistake is voided with a reason, so reports keep the trail. */
+export const payments = sqliteTable(
+  'payments',
+  {
+    id: id(),
+    checkId: text()
+      .notNull()
+      .references(() => checks.id, { onDelete: 'restrict' }),
+    method: text({ enum: PAYMENT_METHODS }).notNull(),
+    mode: text({ enum: PAYMENT_MODES }).notNull(),
+    amountClp: integer().notNull(),
+    tipClp: integer().notNull().default(0),
+    receivedClp: integer(),
+    voidedAt: integer({ mode: 'timestamp_ms' }),
+    voidReason: text(),
+    createdAt: timestamps.createdAt,
+  },
+  (table) => [index('payments_check_idx').on(table.checkId)],
+);
+
+/** Units of each order line paid by an item payment ("one of the two cafés"). */
+export const paymentItems = sqliteTable(
+  'payment_items',
+  {
+    paymentId: text()
+      .notNull()
+      .references(() => payments.id, { onDelete: 'cascade' }),
+    orderItemId: text()
+      .notNull()
+      .references(() => orderItems.id, { onDelete: 'restrict' }),
+    quantity: integer().notNull(),
+    amountClp: integer().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.paymentId, table.orderItemId] }),
+    index('payment_items_item_idx').on(table.orderItemId),
+  ],
+);
+
 export const orders = sqliteTable(
   'orders',
   {
     id: id(),
+    checkId: text()
+      .notNull()
+      .references(() => checks.id, { onDelete: 'restrict' }),
     channel: text({ enum: ORDER_CHANNELS }).notNull(),
     status: text({ enum: ORDER_STATUSES }).notNull().default('new'),
     tableId: text().references(() => diningTables.id, { onDelete: 'restrict' }),
@@ -230,6 +309,7 @@ export const orders = sqliteTable(
   (table) => [
     index('orders_status_idx').on(table.status),
     index('orders_table_idx').on(table.tableId),
+    index('orders_check_idx').on(table.checkId),
   ],
 );
 

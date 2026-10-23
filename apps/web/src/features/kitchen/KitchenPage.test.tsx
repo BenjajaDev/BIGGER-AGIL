@@ -92,8 +92,11 @@ function setup(initialOrders: Order[] = [baseOrder, preparingOrder, readyOrder])
         status: tableOrders.every((order) => order.status === 'delivered')
           ? 'awaiting-payment'
           : 'occupied',
+        checkId: baseOrder.checkId,
+        paidClp: 0,
         itemCount: 2,
         openTotalClp: 5000,
+        balanceClp: 5000,
         openSince: baseOrder.createdAt,
       };
       return Promise.resolve(json({ data: [table] }));

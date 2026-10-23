@@ -7,6 +7,7 @@ import {
   OrderSchema,
   TableOverviewSchema,
   type MenuProduct,
+  type RealtimeEvent,
 } from '@bigger/shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -166,7 +167,7 @@ describe('POST /api/v1/orders', () => {
   it('creates a dine-in order, prices it on the server and publishes it', async () => {
     const table = await freeTable();
     const product = await productNamed('Chacarero');
-    const events: unknown[] = [];
+    const events: RealtimeEvent[] = [];
     context.eventHub.subscribe((event) => events.push(event));
 
     const response = await request(context.app)
@@ -188,7 +189,8 @@ describe('POST /api/v1/orders', () => {
       quantity: 2,
       quickNotes: ['takeaway'],
     });
-    expect(events).toEqual([{ type: 'order.created', payload: order }]);
+    expect(events.map((event) => event.type)).toEqual(['order.created', 'check.updated']);
+    expect(events[0]).toEqual({ type: 'order.created', payload: order });
   });
 
   it('prices a salad by size and snapshots size, protein and vegetables', async () => {

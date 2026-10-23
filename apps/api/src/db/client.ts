@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { sql } from 'drizzle-orm';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { mkdirSync } from 'node:fs';
@@ -30,6 +31,19 @@ export function openDatabase(path: string): DatabaseConnection {
   };
 }
 
+/**
+ * Foreign keys are switched off while migrating (SQLite's recipe for rebuilding a table: with
+ * them on, dropping a parent table would cascade-delete its children) and checked afterwards.
+ */
 export function runMigrations(db: AppDatabase): void {
-  migrate(db, { migrationsFolder: MIGRATIONS_DIR });
+  db.run(sql`PRAGMA foreign_keys = OFF`);
+  try {
+    migrate(db, { migrationsFolder: MIGRATIONS_DIR });
+    const violations = db.all(sql`PRAGMA foreign_key_check`);
+    if (violations.length > 0) {
+      throw new Error(`La migración dejó ${violations.length} referencias inválidas`);
+    }
+  } finally {
+    db.run(sql`PRAGMA foreign_keys = ON`);
+  }
 }

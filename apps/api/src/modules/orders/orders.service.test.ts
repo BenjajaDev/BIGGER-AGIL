@@ -9,6 +9,7 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 import { AppError } from '../../core/errors/app-error.js';
 import type { RealtimePublisher } from '../../realtime/event-hub.js';
+import type { CheckHooks } from './check-hooks.js';
 import type { NewOrder, OrderableProduct, OrdersRepository } from './orders.repository.js';
 import { OrdersService } from './orders.service.js';
 
@@ -141,6 +142,7 @@ function fakeOrder(order: NewOrder): Order {
     id: 'o-1',
     channel: order.channel,
     status: 'new',
+    checkId: 'c-1',
     tableId: order.tableId,
     tableLabel: order.tableId === null ? null : 'Mesa 2',
     customerName: order.customerName,
@@ -185,7 +187,17 @@ function setup(catalog: OrderableProduct[] = [capuchino, brownie]) {
       events.push(event);
     },
   };
-  return { service: new OrdersService(repository, publisher), repository, created, events };
+  const checks: CheckHooks = {
+    assertCanCancel: vi.fn(() => Promise.resolve()),
+    afterOrderChange: vi.fn(() => Promise.resolve()),
+  };
+  return {
+    service: new OrdersService(repository, publisher, checks),
+    repository,
+    checks,
+    created,
+    events,
+  };
 }
 
 function line(overrides: Partial<CreateOrderInput['items'][number]> = {}) {
@@ -330,7 +342,6 @@ const validTransitions: readonly (readonly [OrderStatus, OrderStatus])[] = [
   ['preparing', 'ready'],
   ['preparing', 'cancelled'],
   ['ready', 'delivered'],
-  ['delivered', 'paid'],
 ];
 
 function setupStatus(status: OrderStatus = 'new') {
@@ -435,6 +446,39 @@ describe('OrdersService.updateStatus', () => {
     expect(events).toEqual([{ type: 'order.updated', payload: stored }]);
   });
 
+  it('settles the check after the change: delivering may close a paid check', async () => {
+    const { service, current, updateStatus, checks } = setupStatus('ready');
+    updateStatus.mockResolvedValue({ ...current, status: 'delivered' });
+
+    await service.updateStatus(current.id, { status: 'delivered' });
+
+    expect(checks.afterOrderChange).toHaveBeenCalledExactlyOnceWith('c-1');
+  });
+
+  it('leaves paying to the check: a manual «paid» is rejected', async () => {
+    const { service, current, updateStatus } = setupStatus('delivered');
+
+    await expect(service.updateStatus(current.id, { status: 'paid' })).rejects.toMatchObject({
+      code: 'INVALID_STATE_TRANSITION',
+      message: 'El pago se registra con «Cobrar» en la cuenta de la mesa',
+    });
+    expect(updateStatus).not.toHaveBeenCalled();
+  });
+
+  it('does not cancel an order the check refuses to drop', async () => {
+    const { service, current, updateStatus, checks, events } = setupStatus('preparing');
+    vi.mocked(checks.assertCanCancel).mockRejectedValue(
+      new AppError('CONFLICT', 'Este pedido ya tiene pagos en la cuenta'),
+    );
+
+    await expect(service.updateStatus(current.id, { status: 'cancelled' })).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+    expect(checks.assertCanCancel).toHaveBeenCalledExactlyOnceWith(current);
+    expect(updateStatus).not.toHaveBeenCalled();
+    expect(events).toEqual([]);
+  });
+
   it('does not publish when the database write fails', async () => {
     const { service, current, updateStatus, events } = setupStatus();
     const failure = new Error('SQLite write failed');
@@ -442,6 +486,9 @@ describe('OrdersService.updateStatus', () => {
 
     await expect(service.updateStatus(current.id, { status: 'preparing' })).rejects.toBe(failure);
     expect(events).toEqual([]);
+  });
+});
+
 describe('OrdersService.create with sizes and size rules', () => {
   const catalog = [capuchino, brownie, ensalada, cafeDonut];
 
