@@ -8,6 +8,7 @@ import {
   Undo2,
   UtensilsCrossed,
 } from 'lucide-react';
+import { ArrowLeft, CircleCheck, Plus, ReceiptText, Undo2, UtensilsCrossed } from 'lucide-react';
 import { useState } from 'react';
 import { useParams } from 'react-router';
 import { RouteFallback } from '../../app/RouteFallback';
