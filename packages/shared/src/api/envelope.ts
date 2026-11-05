@@ -8,6 +8,7 @@ export const API_ERROR_CODES = [
   'INVALID_STATE_TRANSITION',
   'PAYLOAD_TOO_LARGE',
   'TOO_MANY_REQUESTS',
+  'SERVICE_UNAVAILABLE',
   'INTERNAL_ERROR',
 ] as const;
 export const ApiErrorCodeSchema = z.enum(API_ERROR_CODES);

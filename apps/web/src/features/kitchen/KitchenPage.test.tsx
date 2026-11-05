@@ -101,6 +101,22 @@ function setup(initialOrders: Order[] = [baseOrder, preparingOrder, readyOrder])
       };
       return Promise.resolve(json({ data: [table] }));
     }
+    if (url.pathname === '/api/v1/printer') {
+      return Promise.resolve(
+        json({
+          data: {
+            enabled: false,
+            device: null,
+            codepage: 'cp858',
+            columns: 32,
+            pending: 0,
+            failed: 0,
+            lastPrintedAt: null,
+            lastError: null,
+          },
+        }),
+      );
+    }
     throw new Error(`Unexpected HTTP request: ${url.pathname}`);
   });
   vi.stubGlobal('fetch', fetchMock);

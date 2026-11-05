@@ -40,6 +40,12 @@ tags:
     description: Mapa del salón con estado derivado de los pedidos.
   - name: Pedidos
     description: Comandas de mesa, para llevar y WhatsApp.
+  - name: Impresión
+    description: |
+      Comandas en la impresora térmica de 58 mm del local. La API imprime sola cada pedido nuevo;
+      estos endpoints muestran el estado, reimprimen y hacen la hoja de prueba. Se activa con
+      `PRINTER_ENABLED` y `PRINTER_PATH` (Bluetooth: `COM5` o `/dev/rfcomm0`; USB: `/dev/usb/lp0`
+      o una impresora compartida de Windows).
   - name: Cobro
     description: |
       Cuenta de la mesa (una abierta por mesa; los pedidos de quien llega después se suman a
@@ -332,6 +338,92 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+
+  /printer:
+    get:
+      tags: [Impresión]
+      summary: Estado de la impresora
+      description: |
+        Si está desactivada responde `enabled: false`. `pending` cuenta lo que espera o se está
+        imprimiendo; `failed`, los trabajos fallidos cuyo pedido aún no tiene una copia impresa.
+      operationId: getPrinterStatus
+      responses:
+        '200':
+          description: Estado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/PrinterStatus' }
+
+  /printer/test:
+    post:
+      tags: [Impresión]
+      summary: Imprime la hoja de prueba (regla de columnas, tildes, tamaños y negrita)
+      description: 'Espera el resultado, para saber de inmediato si la impresora responde.'
+      operationId: printTestSheet
+      responses:
+        '200':
+          description: Impresa
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/PrinterTestResult' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /orders/{orderId}/print:
+    post:
+      tags: [Impresión]
+      summary: Reimprime la comanda de un pedido
+      description: |
+        Encola una copia nueva y responde 202 sin esperar. La copia dice «REIMPRESIÓN» solo si
+        ya salió una anterior.
+      operationId: reprintOrder
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '202':
+          description: Encolada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/PrintJob' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /print-jobs:
+    get:
+      tags: [Impresión]
+      summary: Trabajos de impresión recientes (los 50 últimos)
+      operationId: listPrintJobs
+      parameters:
+        - name: status
+          in: query
+          description: Estados separados por coma, p. ej. `pending,failed`.
+          schema: { type: string }
+      responses:
+        '200':
+          description: Trabajos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/PrintJob' } }
+        '400': { $ref: '#/components/responses/ValidationError' }
 
   /events:
     get:
@@ -783,6 +875,11 @@ components:
           schema: { $ref: '#/components/schemas/ProductTypeInput' }
 
   responses:
+    ServiceUnavailable:
+      description: La impresora no está activada o no responde (`SERVICE_UNAVAILABLE`)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
     Check:
       description: Cuenta con sus pedidos, pagos y saldo
       content:
@@ -874,6 +971,7 @@ components:
                   INVALID_STATE_TRANSITION,
                   PAYLOAD_TOO_LARGE,
                   TOO_MANY_REQUESTS,
+                  SERVICE_UNAVAILABLE,
                   INTERNAL_ERROR,
                 ]
             message: { type: string }
@@ -1607,6 +1705,45 @@ components:
             properties:
               orderItemId: { type: string, format: uuid }
               quantity: { type: integer, minimum: 1, maximum: 99 }
+
+    PrintJob:
+      type: object
+      description: |
+        Una comanda esperando o ya enviada a la impresora. Se guarda en la base: un corte de luz
+        o un reinicio no pierde lo encolado. Tras un fallo reintenta a los 2, 10 y 30 segundos;
+        si no, queda `failed`.
+      required: [id, kind, orderId, label, copy, status, attempts, lastError, createdAt, printedAt]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [kitchen] }
+        orderId: { type: string, format: uuid }
+        label: { type: string, description: 'A quién va ("Mesa 2", "WhatsApp · Camila")' }
+        copy:
+          { type: integer, minimum: 1, description: '1 = original; 2 en adelante, reimpresiones' }
+        status: { type: string, enum: [pending, printing, printed, failed] }
+        attempts: { type: integer, minimum: 0 }
+        lastError: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        printedAt: { type: [string, 'null'], format: date-time }
+
+    PrinterStatus:
+      type: object
+      required: [enabled, device, codepage, columns, pending, failed, lastPrintedAt, lastError]
+      properties:
+        enabled: { type: boolean }
+        device: { type: [string, 'null'], description: Dispositivo en uso }
+        codepage: { type: string, enum: [cp858, wpc1252, ascii] }
+        columns: { type: integer, minimum: 16, maximum: 64 }
+        pending: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0 }
+        lastPrintedAt: { type: [string, 'null'], format: date-time }
+        lastError: { type: [string, 'null'] }
+
+    PrinterTestResult:
+      type: object
+      required: [printedAt]
+      properties:
+        printedAt: { type: string, format: date-time }
 
     RealtimeEvent:
       oneOf:

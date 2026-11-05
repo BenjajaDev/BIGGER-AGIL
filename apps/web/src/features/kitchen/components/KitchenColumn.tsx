@@ -15,6 +15,7 @@ export interface KitchenColumnProps {
   orders: readonly Order[];
   now: Date;
   onAdvance?: (order: Order) => void;
+  onReprint?: (order: Order) => void;
   pendingOrderIds?: ReadonlySet<string>;
   validDrop?: boolean;
 }
@@ -24,6 +25,7 @@ export function KitchenColumn({
   orders,
   now,
   onAdvance,
+  onReprint,
   pendingOrderIds,
   validDrop = false,
 }: KitchenColumnProps) {
@@ -68,6 +70,13 @@ export function KitchenColumn({
                 order={order}
                 now={now}
                 draggable={Boolean(onAdvance) && column.status !== 'ready'}
+                {...(onReprint
+                  ? {
+                      onReprint: () => {
+                        onReprint(order);
+                      },
+                    }
+                  : {})}
                 {...(onAdvance && canTransitionOrder(order.status, column.action.nextStatus)
                   ? {
                       action: {

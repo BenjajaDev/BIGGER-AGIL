@@ -4,14 +4,12 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Env } from './config/env.js';
 import { buildApiRouters, type ContainerDependencies } from './container.js';
-import type { Logger } from './core/logger.js';
 import { createErrorHandler, notFoundHandler } from './core/middleware/error-handler.js';
 
 export const API_PREFIX = '/api/v1';
 
 export interface AppDependencies extends ContainerDependencies {
   env: Pick<Env, 'CORS_ORIGINS'>;
-  logger: Logger;
 }
 
 export function createApp({ env, logger, ...container }: AppDependencies): Express {
@@ -33,7 +31,7 @@ export function createApp({ env, logger, ...container }: AppDependencies): Expre
     },
     express.static(container.uploadsDir, { immutable: true, maxAge: '365d', index: false }),
   );
-  app.use(API_PREFIX, ...buildApiRouters(container));
+  app.use(API_PREFIX, ...buildApiRouters({ ...container, logger }));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { z } from 'zod';
 import { PIN_HASH_PATTERN } from '../modules/admin-auth/pin-hash.js';
+import { PRINTER_CODEPAGES } from '../modules/printing/escpos-encoder.js';
 
 function isTimeZone(value: string): boolean {
   try {
@@ -11,7 +12,7 @@ function isTimeZone(value: string): boolean {
   }
 }
 
-const EnvSchema = z.object({
+const EnvObjectSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().min(1).default('127.0.0.1'),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
@@ -40,7 +41,25 @@ const EnvSchema = z.object({
   ADMIN_SESSION_SECRET: z
     .string()
     .min(32, 'Usa al menos 32 caracteres aleatorios (pnpm --filter @bigger/api admin:pin)'),
+  /** Prints each new order's comanda on the thermal printer. Off unless the shop turns it on. */
+  PRINTER_ENABLED: z.stringbool().default(false),
+  /** Bluetooth (COM5, /dev/rfcomm0) or USB (/dev/usb/lp0, \\\\localhost\\NOMBRE) device path. */
+  PRINTER_PATH: z.string().min(1).optional(),
+  PRINTER_CODEPAGE: z.enum(PRINTER_CODEPAGES).default('cp858'),
+  /** 32 columns for 58 mm paper with the standard font. */
+  PRINTER_COLUMNS: z.coerce.number().int().min(16).max(64).default(32),
+  PRINTER_FEED_LINES: z.coerce.number().int().min(0).max(12).default(4),
+  PRINTER_CUT: z.stringbool().default(false),
 });
+
+const EnvSchema = EnvObjectSchema.refine(
+  (env) => !env.PRINTER_ENABLED || env.PRINTER_PATH !== undefined,
+  {
+    path: ['PRINTER_PATH'],
+    message:
+      'Indica el dispositivo de la impresora (ej.: COM5 o /dev/usb/lp0) o desactiva PRINTER_ENABLED',
+  },
+);
 
 export type Env = z.infer<typeof EnvSchema>;
 

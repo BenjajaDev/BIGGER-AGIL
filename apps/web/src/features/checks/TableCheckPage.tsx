@@ -1,5 +1,13 @@
 import type { Check, Payment } from '@bigger/shared';
-import { ArrowLeft, CircleCheck, Plus, ReceiptText, Undo2, UtensilsCrossed } from 'lucide-react';
+import {
+  ArrowLeft,
+  CircleCheck,
+  Plus,
+  Printer,
+  ReceiptText,
+  Undo2,
+  UtensilsCrossed,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useParams } from 'react-router';
 import { RouteFallback } from '../../app/RouteFallback';
@@ -11,6 +19,7 @@ import { ApiRequestError } from '../../services/http-client';
 import { formatClockTime, formatClp } from '../../lib/format';
 import { ORDER_STATUS_PRESENTATION } from '../orders/order-status';
 import { describeOrderItem } from '../orders/order-text';
+import { usePrinterStatus, useReprintOrder } from '../printing/usePrinter';
 import { PaymentDialog } from './components/PaymentDialog';
 import { VoidPaymentDialog } from './components/VoidPaymentDialog';
 import {
@@ -61,6 +70,8 @@ function CheckSummary({ check }: { check: Check }) {
 }
 
 function OrdersList({ check }: { check: Check }) {
+  const printer = usePrinterStatus();
+  const reprint = useReprintOrder();
   return (
     <ul role="list" className={styles.orders}>
       {check.orders.map((order, index) => {
@@ -72,6 +83,19 @@ function OrdersList({ check }: { check: Check }) {
               <h3 className={styles.orderTitle}>{orderLabel(order, index)}</h3>
               <span className={styles.muted}>{formatClockTime(order.createdAt)}</span>
               <StatusBadge tone={status.tone} icon={status.icon} label={status.label} />
+              {printer.data?.enabled && !cancelled && (
+                <Button
+                  variant="ghost"
+                  disabled={reprint.isPending}
+                  onClick={() => {
+                    reprint.mutate(order.id);
+                  }}
+                >
+                  <Printer size={18} aria-hidden="true" />
+                  Reimprimir
+                  <span className="visually-hidden"> comanda de {orderLabel(order, index)}</span>
+                </Button>
+              )}
             </div>
             <ul role="list" className={styles.lines}>
               {order.items.map((item) => {

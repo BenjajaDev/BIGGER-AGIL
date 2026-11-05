@@ -14,6 +14,7 @@ import {
   orders,
   paymentItems,
   payments,
+  printJobs,
   productModifierGroups,
   products,
   productSizes,
@@ -53,6 +54,7 @@ interface SeededProduct {
 /** Children before parents, so foreign keys never block a delete. */
 function clearDatabase(tx: Transaction): void {
   for (const table of [
+    printJobs,
     paymentItems,
     payments,
     orderItemOptions,

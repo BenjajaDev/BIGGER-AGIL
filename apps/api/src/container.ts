@@ -1,5 +1,6 @@
 import type { Router } from 'express';
 import type { AppDatabase } from './db/client.js';
+import type { Logger } from './core/logger.js';
 import { AdminAuthController } from './modules/admin-auth/admin-auth.controller.js';
 import { createAdminAuthRouter } from './modules/admin-auth/admin-auth.routes.js';
 import { AdminAuthService, type AdminAuthConfig } from './modules/admin-auth/admin-auth.service.js';
@@ -35,6 +36,11 @@ import { DrizzleCatalogRepository } from './modules/catalog/catalog.repository.j
 import { createCatalogRouter } from './modules/catalog/catalog.routes.js';
 import { CatalogService, type CatalogClock } from './modules/catalog/catalog.service.js';
 import { createHealthRouter } from './modules/health/health.routes.js';
+import { DrizzlePrintJobsRepository } from './modules/printing/print-jobs.repository.js';
+import { PrintService } from './modules/printing/print.service.js';
+import { PrintingController } from './modules/printing/printing.controller.js';
+import type { PrintingSetup } from './modules/printing/printing.config.js';
+import { createPrintingRouter } from './modules/printing/printing.routes.js';
 import { OrdersController } from './modules/orders/orders.controller.js';
 import { DrizzleOrdersRepository } from './modules/orders/orders.repository.js';
 import { createOrdersRouter } from './modules/orders/orders.routes.js';
@@ -54,6 +60,9 @@ export interface ContainerDependencies {
   uploadsDir: string;
   /** Shop time zone and clock used to decide which promotions are running. */
   clock: CatalogClock;
+  /** The thermal printer (or none) and how it prints. */
+  printing: PrintingSetup;
+  logger: Logger;
 }
 
 /** Composition root: the only place that knows concrete implementations. */
@@ -63,6 +72,8 @@ export function buildApiRouters({
   adminAuth,
   uploadsDir,
   clock,
+  printing,
+  logger,
 }: ContainerDependencies): Router[] {
   const ordersRepository = new DrizzleOrdersRepository(db);
   const modifierGroupsRepository = new DrizzleModifierGroupsAdminRepository(db);
@@ -77,6 +88,16 @@ export function buildApiRouters({
     ordersRepository,
     eventHub,
   );
+  const printService = new PrintService({
+    jobs: new DrizzlePrintJobsRepository(db),
+    printer: printing.printer,
+    orders: ordersRepository,
+    options: printing.options,
+    logger,
+  });
+  void printService.start(eventHub).catch((error: unknown) => {
+    logger.error({ err: error }, 'No se pudo iniciar la impresión');
+  });
   const ordersController = new OrdersController(
     new OrdersService(ordersRepository, eventHub, checksService),
   );
@@ -111,6 +132,7 @@ export function buildApiRouters({
     createOrdersRouter(ordersController),
     createTablesRouter(tablesController),
     createChecksRouter(new ChecksController(checksService)),
+    createPrintingRouter(new PrintingController(printService)),
     createRealtimeRouter(eventHub),
     createAdminAuthRouter(new AdminAuthController(adminAuthService)),
     createCatalogAdminRouter(catalogAdminControllers, requireAdmin(adminAuthService), [

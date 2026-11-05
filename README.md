@@ -40,6 +40,22 @@ respáldalo junto con la base de datos.
 Para usar la app desde las tablets del local, define `HOST=0.0.0.0` en `apps/api/.env` y
 agrega el origen de la tablet a `CORS_ORIGINS`.
 
+## Impresora de comandas (térmica 58 mm)
+
+La API imprime la comanda de cada pedido nuevo y corre en el mismo equipo que la impresora.
+Funciona por USB o Bluetooth: solo cambia el dispositivo en `PRINTER_PATH`.
+
+1. Empareja o conecta la impresora al equipo.
+   - **Bluetooth**: tras emparejarla, Windows crea un puerto serie saliente (`COM5`); en Linux
+     usa `rfcomm bind 0 <MAC>` y el dispositivo es `/dev/rfcomm0`.
+   - **USB**: en Linux es `/dev/usb/lp0`; en Windows compártela y usa `\\localhost\NOMBRE`.
+2. En `apps/api/.env` define `PRINTER_ENABLED=true` y `PRINTER_PATH` (ver `.env.example`).
+3. Reinicia la API, abre **Configuración → Impresora** e imprime la hoja de prueba. Si las tildes
+   salen mal, cambia `PRINTER_CODEPAGE` (`cp858` o `wpc1252`).
+
+Si la impresora falla, el pedido se crea igual: la comanda queda en cola, se reintenta sola y se
+puede reimprimir desde Cocina o desde la cuenta de la mesa.
+
 ## Scripts
 
 | Comando                                 | Qué hace                                           |

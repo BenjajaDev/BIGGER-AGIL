@@ -17,8 +17,38 @@ describe('parseEnv', () => {
       LOG_LEVEL: 'info',
       UPLOADS_DIR: './data/uploads',
       BUSINESS_TIMEZONE: 'America/Santiago',
+      PRINTER_ENABLED: false,
+      PRINTER_CODEPAGE: 'cp858',
+      PRINTER_COLUMNS: 32,
+      PRINTER_FEED_LINES: 4,
+      PRINTER_CUT: false,
       ...ADMIN,
     });
+  });
+
+  it('needs the device path before the printer can be turned on', () => {
+    expect(() => parseEnv({ ...ADMIN, PRINTER_ENABLED: 'true' })).toThrow(/PRINTER_PATH/);
+    const env = parseEnv({
+      ...ADMIN,
+      PRINTER_ENABLED: 'true',
+      PRINTER_PATH: 'COM5',
+      PRINTER_CODEPAGE: 'wpc1252',
+    });
+    expect(env).toMatchObject({
+      PRINTER_ENABLED: true,
+      PRINTER_PATH: 'COM5',
+      PRINTER_CODEPAGE: 'wpc1252',
+    });
+  });
+
+  it.each([
+    [{ PRINTER_CODEPAGE: 'utf8' }],
+    [{ PRINTER_COLUMNS: '8' }],
+    [{ PRINTER_COLUMNS: '200' }],
+    [{ PRINTER_FEED_LINES: '-1' }],
+    [{ PRINTER_ENABLED: 'quizás' }],
+  ])('rejects an invalid printer setting %j', (printer) => {
+    expect(() => parseEnv({ ...ADMIN, ...printer })).toThrow();
   });
 
   it('splits and validates CORS origins', () => {

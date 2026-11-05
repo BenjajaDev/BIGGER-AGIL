@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { loadEnv } from './config/env.js';
 import { createLogger } from './core/logger.js';
 import { openDatabase, runMigrations } from './db/client.js';
+import { buildPrintingSetup } from './modules/printing/printing.config.js';
 import { EventHub } from './realtime/event-hub.js';
 
 const env = loadEnv();
@@ -17,6 +18,7 @@ const app = createApp({
   adminAuth: { pinHash: env.ADMIN_PIN_HASH, sessionSecret: env.ADMIN_SESSION_SECRET },
   uploadsDir: env.UPLOADS_DIR,
   clock: { timeZone: env.BUSINESS_TIMEZONE, now: () => new Date() },
+  printing: buildPrintingSetup(env),
 });
 
 const server = app.listen(env.PORT, env.HOST, () => {
