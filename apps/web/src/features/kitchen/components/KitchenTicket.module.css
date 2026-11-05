@@ -38,6 +38,22 @@
   white-space: nowrap;
 }
 
+.footer {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.footer > :first-child {
+  flex: 1;
+}
+
+.reprint {
+  flex-shrink: 0;
+  min-width: var(--touch-target);
+  padding-inline: var(--space-3);
+}
+
 .items {
   display: grid;
   gap: var(--space-1);

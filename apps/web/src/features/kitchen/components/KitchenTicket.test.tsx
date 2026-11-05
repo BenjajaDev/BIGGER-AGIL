@@ -55,6 +55,18 @@ describe('KitchenTicket', () => {
   });
 });
 
+describe('KitchenTicket reprint', () => {
+  it('offers «Reimprimir» only while the printer is on, named after the order', async () => {
+    const { rerender } = render(<KitchenTicket order={order} now={now} />);
+    expect(screen.queryByRole('button', { name: /Reimprimir/ })).not.toBeInTheDocument();
+
+    const onReprint = vi.fn();
+    rerender(<KitchenTicket order={order} now={now} onReprint={onReprint} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Reimprimir comanda: Mesa 2' }));
+    expect(onReprint).toHaveBeenCalledOnce();
+  });
+});
+
 describe('groupByKitchenStatus', () => {
   it('splits orders into kitchen columns and ignores settled ones', () => {
     const grouped = groupByKitchenStatus([

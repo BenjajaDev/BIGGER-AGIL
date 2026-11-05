@@ -13,6 +13,7 @@ import { useNow } from '../../hooks/useNow';
 import { ApiRequestError } from '../../services/http-client';
 import { orderTitle } from '../orders/order-text';
 import { useUpdateOrderStatus } from '../orders/useOrders';
+import { usePrinterStatus, useReprintOrder } from '../printing/usePrinter';
 import { KitchenBoard } from './components/KitchenBoard';
 import { KITCHEN_COLUMNS } from './kitchen-columns';
 import { matchesKitchenDrag } from './kitchen-drag';
@@ -24,6 +25,8 @@ export function KitchenPage() {
   const queryClient = useQueryClient();
   const now = useNow(15_000);
   const updateStatus = useUpdateOrderStatus();
+  const printer = usePrinterStatus();
+  const reprint = useReprintOrder();
   const pendingIdsRef = useRef(new Set<string>());
   const [pendingOrderIds, setPendingOrderIds] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +98,18 @@ export function KitchenPage() {
     }
   };
 
+  const reprintOrder = (order: Order) => {
+    setError(null);
+    reprint.mutate(order.id, {
+      onSuccess: () => {
+        setAnnouncement(`Reimprimiendo la comanda de ${orderTitle(order)}.`);
+      },
+      onError: (caught) => {
+        setError(caught instanceof ApiRequestError ? caught.message : 'No se pudo reimprimir.');
+      },
+    });
+  };
+
   return (
     <div className={styles.page} ref={pageRef}>
       <h1 className="visually-hidden" tabIndex={-1} ref={headingRef}>
@@ -118,6 +133,7 @@ export function KitchenPage() {
             onAdvance={(order, destination) => {
               void advanceOrder(order, destination);
             }}
+            {...(printer.data?.enabled ? { onReprint: reprintOrder } : {})}
           />
         )}
       </AsyncContent>

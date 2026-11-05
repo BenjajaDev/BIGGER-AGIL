@@ -4,6 +4,7 @@ import {
   FolderTree,
   LogOut,
   Package,
+  Printer,
   Shapes,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -20,6 +21,7 @@ const SECTIONS = [
   { to: 'tipos', label: 'Tipos', icon: Shapes },
   { to: 'personalizaciones', label: 'Personalizaciones', icon: SlidersHorizontal },
   { to: 'categorias', label: 'Categorías', icon: FolderTree },
+  { to: 'impresora', label: 'Impresora', icon: Printer },
 ] as const;
 
 export function ConfigLayout() {

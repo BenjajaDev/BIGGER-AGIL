@@ -10,6 +10,8 @@ export const queryKeys = {
   checks: ['checks'] as const,
   tableCheck: (tableId: string) => ['checks', 'table', tableId] as const,
   check: (checkId: string) => ['checks', checkId] as const,
+  printer: ['printer'] as const,
+  printJobs: ['printer', 'jobs'] as const,
   orders: ['orders'] as const,
   orderList: (params: OrderListParams) => ['orders', params] as const,
   admin: ['admin'] as const,

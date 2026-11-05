@@ -1,6 +1,6 @@
 import type { Order } from '@bigger/shared';
 import { useDraggable } from '@dnd-kit/react';
-import { GripVertical, LoaderCircle } from 'lucide-react';
+import { GripVertical, LoaderCircle, Printer } from 'lucide-react';
 import { Button, type ButtonVariant } from '../../../components/ui/Button';
 import { cx } from '../../../lib/cx';
 import { formatElapsed } from '../../../lib/format';
@@ -19,9 +19,17 @@ export interface KitchenTicketProps {
   now: Date;
   action?: KitchenTicketAction;
   draggable?: boolean;
+  /** Present only while the comanda printer is on. */
+  onReprint?: () => void;
 }
 
-export function KitchenTicket({ order, now, action, draggable = false }: KitchenTicketProps) {
+export function KitchenTicket({
+  order,
+  now,
+  action,
+  draggable = false,
+  onReprint,
+}: KitchenTicketProps) {
   const title = orderTitle(order);
   const titleId = `ticket-${order.id}`;
   const { ref, handleRef, isDragging } = useDraggable({
@@ -64,22 +72,38 @@ export function KitchenTicket({ order, now, action, draggable = false }: Kitchen
           <li key={item.id}>{describeOrderItem(item)}</li>
         ))}
       </ul>
-      {action && (
-        <Button
-          data-order-action
-          variant={action.variant}
-          size="lg"
-          fullWidth
-          onClick={action.onClick}
-          disabled={action.isPending}
-          aria-busy={action.isPending}
-          aria-label={`${action.isPending ? 'Guardando… ' : ''}${action.label}: ${title}`}
-        >
-          {action.isPending && (
-            <LoaderCircle className={styles.spinner} size={20} aria-hidden="true" />
+      {(action || onReprint) && (
+        <div className={styles.footer}>
+          {action && (
+            <Button
+              data-order-action
+              variant={action.variant}
+              size="lg"
+              fullWidth
+              onClick={action.onClick}
+              disabled={action.isPending}
+              aria-busy={action.isPending}
+              aria-label={`${action.isPending ? 'Guardando… ' : ''}${action.label}: ${title}`}
+            >
+              {action.isPending && (
+                <LoaderCircle className={styles.spinner} size={20} aria-hidden="true" />
+              )}
+              {action.isPending ? 'Guardando…' : action.label}
+            </Button>
           )}
-          {action.isPending ? 'Guardando…' : action.label}
-        </Button>
+          {onReprint && (
+            <Button
+              variant="secondary"
+              size="lg"
+              className={styles.reprint}
+              onClick={onReprint}
+              aria-label={`Reimprimir comanda: ${title}`}
+              title="Reimprimir comanda"
+            >
+              <Printer size={22} aria-hidden="true" />
+            </Button>
+          )}
+        </div>
       )}
     </article>
   );

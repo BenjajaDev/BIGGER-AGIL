@@ -5,6 +5,8 @@ import {
   ORDER_STATUSES,
   PAYMENT_METHODS,
   PAYMENT_MODES,
+  PRINT_JOB_KINDS,
+  PRINT_JOB_STATUSES,
   PRODUCT_KINDS,
   type Allergen,
   type ProductSize,
@@ -356,4 +358,36 @@ export const orderItemOptions = sqliteTable(
     referenceId: text(),
   },
   (table) => [index('order_item_options_item_idx').on(table.orderItemId)],
+);
+
+/**
+ * Tickets waiting for, or already sent to, the thermal printer. Persisted so a power cut or a
+ * restart of the API never loses a comanda that was still queued.
+ */
+export const printJobs = sqliteTable(
+  'print_jobs',
+  {
+    id: id(),
+    kind: text({ enum: PRINT_JOB_KINDS }).notNull(),
+    orderId: text()
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    /** Snapshot for the job list ("Mesa 2"), so it needs no join. */
+    label: text().notNull(),
+    /** 1 = the original comanda; reprints add one each. */
+    copy: integer().notNull(),
+    status: text({ enum: PRINT_JOB_STATUSES }).notNull().default('pending'),
+    attempts: integer().notNull().default(0),
+    lastError: text(),
+    /** A failed attempt waits here before the next one. */
+    nextAttemptAt: integer({ mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    printedAt: integer({ mode: 'timestamp_ms' }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('print_jobs_copy_uq').on(table.orderId, table.kind, table.copy),
+    index('print_jobs_due_idx').on(table.status, table.nextAttemptAt),
+  ],
 );

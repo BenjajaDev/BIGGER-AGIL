@@ -49,6 +49,14 @@ export const QUICK_NOTES = ['no-sugar', 'takeaway', 'lactose-free', 'sweetener']
 export const QuickNoteSchema = z.enum(QUICK_NOTES);
 export type QuickNote = z.infer<typeof QuickNoteSchema>;
 
+/** How a quick note reads on screen and on the printed comanda. */
+export const QUICK_NOTE_LABELS: Readonly<Record<QuickNote, string>> = {
+  'no-sugar': 'Sin azúcar',
+  takeaway: 'Para llevar',
+  'lactose-free': 'Sin lactosa',
+  sweetener: 'Con endulzante',
+};
+
 export const ORDER_ITEM_OPTION_KINDS = ['size', 'modifier', 'combo'] as const;
 export const OrderItemOptionKindSchema = z.enum(ORDER_ITEM_OPTION_KINDS);
 export type OrderItemOptionKind = z.infer<typeof OrderItemOptionKindSchema>;
@@ -93,6 +101,18 @@ export const OrderSchema = z.object({
   updatedAt: z.iso.datetime(),
 });
 export type Order = z.infer<typeof OrderSchema>;
+
+/** Who an order is for, as one line: "Mesa 2", "Para llevar · Ana", "WhatsApp · Camila". */
+export function orderTitle(order: Pick<Order, 'channel' | 'tableLabel' | 'customerName'>): string {
+  switch (order.channel) {
+    case 'dine-in':
+      return order.tableLabel ?? 'Mesa';
+    case 'whatsapp':
+      return `WhatsApp · ${order.customerName ?? 'Cliente'}`;
+    case 'takeaway':
+      return order.customerName ? `Para llevar · ${order.customerName}` : 'Para llevar';
+  }
+}
 
 export const OrderListFilterSchema = z.object({
   status: z

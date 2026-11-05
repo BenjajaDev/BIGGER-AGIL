@@ -2,6 +2,7 @@ import { Wifi, WifiOff } from 'lucide-react';
 import { Link, NavLink } from 'react-router';
 import { APP_MODULES } from '../../app/navigation';
 import { cx } from '../../lib/cx';
+import { PrinterIndicator } from '../../features/printing/components/PrinterIndicator';
 import type { RealtimeConnectionState } from '../../services/realtime.service';
 import styles from './TopNav.module.css';
 
@@ -51,6 +52,7 @@ export function TopNav({ connection }: TopNavProps) {
           ))}
         </ul>
       </nav>
+      <PrinterIndicator />
       <ConnectionIndicator state={connection} />
     </header>
   );

@@ -1,11 +1,6 @@
-import type { Order, OrderItem, QuickNote } from '@bigger/shared';
+import { orderTitle, QUICK_NOTE_LABELS, type OrderItem } from '@bigger/shared';
 
-export const QUICK_NOTE_LABELS: Readonly<Record<QuickNote, string>> = {
-  'no-sugar': 'Sin azúcar',
-  takeaway: 'Para llevar',
-  'lactose-free': 'Sin lactosa',
-  sweetener: 'Con endulzante',
-};
+export { orderTitle, QUICK_NOTE_LABELS };
 
 export function describeOrderItem(
   item: Pick<OrderItem, 'quantity' | 'productName' | 'quickNotes' | 'note' | 'options'>,
@@ -18,15 +13,4 @@ export function describeOrderItem(
     .filter(Boolean)
     .join(' · ');
   return `${item.quantity} × ${item.productName}${notes ? ` · ${notes}` : ''}`;
-}
-
-export function orderTitle(order: Pick<Order, 'channel' | 'tableLabel' | 'customerName'>): string {
-  switch (order.channel) {
-    case 'dine-in':
-      return order.tableLabel ?? 'Mesa';
-    case 'whatsapp':
-      return `WhatsApp · ${order.customerName ?? 'Cliente'}`;
-    case 'takeaway':
-      return order.customerName ? `Para llevar · ${order.customerName}` : 'Para llevar';
-  }
 }

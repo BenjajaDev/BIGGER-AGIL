@@ -17,10 +17,17 @@ export interface KitchenBoardProps {
   orders: OrdersByKitchenStatus;
   now: Date;
   onAdvance?: (order: Order, destination?: KitchenOrderStatus) => void;
+  onReprint?: (order: Order) => void;
   pendingOrderIds?: ReadonlySet<string>;
 }
 
-export function KitchenBoard({ orders, now, onAdvance, pendingOrderIds }: KitchenBoardProps) {
+export function KitchenBoard({
+  orders,
+  now,
+  onAdvance,
+  onReprint,
+  pendingOrderIds,
+}: KitchenBoardProps) {
   const [drag, setDrag] = useState<KitchenDragSnapshot | null>(null);
   const active = useRef<{ snapshot: KitchenDragSnapshot; manager: DragDropManager } | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -135,6 +142,7 @@ export function KitchenBoard({ orders, now, onAdvance, pendingOrderIds }: Kitche
             pendingOrderIds={pendingOrderIds}
             validDrop={drag !== null && kitchenDropStatus(drag.status, column.status) !== null}
             {...(onAdvance ? { onAdvance } : {})}
+            {...(onReprint ? { onReprint } : {})}
           />
         ))}
       </div>
