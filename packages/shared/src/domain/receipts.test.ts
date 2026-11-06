@@ -91,21 +91,23 @@ describe('wrapText', () => {
 describe('formatKitchenTicket', () => {
   it('prints the table large, the sequence and the local time, and no prices', () => {
     const lines = formatKitchenTicket(input());
-    expect(lines[0]).toMatchObject({ text: 'BIGGER', align: 'center', size: 'big', bold: true });
-    expect(lines[2]).toMatchObject({ text: 'MESA 2', size: 'tall', bold: true });
-    expect(lines[3]?.text).toBe(padBetween('Pedido 3', '14:32', COLUMNS));
+    expect(lines[0]).toMatchObject({ text: 'B I G G E R', align: 'center', bold: true });
+    expect(lines[1]).toMatchObject({ text: 'MESA 2', align: 'center', size: 'big', bold: true });
+    expect(lines[2]).toMatchObject({ text: 'C O M A N D A', align: 'center' });
+    expect(lines[4]?.text).toBe(padBetween('Pedido 3', '14:32', COLUMNS));
     expect(texts(lines).join('\n')).not.toMatch(/\$|4900|4590/);
   });
 
   it('lists size beside the product, groups options and flags notes', () => {
     const body = texts(formatKitchenTicket(input()));
-    expect(body).toContain('2 x CHACARERO');
-    expect(body).toContain('     * Para llevar');
-    expect(body).toContain('1 x ARMA TU ENSALADA (Grande)');
-    expect(body).toContain('     Proteína: Pollo');
-    expect(body).toContain('     Vegetales: Apio, Choclo,');
-    expect(body).toContain('       Pepino, Tomate');
-    expect(body).toContain('     NOTA: sin sal');
+    expect(body).toContain('CANT  PRODUCTO');
+    expect(body).toContain('2     CHACARERO');
+    expect(body).toContain('      * Para llevar');
+    expect(body).toContain('1     ARMA TU ENSALADA (Grande)');
+    expect(body).toContain('      Proteína: Pollo');
+    expect(body).toContain('      Vegetales: Apio, Choclo,');
+    expect(body).toContain('        Pepino, Tomate');
+    expect(body).toContain('      NOTA: sin sal');
   });
 
   it('keeps every line inside its size capacity, also on a narrower paper', () => {
@@ -129,8 +131,8 @@ describe('formatKitchenTicket', () => {
       }),
     );
     const body = texts(lines);
-    expect(body[2]).toBe('WHATSAPP');
-    expect(body[3]).toBe(padBetween('', '14:32', COLUMNS));
+    expect(body[1]).toBe('WHATSAPP');
+    expect(body[4]).toBe(padBetween('Comanda nueva', '14:32', COLUMNS));
     expect(body).toContain('Para: Camila R.');
     expect(body).toContain('Retira: 15:10');
   });

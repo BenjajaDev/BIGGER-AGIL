@@ -106,7 +106,7 @@ describe('PrintService', () => {
     });
     expect(printer.printed).toHaveLength(1);
     expect(text(printer.printed[0])).toContain((order.tableLabel ?? '').toUpperCase());
-    expect(text(printer.printed[0])).toContain('2 x LUCO');
+    expect(text(printer.printed[0])).toContain('2     LUCO');
     expect(text(printer.printed[0])).toContain('NOTA: sin sal');
     expect(await queue.status()).toMatchObject({
       enabled: true,
