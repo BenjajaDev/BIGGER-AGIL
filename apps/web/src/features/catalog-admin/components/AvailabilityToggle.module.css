@@ -1,0 +1,58 @@
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  background-color: var(--surface-muted);
+}
+
+.toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.track {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 1.5rem;
+  border: var(--border-width-strong) solid var(--text-secondary);
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-card);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.thumb {
+  position: absolute;
+  top: 50%;
+  left: 0.125rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--text-secondary);
+  transform: translateY(-50%);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.on .track {
+  border-color: var(--status-warning);
+  background-color: var(--status-warning);
+}
+
+.on .thumb {
+  background-color: var(--text-on-warm);
+  transform: translate(1.25rem, -50%);
+}

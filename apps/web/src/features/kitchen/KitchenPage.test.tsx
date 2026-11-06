@@ -646,11 +646,24 @@ describe('KitchenPage status actions', () => {
     expect(app.patchCalls()).toHaveLength(1);
   });
 
+  it('shows how many new orders wait in the tab title and puts it back on leaving', async () => {
+    document.title = 'BIGGER Ágil';
+    const app = setup([baseOrder, { ...baseOrder, id: '9b8f7c6e-5d4c-4b3a-9f2e-1d0c9b8a7f6e' }]);
+    const { unmount } = app.renderPage();
+    await waitFor(() => {
+      expect(document.title).toBe('(2) Cocina · BIGGER Ágil');
+    });
+    unmount();
+    expect(document.title).toBe('BIGGER Ágil');
+  });
+
   it.each(['{Enter}', ' '])('supports the keyboard with %s', async (key) => {
     const app = setup([baseOrder]);
     app.renderPage();
     const button = await screen.findByRole('button', { name: 'Empezar: Mesa 2' });
     const user = userEvent.setup();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Sonido apagado' })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole('button', { name: 'Arrastrar: Mesa 2' })).toHaveFocus();
     await user.tab();

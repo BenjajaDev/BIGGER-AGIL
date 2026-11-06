@@ -83,7 +83,7 @@ describe('printing turned on', () => {
     const order = await placeOrder();
 
     await vi.waitFor(() => {
-      expect(paper()).toContain('2 x LUCO');
+      expect(paper()).toContain('2     LUCO');
     });
     expect(paper()).toContain((order.tableLabel ?? '').toUpperCase());
     expect(paper()).toContain('Para: Ana');
@@ -109,7 +109,7 @@ describe('printing turned on', () => {
     await setup(true);
     const order = await placeOrder();
     await vi.waitFor(() => {
-      expect(paper()).toContain('2 x LUCO');
+      expect(paper()).toContain('2     LUCO');
     });
 
     const response = await request(context.app).post(`/api/v1/orders/${order.id}/print`);

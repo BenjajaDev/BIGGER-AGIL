@@ -45,6 +45,20 @@
   --status-warning: var(--color-ambar-400);
   --status-warning-hover: var(--color-ambar-500);
   --text-on-warm: var(--color-carbon-900);
+  /*
+   * Tonos de estado: fondo suave + tinta para pastillas, avisos y contadores.
+   * Cada par cumple AA (lo verifica contrast.test.ts). El color solo nunca comunica: va con ícono o texto.
+   */
+  --tone-success-soft: #e4efe5;
+  --tone-success-ink: var(--color-salvia-700);
+  --tone-warning-soft: #fbecd0;
+  --tone-warning-ink: var(--color-carbon-900);
+  --tone-danger-soft: #f9e4e2;
+  --tone-danger-ink: var(--color-rojo-700);
+  --tone-accent-soft: #f6e4dd;
+  --tone-accent-ink: var(--color-terracota-600);
+  --tone-neutral-soft: var(--color-crema-100);
+  --tone-neutral-ink: var(--color-piedra-600);
   --focus-ring: var(--color-carbon-900);
   --focus-ring-inverse: var(--color-dorado-400);
 
@@ -87,17 +101,42 @@
   --border-width-strong: 2px;
   --shadow-card: 0 1px 2px rgb(30 30 30 / 6%), 0 2px 8px rgb(30 30 30 / 4%);
   --shadow-raised: 0 4px 16px rgb(30 30 30 / 12%);
+  --shadow-paper: drop-shadow(0 1px 1px rgb(36 28 20 / 12%))
+    drop-shadow(0 6px 12px rgb(36 28 20 / 8%));
+  /* Capas translúcidas: fondo de diálogos y estados sobre superficies oscuras o de color. */
+  --scrim: rgb(30 30 30 / 55%);
+  --hover-on-inverse: rgb(255 255 255 / 10%);
+  --hover-neutral: rgb(127 127 127 / 12%);
+  --text-inverse-soft: rgb(255 255 255 / 85%);
+  --highlight-on-cover-strong: rgb(255 255 255 / 18%);
+  --highlight-on-cover: rgb(255 255 255 / 12%);
+  --mask-solid: #000;
 
   /* Interacción */
+  /* Táctil: 48 mínimo, 56 cómodo, 64 para la acción principal de cada vista. */
   --touch-target: 48px;
+  --touch-comfortable: 56px;
+  --touch-large: 64px;
   --duration-fast: 120ms;
   --duration-base: 200ms;
   --duration-slow: 320ms;
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
   /* Layout */
-  --topbar-height: 4rem;
+  --topbar-height: 3.5rem;
+  --subnav-height: 3rem;
+  --bottombar-height: 4rem;
+  /* Alto de lo que queda fijo arriba: barra y pestañas en PC y tablet, solo la barra en celular. */
+  --header-height: calc(var(--topbar-height) + var(--subnav-height));
   --content-max-width: 80rem;
+}
+
+@media (max-width: 47.99rem) {
+  :root {
+    --header-height: var(--topbar-height);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

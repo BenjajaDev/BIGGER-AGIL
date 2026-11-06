@@ -228,6 +228,58 @@ describe('products', () => {
     expect(await publicProductNames()).toContain('Facturas');
   });
 
+  it('marks a product as sold out and back, without touching the rest of it', async () => {
+    const before = await productNamed('Facturas');
+    events.length = 0;
+
+    const soldOut = await agent
+      .patch(`/api/v1/admin/products/${before.id}/availability`)
+      .send({ isAvailable: false });
+    expect(soldOut.status).toBe(200);
+    expect(ProductBody.parse(soldOut.body).data).toEqual({ ...before, isAvailable: false });
+    expect(await publicProductNames()).not.toContain('Facturas');
+    expect(events).toContainEqual({ type: 'catalog.updated' });
+
+    const back = await agent
+      .patch(`/api/v1/admin/products/${before.id}/availability`)
+      .send({ isAvailable: true });
+    expect(ProductBody.parse(back.body).data).toEqual(before);
+    expect(await publicProductNames()).toContain('Facturas');
+  });
+
+  it('does not announce a change when the availability is already the one asked', async () => {
+    const facturas = await productNamed('Facturas');
+    events.length = 0;
+    const response = await agent
+      .patch(`/api/v1/admin/products/${facturas.id}/availability`)
+      .send({ isAvailable: true });
+    expect(response.status).toBe(200);
+    expect(events).toEqual([]);
+  });
+
+  it('rejects availability changes without a session, with a bad body, on unknown or deleted products', async () => {
+    const facturas = await productNamed('Facturas');
+    const path = `/api/v1/admin/products/${facturas.id}/availability`;
+
+    const anonymous = await request(context.app).patch(path).send({ isAvailable: false });
+    expect(anonymous.status).toBe(401);
+
+    expect((await agent.patch(path).send({ isAvailable: 'no' })).status).toBe(400);
+    expect((await agent.patch(path).send({})).status).toBe(400);
+    expect(
+      (
+        await agent
+          .patch('/api/v1/admin/products/0b8f7c6e-5d4c-4b3a-9f2e-1d0c9b8a7f6e/availability')
+          .send({ isAvailable: false })
+      ).status,
+    ).toBe(404);
+
+    await agent.delete(`/api/v1/admin/products/${facturas.id}`);
+    const archived = await agent.patch(path).send({ isAvailable: false });
+    expect(archived.status).toBe(409);
+    expect(ApiErrorBodySchema.parse(archived.body).error.code).toBe('CONFLICT');
+  });
+
   it('returns 404 for an unknown product and 400 for a malformed id', async () => {
     expect(
       (await agent.delete('/api/v1/admin/products/0b8f7c6e-5d4c-4b3a-9f2e-1d0c9b8a7f6e')).status,

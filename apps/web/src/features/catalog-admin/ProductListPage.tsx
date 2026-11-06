@@ -15,15 +15,19 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { CoverImage } from '../../components/ui/CoverImage';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { StatusBadge } from '../../components/ui/StatusBadge';
+import { UndoToast } from '../../components/ui/UndoToast';
 import { cx } from '../../lib/cx';
 import { localToday } from '../../lib/dates';
 import { formatClp } from '../../lib/format';
 import styles from './CatalogAdmin.module.css';
+import { AvailabilityToggle } from './components/AvailabilityToggle';
 import { FlashNotice } from './components/FlashNotice';
 import { FormAlert } from './components/FormAlert';
+import { ProductFilters } from './components/ProductFilters';
 import { ProductStatusBadge } from './components/ProductStatusBadge';
 import { QuickAddForm } from './components/QuickAddForm';
 import { PRODUCT_KIND_COPY } from './form-values';
+import { filterProducts, isFiltering, NO_FILTER, type ProductFilter } from './product-filter';
 import { describeProductConfiguration } from './product-summary';
 import { PROMOTION_STATUS_BADGE } from './promotion-status';
 import {
@@ -33,6 +37,7 @@ import {
   useAdminProductTypes,
   useArchiveProduct,
   useRestoreProduct,
+  useSetProductAvailability,
 } from './useCatalogAdmin';
 
 interface CategoryGroup {
@@ -94,6 +99,43 @@ export function ProductListPage({ kind }: { kind: ProductKind }) {
   const restore = useRestoreProduct();
   const [pendingArchive, setPendingArchive] = useState<AdminProduct | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<ProductFilter>(NO_FILTER);
+  const setAvailability = useSetProductAvailability();
+  const [undo, setUndo] = useState<{ product: AdminProduct; message: string } | null>(null);
+
+  /** Puts the product back exactly as it was before the last change. */
+  const changeAvailabilityBack = (product: AdminProduct) => {
+    setUndo(null);
+    setAvailability.mutate(
+      { id: product.id, isAvailable: product.isAvailable },
+      {
+        onError: (error) => {
+          setRestoreError(error.message);
+        },
+      },
+    );
+  };
+
+  const changeAvailability = (product: AdminProduct, isAvailable: boolean) => {
+    setRestoreError(null);
+    setAvailability.mutate(
+      { id: product.id, isAvailable },
+      {
+        onSuccess: () => {
+          setUndo({
+            product,
+            message: isAvailable
+              ? `«${product.name}» está disponible de nuevo`
+              : `«${product.name}» quedó agotado hoy`,
+          });
+        },
+        onError: (error) => {
+          setUndo(null);
+          setRestoreError(error.message);
+        },
+      },
+    );
+  };
 
   const closeDialog = () => {
     setPendingArchive(null);
@@ -133,92 +175,148 @@ export function ProductListPage({ kind }: { kind: ProductKind }) {
       <AsyncContent query={productsQuery} loadingLabel={`Cargando ${copy.title.toLowerCase()}…`}>
         {(products) => {
           const ofKind = products.filter((product) => product.kind === kind);
-          const groups = groupByCategory(ofKind, categoriesQuery.data ?? []);
-          if (groups.length === 0) {
+          if (ofKind.length === 0) {
             return (
               <EmptyState icon={SearchX} title={`Todavía no hay ${copy.title.toLowerCase()}`} />
             );
           }
-          return groups.map(({ category, products: items }) => (
-            <section
-              key={category.id}
-              className={styles.section}
-              aria-labelledby={`cat-${category.id}`}
-            >
-              <h2 id={`cat-${category.id}`} className={styles.sectionTitle}>
-                {category.name}
-              </h2>
-              <ul role="list" className={styles.rows}>
-                {items.map((product) => (
-                  <Card
-                    as="li"
-                    key={product.id}
-                    padded={false}
-                    className={cx(styles.row, product.archivedAt !== null && styles.rowArchived)}
-                  >
-                    <CoverImage
-                      image={product.image}
-                      ratio="4 / 3"
-                      sizes="4.5rem"
-                      className={styles.thumb}
-                    />
-                    <div className={styles.rowMain}>
-                      <span className={styles.rowTitle}>
-                        {product.name}
-                        <ProductBadges
-                          product={product}
-                          typeName={
-                            typesQuery.data?.find((type) => type.id === product.typeId)?.name
-                          }
-                        />
-                      </span>
-                      <span className={styles.rowMeta}>
-                        {describeProductConfiguration(product, groupsQuery.data ?? [])}
-                      </span>
-                    </div>
-                    <ProductPrice product={product} />
-                    <div className={styles.rowActions}>
-                      {product.archivedAt === null ? (
-                        <>
-                          <ButtonLink to={`${copy.basePath}/${product.id}`} variant="secondary">
-                            <Pencil size={18} aria-hidden="true" />
-                            Editar<span className="visually-hidden"> {product.name}</span>
-                          </ButtonLink>
+          const visible = filterProducts(ofKind, filter, localToday());
+          const groups = groupByCategory(visible, categoriesQuery.data ?? []);
+          const controls = (
+            <ProductFilters
+              filter={filter}
+              categories={activeCategories}
+              shown={visible.length}
+              total={ofKind.length}
+              onChange={setFilter}
+            />
+          );
+          if (groups.length === 0) {
+            return (
+              <>
+                {controls}
+                <EmptyState
+                  icon={SearchX}
+                  title="Ningún producto coincide"
+                  description="Prueba con otra búsqueda o quita algún filtro."
+                  action={
+                    isFiltering(filter) ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setFilter(NO_FILTER);
+                        }}
+                      >
+                        Quitar filtros
+                      </Button>
+                    ) : undefined
+                  }
+                />
+              </>
+            );
+          }
+          return [
+            <div key="controls">{controls}</div>,
+            ...groups.map(({ category, products: items }) => (
+              <section
+                key={category.id}
+                className={styles.section}
+                aria-labelledby={`cat-${category.id}`}
+              >
+                <h2 id={`cat-${category.id}`} className={styles.sectionTitle}>
+                  {category.name}
+                </h2>
+                <ul role="list" className={styles.rows}>
+                  {items.map((product) => (
+                    <Card
+                      as="li"
+                      key={product.id}
+                      padded={false}
+                      className={cx(styles.row, product.archivedAt !== null && styles.rowArchived)}
+                    >
+                      <CoverImage
+                        image={product.image}
+                        ratio="4 / 3"
+                        sizes="4.5rem"
+                        className={styles.thumb}
+                      />
+                      <div className={styles.rowMain}>
+                        <span className={styles.rowTitle}>
+                          {product.name}
+                          <ProductBadges
+                            product={product}
+                            typeName={
+                              typesQuery.data?.find((type) => type.id === product.typeId)?.name
+                            }
+                          />
+                        </span>
+                        <span className={styles.rowMeta}>
+                          {describeProductConfiguration(product, groupsQuery.data ?? [])}
+                        </span>
+                      </div>
+                      <ProductPrice product={product} />
+                      <div className={styles.rowActions}>
+                        {product.archivedAt === null ? (
+                          <>
+                            <AvailabilityToggle
+                              product={product}
+                              onChange={(isAvailable) => {
+                                changeAvailability(product, isAvailable);
+                              }}
+                            />
+                            <ButtonLink to={`${copy.basePath}/${product.id}`} variant="secondary">
+                              <Pencil size={18} aria-hidden="true" />
+                              Editar<span className="visually-hidden"> {product.name}</span>
+                            </ButtonLink>
+                            <Button
+                              variant="ghost"
+                              onClick={() => {
+                                setPendingArchive(product);
+                              }}
+                            >
+                              <Trash2 size={18} aria-hidden="true" />
+                              Eliminar<span className="visually-hidden"> {product.name}</span>
+                            </Button>
+                          </>
+                        ) : (
                           <Button
-                            variant="ghost"
+                            variant="secondary"
+                            disabled={restore.isPending}
                             onClick={() => {
-                              setPendingArchive(product);
+                              setRestoreError(null);
+                              restore.mutate(product.id, {
+                                onError: (error) => {
+                                  setRestoreError(error.message);
+                                },
+                              });
                             }}
                           >
-                            <Trash2 size={18} aria-hidden="true" />
-                            Eliminar<span className="visually-hidden"> {product.name}</span>
+                            <ArchiveRestore size={18} aria-hidden="true" />
+                            Restaurar<span className="visually-hidden"> {product.name}</span>
                           </Button>
-                        </>
-                      ) : (
-                        <Button
-                          variant="secondary"
-                          disabled={restore.isPending}
-                          onClick={() => {
-                            setRestoreError(null);
-                            restore.mutate(product.id, {
-                              onError: (error) => {
-                                setRestoreError(error.message);
-                              },
-                            });
-                          }}
-                        >
-                          <ArchiveRestore size={18} aria-hidden="true" />
-                          Restaurar<span className="visually-hidden"> {product.name}</span>
-                        </Button>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </ul>
-            </section>
-          ));
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </ul>
+              </section>
+            )),
+          ];
         }}
       </AsyncContent>
+
+      {undo && (
+        <UndoToast
+          key={undo.message}
+          message={undo.message}
+          onUndo={() => {
+            changeAvailabilityBack(undo.product);
+          }}
+          onExpire={() => {
+            setUndo(null);
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={pendingArchive !== null}

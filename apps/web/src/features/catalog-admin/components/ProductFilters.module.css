@@ -1,0 +1,38 @@
+.filters {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.search {
+  position: relative;
+  display: block;
+}
+
+.icon {
+  position: absolute;
+  top: 50%;
+  left: var(--space-3);
+  color: var(--text-secondary);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.input {
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-4) 0 calc(var(--space-3) + 1.75rem);
+  border: var(--border-width-strong) solid var(--text-secondary);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-card);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.count {
+  color: var(--text-secondary);
+  font-size: var(--text-detail);
+}

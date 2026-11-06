@@ -1,0 +1,23 @@
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-4);
+  border: var(--border-width-strong) solid var(--text-inverse-soft);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-inverse);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  background-color: var(--hover-on-inverse);
+}
+
+.toggle[aria-pressed='true'] {
+  border-color: var(--status-highlight);
+  background-color: var(--status-highlight);
+  color: var(--text-on-warm);
+}

@@ -19,7 +19,9 @@ export interface TicketLayout {
 }
 
 const BRAND = 'BIGGER';
-const ITEM_INDENT = 5;
+/** Width of the CANT column; products and their extras start right after it. */
+const QUANTITY_COLUMN = 6;
+const ITEM_INDENT = QUANTITY_COLUMN;
 const CONTINUATION_INDENT = 2;
 
 /** Characters that fit in one printed line of the given size. */
@@ -35,7 +37,13 @@ const line = (text: string, options: Partial<Omit<TicketLine, 'text'>> = {}): Ti
   ...options,
 });
 
-const rule = (character: '=' | '-', columns: number): TicketLine => line(character.repeat(columns));
+const rule = (columns: number): TicketLine => line('-'.repeat(columns));
+
+const dashedRule = (columns: number): TicketLine =>
+  line('- '.repeat(Math.ceil(columns / 2)).slice(0, columns));
+
+/** «BIGGER» as «B I G G E R»: the letter-spaced look of the screen header. */
+const spaced = (text: string): string => text.replace(/(.)(?=.)/gu, '$1 ');
 
 /** Word wrap with a hanging indent; words longer than the line are split. */
 export function wrapText(
@@ -113,9 +121,15 @@ function groupedOptions(item: PrintableItem): { label: string; names: string[] }
 function itemLines(item: PrintableItem, columns: number): TicketLine[] {
   const size = item.options.find((option) => option.kind === 'size');
   const name = item.productName.toLocaleUpperCase('es');
-  const title = `${item.quantity} x ${name}${size ? ` (${size.name})` : ''}`;
-  const lines = wrapText(title, columns, 0, 4).map((text) =>
-    line(text, { size: 'tall', bold: true }),
+  const product = `${name}${size ? ` (${size.name})` : ''}`;
+  const lines = wrapText(product, columns - QUANTITY_COLUMN).map((text, index) =>
+    line(
+      `${index === 0 ? String(item.quantity).padEnd(QUANTITY_COLUMN) : ' '.repeat(QUANTITY_COLUMN)}${text}`,
+      {
+        size: 'tall',
+        bold: true,
+      },
+    ),
   );
 
   for (const { label, names } of groupedOptions(item)) {
@@ -169,17 +183,19 @@ export function formatKitchenTicket(
   { columns }: TicketLayout = { columns: DEFAULT_TICKET_COLUMNS },
 ): TicketLine[] {
   const lines: TicketLine[] = [
-    line(BRAND, { align: 'center', size: 'big', bold: true }),
-    rule('=', columns),
-    ...wrapText(ticketTitle(order), columns).map((text) =>
-      line(text, { size: 'tall', bold: true }),
+    line(spaced(BRAND), { align: 'center', bold: true }),
+    ...wrapText(ticketTitle(order), lineCapacity('big', columns)).map((text) =>
+      line(text, { align: 'center', size: 'big', bold: true }),
     ),
+    line(spaced('COMANDA'), { align: 'center' }),
+    rule(columns),
     line(
       padBetween(
-        order.channel === 'dine-in' ? `Pedido ${sequenceInCheck}` : '',
+        order.channel === 'dine-in' ? `Pedido ${sequenceInCheck}` : 'Comanda nueva',
         clockTime(order.createdAt, timeZone),
         columns,
       ),
+      { bold: true },
     ),
   ];
   if (order.customerName) {
@@ -189,9 +205,13 @@ export function formatKitchenTicket(
     lines.push(line(`Retira: ${clockTime(order.pickupAt, timeZone)}`, { bold: true }));
   }
   if (reprint) lines.push(line('*** REIMPRESIÓN ***', { align: 'center', bold: true }));
-  lines.push(rule('-', columns));
+  lines.push(
+    rule(columns),
+    line(`${'CANT'.padEnd(QUANTITY_COLUMN)}PRODUCTO`, { bold: true }),
+    rule(columns),
+  );
   for (const item of order.items) lines.push(...itemLines(item, columns));
-  lines.push(rule('-', columns));
+  lines.push(dashedRule(columns));
   return lines;
 }
 
@@ -203,17 +223,17 @@ export function formatTestTicket(
   return [
     line(BRAND, { align: 'center', size: 'big', bold: true }),
     line('HOJA DE PRUEBA', { align: 'center', bold: true }),
-    rule('=', columns),
+    rule(columns),
     line(ruler),
     line('Normal: áéíóú ÁÉÍÓÚ ñ Ñ ü ¿?'),
     line('Negrita: ¡Hola, señor!', { bold: true }),
     line('Alto doble: 2 x CHACARERO', { size: 'tall', bold: true }),
     line('Doble ancho', { size: 'big' }),
-    rule('-', columns),
+    rule(columns),
     ...wrapText(
       `Si la regla de arriba se corta, baja PRINTER_COLUMNS. Si ves símbolos raros en vez de acentos, cambia PRINTER_CODEPAGE.`,
       columns,
     ).map((text) => line(text)),
-    rule('-', columns),
+    rule(columns),
   ];
 }

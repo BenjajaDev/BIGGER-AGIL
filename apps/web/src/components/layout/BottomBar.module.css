@@ -1,0 +1,159 @@
+.bar {
+  display: none;
+}
+
+@media (max-width: 47.99rem) {
+  .bar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 5;
+    display: block;
+    padding-bottom: env(safe-area-inset-bottom);
+    background-color: var(--surface-card);
+    border-top: var(--border-width) solid var(--border-subtle);
+    box-shadow: var(--shadow-raised);
+  }
+}
+
+.list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: end;
+  height: var(--bottombar-height);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--bottombar-height);
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.item[aria-current='page'] {
+  color: var(--text-primary);
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+
+.iconWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.badgeSlot {
+  position: absolute;
+  top: -0.5rem;
+  left: 55%;
+}
+
+/* The one action people do all day sits in the middle, raised and in the primary colour. */
+.centre {
+  display: flex;
+  justify-content: center;
+}
+
+.create {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-large);
+  height: var(--touch-large);
+  margin-top: calc(var(--space-6) * -1);
+  border-radius: var(--radius-pill);
+  background-color: var(--action-primary);
+  color: var(--text-inverse);
+  font-size: 0.8125rem;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  text-decoration: none;
+  box-shadow: var(--shadow-raised);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.create:hover {
+  background-color: var(--action-primary-hover);
+}
+
+.sheet {
+  width: 100%;
+  max-width: none;
+  margin: auto 0 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background-color: var(--surface-card);
+  color: var(--text-primary);
+}
+
+.sheet[open] {
+  animation: pop-in var(--duration-base) var(--ease-out);
+}
+
+.sheet::backdrop {
+  background-color: var(--scrim);
+}
+
+.sheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.sheetTitle {
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+}
+
+.close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-muted);
+  cursor: pointer;
+}
+
+.sheetList {
+  display: grid;
+  padding: var(--space-2) var(--space-3) var(--space-5);
+}
+
+.sheetLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-comfortable);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-button);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+
+.sheetLink:hover {
+  background-color: var(--surface-muted);
+}
+
+.devTag {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background-color: var(--tone-neutral-soft);
+  color: var(--tone-neutral-ink);
+  font-size: 0.75rem;
+  font-weight: var(--weight-semibold);
+}

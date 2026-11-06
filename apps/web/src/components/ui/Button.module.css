@@ -84,5 +84,5 @@
 }
 
 .ghost:hover:not(:disabled) {
-  background-color: rgb(127 127 127 / 12%);
+  background-color: var(--hover-neutral);
 }

@@ -235,3 +235,20 @@ que el cobro.
 - **Descartado**: avisos «Llamar al mesero / Pedir la cuenta».
 - **Pendiente**: imprimir el QR de cada mesa (paso 3) y validar en el local con la hoja de prueba.
 - **Siguiente**: sistema visual y navegación (paso V), con la paleta y tipografía actuales de BIGGER.
+
+## Estado (paso V: sistema visual y navegación)
+
+Hecho, sobre la paleta y tipografía actuales de BIGGER:
+
+- **Tokens**: tonos de estado (fondo suave + tinta) con contraste AA verificado por
+  `contrast.test.ts` desde `tokens.css`; táctil 48 / 56 / 64; curvas de movimiento; capas
+  translúcidas como tokens. `pnpm check:tokens` prohíbe colores sueltos en pantallas.
+- **Navegación**: barra oscura con interruptor Operación / Gestión y pestañas del área con
+  contadores (mesas por cobrar, pedidos nuevos); en celular, barra inferior con «+ Pedido» al
+  centro y hoja «Más» con Gestión; View Transitions entre secciones.
+- **Resumen de hoy** (`/`): Mesas con filtro y Cocina en vivo en la columna principal; Ahora,
+  En curso y última comanda impresa a un lado. En pantallas angostas «Ahora» sube al principio.
+
+Pendiente de este paso: las ventas del día en el Resumen llegan con Reportes (paso 2); las
+piezas táctiles (Stepper, MontosRapidos, TablaAdaptable, Deshacer) se construyen en el paso que
+las usa.

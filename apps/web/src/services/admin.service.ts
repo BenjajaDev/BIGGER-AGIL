@@ -48,6 +48,10 @@ export const adminService = {
     requestJson('PUT', `/admin/products/${id}`, AdminProductSchema, { body: input }),
   archiveProduct: (id: string) =>
     requestJson('DELETE', `/admin/products/${id}`, AdminProductSchema),
+  setProductAvailability: (id: string, isAvailable: boolean) =>
+    requestJson('PATCH', `/admin/products/${id}/availability`, AdminProductSchema, {
+      body: { isAvailable },
+    }),
   restoreProduct: (id: string) =>
     requestJson('POST', `/admin/products/${id}/restore`, AdminProductSchema),
 

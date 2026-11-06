@@ -9,15 +9,19 @@ import { AlertCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { AsyncContent } from '../../components/ui/AsyncContent';
 import { queryKeys } from '../../app/query-keys';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useNow } from '../../hooks/useNow';
 import { ApiRequestError } from '../../services/http-client';
 import { orderTitle } from '../orders/order-text';
 import { useUpdateOrderStatus } from '../orders/useOrders';
 import { usePrinterStatus, useReprintOrder } from '../printing/usePrinter';
 import { KitchenBoard } from './components/KitchenBoard';
+import { SoundToggle } from './components/SoundToggle';
 import { KITCHEN_COLUMNS } from './kitchen-columns';
 import { matchesKitchenDrag } from './kitchen-drag';
 import styles from './KitchenPage.module.css';
+import { useKitchenSound } from './sound/useKitchenSound';
+import { useNewOrderAlerts } from './sound/useNewOrderAlerts';
 import { groupByKitchenStatus, useKitchenOrders } from './useKitchenOrders';
 
 export function KitchenPage() {
@@ -27,10 +31,21 @@ export function KitchenPage() {
   const updateStatus = useUpdateOrderStatus();
   const printer = usePrinterStatus();
   const reprint = useReprintOrder();
+  const sound = useKitchenSound();
+  const waiting = (ordersQuery.data ?? []).filter((order) => order.status === 'new').length;
+  useDocumentTitle(waiting > 0 ? `(${waiting}) Cocina · BIGGER Ágil` : 'Cocina · BIGGER Ágil');
   const pendingIdsRef = useRef(new Set<string>());
   const [pendingOrderIds, setPendingOrderIds] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  useNewOrderAlerts({
+    orders: ordersQuery.data,
+    soundOn: sound.soundOn,
+    player: sound.player,
+    onNewOrders: (arrived) => {
+      setAnnouncement(`Nuevo pedido: ${arrived.map((order) => orderTitle(order)).join(', ')}.`);
+    },
+  });
   const pageRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [focusTarget, setFocusTarget] = useState<{
@@ -118,6 +133,9 @@ export function KitchenPage() {
       <p role="status" className="visually-hidden">
         {announcement}
       </p>
+      <div className={styles.toolbar}>
+        <SoundToggle soundOn={sound.soundOn} onToggle={sound.toggle} />
+      </div>
       {error && (
         <p role="alert" className={styles.error}>
           <AlertCircle size={20} aria-hidden="true" />

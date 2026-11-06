@@ -66,8 +66,8 @@ describe('PrinterPage', () => {
 
     const preview = screen.getByRole('figure', { name: 'Vista previa de una comanda impresa' });
     expect(within(preview).getByText('MESA 2')).toBeInTheDocument();
-    expect(within(preview).getByText('2 x CHACARERO')).toBeInTheDocument();
-    expect(within(preview).getByText('1 x ARMA TU ENSALADA (Grande)')).toBeInTheDocument();
+    expect(within(preview).getByText('2 CHACARERO')).toBeInTheDocument();
+    expect(within(preview).getByText('1 ARMA TU ENSALADA (Grande)')).toBeInTheDocument();
     await expectNoA11yViolations(container);
   });
 

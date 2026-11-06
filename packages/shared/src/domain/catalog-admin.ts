@@ -231,6 +231,10 @@ export const ProductInputSchema = z.discriminatedUnion('kind', [
 ]);
 export type ProductInput = z.infer<typeof ProductInputSchema>;
 
+/** «Agotado hoy»: switches only whether the product can be ordered, without touching the rest. */
+export const ProductAvailabilityInputSchema = z.object({ isAvailable: z.boolean() });
+export type ProductAvailabilityInput = z.infer<typeof ProductAvailabilityInputSchema>;
+
 export const ModifierOptionInputSchema = z.object({
   /** Present when editing an existing option, so its identity is preserved. */
   id: z.uuid().optional(),

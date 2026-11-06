@@ -2,6 +2,7 @@ import {
   CategoryInputSchema,
   IncludeArchivedQuerySchema,
   ModifierGroupInputSchema,
+  ProductAvailabilityInputSchema,
   ProductInputSchema,
   ProductTypeInputSchema,
 } from '@bigger/shared';
@@ -75,6 +76,11 @@ export class ProductsAdminController {
       res,
       await this.#service.update(idOf(req), parseOrThrow(ProductInputSchema, req.body)),
     );
+  };
+
+  setAvailability: RequestHandler = async (req, res) => {
+    const { isAvailable } = parseOrThrow(ProductAvailabilityInputSchema, req.body);
+    sendData(res, await this.#service.setAvailability(idOf(req), isAvailable));
   };
 
   archive: RequestHandler = async (req, res) => {
