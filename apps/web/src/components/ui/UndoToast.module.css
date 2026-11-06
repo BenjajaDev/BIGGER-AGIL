@@ -1,0 +1,51 @@
+.toast {
+  position: fixed;
+  inset: auto var(--space-4) var(--space-4);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  max-width: 30rem;
+  margin-inline: auto;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-inverse);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-raised);
+  animation: pop-in var(--duration-base) var(--ease-out);
+}
+
+.toast :focus-visible {
+  outline-color: var(--focus-ring-inverse);
+}
+
+.message {
+  font-weight: var(--weight-semibold);
+}
+
+.undo {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-4);
+  border: var(--border-width-strong) solid var(--status-highlight);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--status-highlight);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.undo:hover {
+  background-color: var(--hover-on-inverse);
+}
+
+/* Above the phone bottom bar. */
+@media (max-width: 47.99rem) {
+  .toast {
+    bottom: calc(var(--bottombar-height) + var(--space-4) + env(safe-area-inset-bottom));
+  }
+}

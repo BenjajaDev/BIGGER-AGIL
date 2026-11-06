@@ -1,10 +1,11 @@
 import type {
+  AdminProduct,
   CategoryInput,
   ModifierGroupInput,
   ProductInput,
   ProductTypeInput,
 } from '@bigger/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { queryKeys } from '../../app/query-keys';
 import { adminService } from '../../services/admin.service';
 
@@ -96,6 +97,42 @@ export const useSaveProduct = () =>
   );
 export const useArchiveProduct = () => useCatalogMutation(adminService.archiveProduct);
 export const useRestoreProduct = () => useCatalogMutation(adminService.restoreProduct);
+
+interface AvailabilityChange {
+  id: string;
+  isAvailable: boolean;
+}
+
+/** «Agotado hoy»: the list answers at once and goes back if the server refuses. */
+export function useSetProductAvailability() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isAvailable }: AvailabilityChange) =>
+      adminService.setProductAvailability(id, isAvailable),
+    onMutate: async ({ id, isAvailable }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.admin });
+      const lists = queryClient
+        .getQueriesData<AdminProduct[]>({ queryKey: ['admin', 'products'] })
+        .filter((entry): entry is [QueryKey, AdminProduct[]] => Array.isArray(entry[1]));
+      for (const [key, products] of lists) {
+        queryClient.setQueryData<AdminProduct[]>(
+          key,
+          products.map((product) => (product.id === id ? { ...product, isAvailable } : product)),
+        );
+      }
+      return { lists };
+    },
+    onError: (_error, _change, context) => {
+      for (const [key, products] of context?.lists ?? []) queryClient.setQueryData(key, products);
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.catalog }),
+      ]);
+    },
+  });
+}
 
 export const useSaveModifierGroup = () =>
   useCatalogMutation(({ id, input }: { id: string | undefined; input: ModifierGroupInput }) =>

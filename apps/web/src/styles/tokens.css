@@ -128,7 +128,15 @@
   --topbar-height: 3.5rem;
   --subnav-height: 3rem;
   --bottombar-height: 4rem;
+  /* Alto de lo que queda fijo arriba: barra y pestañas en PC y tablet, solo la barra en celular. */
+  --header-height: calc(var(--topbar-height) + var(--subnav-height));
   --content-max-width: 80rem;
+}
+
+@media (max-width: 47.99rem) {
+  :root {
+    --header-height: var(--topbar-height);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

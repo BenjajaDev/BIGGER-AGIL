@@ -37,6 +37,7 @@ export interface ProductsAdminRepository {
   create: (input: ProductInput) => Promise<string>;
   update: (id: string, input: ProductInput) => Promise<void>;
   setArchivedAt: (id: string, archivedAt: Date | null) => Promise<void>;
+  setAvailability: (id: string, isAvailable: boolean) => Promise<void>;
 }
 
 const referenceColumns = {
@@ -233,6 +234,10 @@ export class DrizzleProductsAdminRepository implements ProductsAdminRepository {
 
   async setArchivedAt(id: string, archivedAt: Date | null): Promise<void> {
     await this.#db.update(products).set({ archivedAt }).where(eq(products.id, id));
+  }
+
+  async setAvailability(id: string, isAvailable: boolean): Promise<void> {
+    await this.#db.update(products).set({ isAvailable }).where(eq(products.id, id));
   }
 
   async #nextSortOrder(categoryId: string): Promise<number> {

@@ -632,6 +632,32 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
+  /admin/products/{id}/availability:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    patch:
+      tags: [Administración]
+      summary: Marca un producto como agotado o disponible
+      description: |
+        «Agotado hoy»: el producto sale de la carta y no se puede pedir, sin tocar el resto de su
+        configuración. Emite el evento `catalog.updated`. Responde 409 si el producto está eliminado.
+      operationId: adminSetProductAvailability
+      security: [{ adminSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isAvailable]
+              properties:
+                isAvailable: { type: boolean }
+      responses:
+        '200': { $ref: '#/components/responses/AdminProduct' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
   /admin/products/{id}/restore:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     post:

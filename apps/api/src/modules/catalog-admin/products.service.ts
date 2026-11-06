@@ -64,6 +64,17 @@ export class ProductsAdminService {
     return this.#changed(id);
   }
 
+  /** «Agotado hoy»: the product leaves the menu and cannot be ordered, but keeps its configuration. */
+  async setAvailability(id: string, isAvailable: boolean): Promise<AdminProduct> {
+    const product = await this.#get(id);
+    if (product.archivedAt !== null) {
+      throw new AppError('CONFLICT', 'Restaura el producto antes de cambiar su disponibilidad');
+    }
+    if (product.isAvailable === isAvailable) return product;
+    await this.#products.setAvailability(id, isAvailable);
+    return this.#changed(id);
+  }
+
   async restore(id: string): Promise<AdminProduct> {
     const product = await this.#get(id);
     if (product.archivedAt === null) return product;

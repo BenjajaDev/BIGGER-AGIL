@@ -1,5 +1,5 @@
 .page {
-  min-height: calc(100dvh - var(--topbar-height));
+  min-height: calc(100dvh - var(--header-height));
   padding: var(--space-6);
   background-color: var(--surface-kitchen);
   color: var(--text-inverse);
@@ -18,4 +18,10 @@
   border-radius: var(--radius-md);
   background-color: var(--surface-card);
   color: var(--status-error);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-4);
 }

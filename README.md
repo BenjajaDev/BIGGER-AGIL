@@ -60,6 +60,14 @@ Funciona por USB o Bluetooth: solo cambia el dispositivo en `PRINTER_PATH`.
 Si la impresora falla, el pedido se crea igual: la comanda queda en cola, se reintenta sola y se
 puede reimprimir desde Cocina o desde la cuenta de la mesa.
 
+## Sonido en Cocina
+
+En **Cocina** el botón «Sonido apagado» enciende un timbre corto cuando entra un pedido nuevo.
+Se recuerda en cada dispositivo (déjalo encendido en la tablet de cocina) y al encenderlo suena una
+muestra, porque el navegador exige un toque para permitir audio. Mantén la pantalla de esa tablet
+encendida: con la pantalla apagada o la pestaña en segundo plano el navegador puede silenciar el
+timbre. Aunque el sonido esté apagado, la pestaña muestra «(2) Cocina» con los pedidos nuevos.
+
 ## Scripts
 
 | Comando                                 | Qué hace                                           |

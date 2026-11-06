@@ -33,6 +33,7 @@ export function createCatalogAdminRouter(
   admin.post('/products', products.create);
   admin.get('/products/:id', products.get);
   admin.put('/products/:id', products.update);
+  admin.patch('/products/:id/availability', products.setAvailability);
   admin.delete('/products/:id', products.archive);
   admin.post('/products/:id/restore', products.restore);
 

@@ -1,7 +1,7 @@
 .wrapper {
   display: grid;
   place-items: center;
-  min-height: calc(100dvh - var(--topbar-height));
+  min-height: calc(100dvh - var(--header-height));
   padding: var(--space-6);
 }
 
