@@ -18,6 +18,8 @@ describe('parseEnv', () => {
       UPLOADS_DIR: './data/uploads',
       BUSINESS_TIMEZONE: 'America/Santiago',
       PRINTER_ENABLED: false,
+      PRINTER_TRANSPORT: 'auto',
+      PRINTER_BAUD_RATE: 9600,
       PRINTER_CODEPAGE: 'cp858',
       PRINTER_COLUMNS: 32,
       PRINTER_FEED_LINES: 4,
@@ -43,6 +45,8 @@ describe('parseEnv', () => {
 
   it.each([
     [{ PRINTER_CODEPAGE: 'utf8' }],
+    [{ PRINTER_TRANSPORT: 'usb' }],
+    [{ PRINTER_BAUD_RATE: '100' }],
     [{ PRINTER_COLUMNS: '8' }],
     [{ PRINTER_COLUMNS: '200' }],
     [{ PRINTER_FEED_LINES: '-1' }],

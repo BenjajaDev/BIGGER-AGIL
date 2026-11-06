@@ -49,6 +49,10 @@ Funciona por USB o Bluetooth: solo cambia el dispositivo en `PRINTER_PATH`.
    - **Bluetooth**: tras emparejarla, Windows crea un puerto serie saliente (`COM5`); en Linux
      usa `rfcomm bind 0 <MAC>` y el dispositivo es `/dev/rfcomm0`.
    - **USB**: en Linux es `/dev/usb/lp0`; en Windows compártela y usa `\\localhost\NOMBRE`.
+   - Si Windows muestra «El controlador no está disponible» para «Bluetooth Printer», ignóralo:
+     lo que importa es el puerto **Saliente** en Más opciones de Bluetooth → Puertos COM.
+   - `COMn` y `/dev/rfcomm*` se abren como puerto serie (`PRINTER_TRANSPORT=auto`); las rutas
+     `/dev/usb/lp0` y `\\localhost\NOMBRE` se escriben directo.
 2. En `apps/api/.env` define `PRINTER_ENABLED=true` y `PRINTER_PATH` (ver `.env.example`).
 3. Reinicia la API, abre **Configuración → Impresora** e imprime la hoja de prueba. Si las tildes
    salen mal, cambia `PRINTER_CODEPAGE` (`cp858` o `wpc1252`).

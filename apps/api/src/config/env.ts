@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { z } from 'zod';
 import { PIN_HASH_PATTERN } from '../modules/admin-auth/pin-hash.js';
 import { PRINTER_CODEPAGES } from '../modules/printing/escpos-encoder.js';
+import { PRINTER_TRANSPORTS } from '../modules/printing/printer-transport.js';
 
 function isTimeZone(value: string): boolean {
   try {
@@ -45,6 +46,10 @@ const EnvObjectSchema = z.object({
   PRINTER_ENABLED: z.stringbool().default(false),
   /** Bluetooth (COM5, /dev/rfcomm0) or USB (/dev/usb/lp0, \\\\localhost\\NOMBRE) device path. */
   PRINTER_PATH: z.string().min(1).optional(),
+  /** `auto` uses the serial port for COMn and /dev/rfcomm*, /dev/ttyUSB*, and a plain write otherwise. */
+  PRINTER_TRANSPORT: z.enum(PRINTER_TRANSPORTS).default('auto'),
+  /** Only used by the serial port; Bluetooth ignores it and USB-serial printers use 9600 or 19200. */
+  PRINTER_BAUD_RATE: z.coerce.number().int().min(1200).max(460_800).default(9600),
   PRINTER_CODEPAGE: z.enum(PRINTER_CODEPAGES).default('cp858'),
   /** 32 columns for 58 mm paper with the standard font. */
   PRINTER_COLUMNS: z.coerce.number().int().min(16).max(64).default(32),
