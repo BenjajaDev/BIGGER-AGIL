@@ -1,0 +1,39 @@
+.card {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.title {
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+}
+
+.figures {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.figures > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.figures dt {
+  color: var(--text-secondary);
+}
+
+.figures dd {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.figures .big {
+  font-family: var(--font-display);
+  font-size: var(--text-subtitle);
+  font-weight: var(--weight-bold);
+}

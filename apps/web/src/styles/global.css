@@ -93,6 +93,13 @@ svg {
   }
 }
 
+/* Changing section cross-fades the content; the bars stay put. */
+::view-transition-old(contenido),
+::view-transition-new(contenido) {
+  animation-duration: var(--duration-base);
+  animation-timing-function: var(--ease-out);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

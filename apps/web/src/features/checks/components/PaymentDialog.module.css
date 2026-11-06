@@ -17,7 +17,7 @@
 }
 
 .dialog::backdrop {
-  background-color: rgb(30 30 30 / 55%);
+  background-color: var(--scrim);
 }
 
 .head {

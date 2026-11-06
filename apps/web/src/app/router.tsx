@@ -70,7 +70,11 @@ const configurationRoute: RouteObject = {
 
 /** Pages are code-split: phones opening the QR menu never download the internal system. */
 const internalRoutes: RouteObject[] = [
-  { index: true, element: <Navigate to="/mesas" replace /> },
+  {
+    index: true,
+    lazy: () =>
+      import('../features/summary/SummaryPage').then((m) => ({ Component: m.SummaryPage })),
+  },
   {
     path: '/mesas',
     lazy: () => import('../features/tables/TablesPage').then((m) => ({ Component: m.TablesPage })),

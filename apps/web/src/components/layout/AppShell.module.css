@@ -1,6 +1,6 @@
 .shell {
   display: grid;
-  grid-template-rows: var(--topbar-height) 1fr;
+  grid-template-rows: auto 1fr;
   /* Clamp the single column to the viewport so wide rows (nav, content) can't stretch the page. */
   grid-template-columns: minmax(0, 1fr);
   min-height: 100dvh;
@@ -25,5 +25,13 @@
 
 .main {
   min-width: 0;
+  view-transition-name: contenido;
   animation: fade-in var(--duration-base) var(--ease-out);
+}
+
+/* Room for the fixed bottom bar on phones. */
+@media (max-width: 47.99rem) {
+  .main {
+    padding-bottom: calc(var(--bottombar-height) + var(--space-6) + env(safe-area-inset-bottom));
+  }
 }

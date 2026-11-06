@@ -1,0 +1,92 @@
+.page {
+  display: grid;
+  gap: var(--space-5);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.title {
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+}
+
+.date {
+  color: var(--text-secondary);
+}
+
+.date::first-letter {
+  text-transform: uppercase;
+}
+
+/*
+ * Wide: Mesas and the live kitchen in the main column; the urgent list and the figures on the side.
+ * Narrow: the columns dissolve and «Ahora» comes first, because that is what the person standing needs.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 23rem;
+  align-items: start;
+  gap: var(--space-5);
+}
+
+.main,
+.side {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.grid > div > div {
+  min-width: 0;
+}
+
+@media (max-width: 63.99rem) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .main,
+  .side {
+    display: contents;
+  }
+
+  .attention {
+    order: 1;
+  }
+
+  .tables {
+    order: 2;
+  }
+
+  .kitchen {
+    order: 3;
+  }
+
+  .progress {
+    order: 4;
+  }
+
+  .printed {
+    order: 5;
+  }
+}
+
+/* On phones «+ Pedido» already sits in the middle of the bottom bar. */
+@media (max-width: 47.99rem) {
+  .page {
+    padding: var(--space-4);
+  }
+
+  .create {
+    display: none;
+  }
+}
