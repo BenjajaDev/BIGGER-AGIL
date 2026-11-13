@@ -27,6 +27,9 @@ import { DrizzleModifierGroupsAdminRepository } from './modules/catalog-admin/mo
 import { ModifierGroupsAdminService } from './modules/catalog-admin/modifier-groups.service.js';
 import { DrizzleProductsAdminRepository } from './modules/catalog-admin/products.repository.js';
 import { ProductsAdminService } from './modules/catalog-admin/products.service.js';
+import { BrailleController } from './modules/braille/braille.controller.js';
+import { createBrailleRouter } from './modules/braille/braille.routes.js';
+import { BrailleService } from './modules/braille/braille.service.js';
 import { CatalogController } from './modules/catalog/catalog.controller.js';
 import { ChecksController } from './modules/checks/checks.controller.js';
 import { DrizzleChecksRepository } from './modules/checks/checks.repository.js';
@@ -80,8 +83,10 @@ export function buildApiRouters({
   const lookups = new DrizzleCatalogLookups(db);
   const adminAuthService = new AdminAuthService(adminAuth, new LoginThrottle());
 
-  const catalogController = new CatalogController(
-    new CatalogService(new DrizzleCatalogRepository(db), clock),
+  const catalogService = new CatalogService(new DrizzleCatalogRepository(db), clock);
+  const catalogController = new CatalogController(catalogService);
+  const brailleRouter = createBrailleRouter(
+    new BrailleController(new BrailleService(catalogService)),
   );
   const checksService = new ChecksService(
     new DrizzleChecksRepository(db),
@@ -137,6 +142,7 @@ export function buildApiRouters({
     createAdminAuthRouter(new AdminAuthController(adminAuthService)),
     createCatalogAdminRouter(catalogAdminControllers, requireAdmin(adminAuthService), [
       imagesRouter,
+      brailleRouter,
     ]),
   ];
 }

@@ -4,6 +4,7 @@ export * from './domain/catalog-admin.js';
 export * from './domain/checks.js';
 export * from './domain/orders.js';
 export * from './domain/printing.js';
+export * from './domain/braille.js';
 export * from './domain/product-rules.js';
 export * from './domain/receipts.js';
 export * from './domain/tables.js';

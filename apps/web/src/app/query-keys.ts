@@ -10,6 +10,7 @@ export const queryKeys = {
   checks: ['checks'] as const,
   tableCheck: (tableId: string) => ['checks', 'table', tableId] as const,
   check: (checkId: string) => ['checks', checkId] as const,
+  braillePlates: ['admin', 'braille'] as const,
   printer: ['printer'] as const,
   printJobs: ['printer', 'jobs'] as const,
   orders: ['orders'] as const,
