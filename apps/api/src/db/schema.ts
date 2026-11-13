@@ -108,6 +108,7 @@ export const products = sqliteTable(
     /** Calendar dates (`YYYY-MM-DD`) in the shop's time zone; null = open-ended. */
     promoStartsOn: text(),
     promoEndsOn: text(),
+    promoDiscountPercent: integer().notNull().default(0),
     archivedAt: archivedAt(),
     ...timestamps,
   },

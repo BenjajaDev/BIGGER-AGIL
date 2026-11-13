@@ -31,13 +31,37 @@ export function PromotionFields() {
         description="Aparece primero en la carta, con la etiqueta Promoción. Sin fechas, queda activa hasta que la quites."
         checked={promotion !== null}
         onChange={(event) => {
-          setValue('promotion', event.target.checked ? { startsOn: null, endsOn: null } : null, {
-            shouldDirty: true,
-          });
+          setValue(
+            'promotion',
+            event.target.checked ? { startsOn: null, endsOn: null, discountPercent: 0 } : null,
+            {
+              shouldDirty: true,
+            },
+          );
         }}
       />
       {promotion !== null && (
         <>
+          <Field
+            label="Descuento (%)"
+            hint="0 solo destaca el producto; con un descuento, el precio baja de verdad mientras dure."
+            error={errors.promotion?.discountPercent?.message}
+          >
+            {(control) => (
+              <input
+                {...control}
+                {...register('promotion.discountPercent', {
+                  setValueAs: (value) => (value === '' ? 0 : Number(value)),
+                })}
+                type="number"
+                min={0}
+                max={90}
+                step={1}
+                inputMode="numeric"
+                className={controlClassName}
+              />
+            )}
+          </Field>
           <div className={styles.grid2}>
             <Field label="Desde (opcional)" error={errors.promotion?.startsOn?.message}>
               {(control) => (

@@ -24,6 +24,7 @@ export const productRowColumns = {
   isPromotion: products.isPromotion,
   promoStartsOn: products.promoStartsOn,
   promoEndsOn: products.promoEndsOn,
+  promoDiscountPercent: products.promoDiscountPercent,
 };
 
 export interface ImageColumns {
@@ -38,6 +39,7 @@ export type ProductRow = Omit<Product, 'image' | 'sizes' | 'promotion'> &
     isPromotion: boolean;
     promoStartsOn: string | null;
     promoEndsOn: string | null;
+    promoDiscountPercent?: number | undefined;
   };
 
 export function toImageAsset(row: ImageColumns): ImageAsset | null {
@@ -60,12 +62,15 @@ export function toProductBase(row: ProductRow): Omit<Product, 'sizes'> {
     isPromotion,
     promoStartsOn,
     promoEndsOn,
+    promoDiscountPercent,
     ...rest
   } = row;
   return {
     ...rest,
     image: toImageAsset({ imageId, imageFocusY, imageWidth, imageHeight }),
-    promotion: isPromotion ? { startsOn: promoStartsOn, endsOn: promoEndsOn } : null,
+    promotion: isPromotion
+      ? { startsOn: promoStartsOn, endsOn: promoEndsOn, discountPercent: promoDiscountPercent ?? 0 }
+      : null,
   };
 }
 

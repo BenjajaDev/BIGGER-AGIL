@@ -8,6 +8,7 @@ import type {
   OrderItemOptionKind,
   OrderStatus,
   ProductKind,
+  Promotion,
   ProductSize,
   QuickNote,
 } from '@bigger/shared';
@@ -38,6 +39,7 @@ export interface OrderableProduct {
   priceClp: number;
   isAvailable: boolean;
   archivedAt: Date | null;
+  promotion?: Promotion | null | undefined;
   sizes: ProductSize[];
   modifierGroups: ModifierGroup[];
   comboSlots: ComboSlot[];
@@ -173,17 +175,26 @@ export class DrizzleOrdersRepository implements OrdersRepository {
         priceClp: products.priceClp,
         isAvailable: products.isAvailable,
         archivedAt: products.archivedAt,
+        isPromotion: products.isPromotion,
+        promoStartsOn: products.promoStartsOn,
+        promoEndsOn: products.promoEndsOn,
+        promoDiscountPercent: products.promoDiscountPercent,
       })
       .from(products)
       .where(inArray(products.id, [...ids]));
 
     const relations = await loadCatalogRelations(this.#db, rows);
-    return rows.map((row) => ({
-      ...row,
-      sizes: relations.sizesByProduct.get(row.id) ?? [],
-      modifierGroups: relations.modifierGroupsByProduct.get(row.id) ?? [],
-      comboSlots: relations.comboSlotsByProduct.get(row.id) ?? [],
-    }));
+    return rows.map(
+      ({ isPromotion, promoStartsOn, promoEndsOn, promoDiscountPercent, ...row }) => ({
+        ...row,
+        promotion: isPromotion
+          ? { startsOn: promoStartsOn, endsOn: promoEndsOn, discountPercent: promoDiscountPercent }
+          : null,
+        sizes: relations.sizesByProduct.get(row.id) ?? [],
+        modifierGroups: relations.modifierGroupsByProduct.get(row.id) ?? [],
+        comboSlots: relations.comboSlotsByProduct.get(row.id) ?? [],
+      }),
+    );
   }
 
   async findById(id: string): Promise<Order | null> {

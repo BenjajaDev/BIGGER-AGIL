@@ -57,6 +57,13 @@
       "when": 1794585566538,
       "tag": "0007_freezing_skaar",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794585953900,
+      "tag": "0008_glamorous_marauders",
+      "breakpoints": true
     }
   ]
 }

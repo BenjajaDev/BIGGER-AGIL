@@ -122,7 +122,7 @@ export function buildApiRouters({
     logger.error({ err: error }, 'No se pudo iniciar la impresión');
   });
   const ordersController = new OrdersController(
-    new OrdersService(ordersRepository, eventHub, checksService),
+    new OrdersService(ordersRepository, eventHub, checksService, clock),
   );
   const tablesController = new TablesController(
     new TablesService(new DrizzleTablesRepository(db), checksService),
