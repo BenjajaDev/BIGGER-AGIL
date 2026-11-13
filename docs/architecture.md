@@ -34,7 +34,7 @@ Para habilitar uno basta con cambiar su entrada en `apps/web/src/app/navigation.
 | Datos en UI  | TanStack Query                                                     | Caché + invalidación al recibir eventos SSE                   |
 | Estilos      | CSS Modules + tokens CSS                                           | Sin runtime; tokens explícitos de la paleta                   |
 | Calidad      | ESLint (strict type-checked, jsx-a11y), Prettier, Vitest, axe-core |                                                               |
-| Futuro       | `pdfkit` (API, reportes PDF) · `recharts` (UI, gráficos)           | Por definir tras el cierre                                      |
+| Futuro       | `pdfkit` (API, reportes PDF) · `recharts` (UI, gráficos)           | Por definir tras el cierre                                    |
 
 ## 3. Patrón MVC
 

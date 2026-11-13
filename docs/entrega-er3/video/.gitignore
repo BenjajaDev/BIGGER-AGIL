@@ -1,0 +1,7 @@
+raw/
+seg/
+*.png
+_card.html
+state.json
+ids.json
+video-bigger-agil.mp4
