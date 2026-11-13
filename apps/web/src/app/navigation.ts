@@ -108,20 +108,7 @@ export const APP_MODULES: readonly AppModule[] = [
     ],
     plannedIncrement: 'INC-4',
   },
-  {
-    path: '/reportes',
-    group: 'management',
-    label: 'Reportes',
-    icon: BarChart3,
-    status: 'in-development',
-    summary: 'Resumen de ventas para decidir con datos reales.',
-    plannedFeatures: [
-      'Ventas, pedidos y ticket promedio por semana, mes y temporada',
-      'Lo más vendido y productos de poca salida',
-      'Exportación a PDF',
-    ],
-    plannedIncrement: 'INC-5',
-  },
+  { path: '/reportes', label: 'Reportes', icon: BarChart3, group: 'management', status: 'active' },
   {
     path: '/clientes',
     group: 'management',

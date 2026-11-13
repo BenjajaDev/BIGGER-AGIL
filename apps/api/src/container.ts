@@ -31,6 +31,10 @@ import { BrailleController } from './modules/braille/braille.controller.js';
 import { createBrailleRouter } from './modules/braille/braille.routes.js';
 import { BrailleService } from './modules/braille/braille.service.js';
 import { CatalogController } from './modules/catalog/catalog.controller.js';
+import { ReportsController } from './modules/reports/reports.controller.js';
+import { DrizzleReportsRepository } from './modules/reports/reports.repository.js';
+import { createReportsRouter } from './modules/reports/reports.routes.js';
+import { ReportsService } from './modules/reports/reports.service.js';
 import { ChecksController } from './modules/checks/checks.controller.js';
 import { DrizzleChecksRepository } from './modules/checks/checks.repository.js';
 import { createChecksRouter } from './modules/checks/checks.routes.js';
@@ -85,6 +89,9 @@ export function buildApiRouters({
 
   const catalogService = new CatalogService(new DrizzleCatalogRepository(db), clock);
   const catalogController = new CatalogController(catalogService);
+  const reportsRouter = createReportsRouter(
+    new ReportsController(new ReportsService(new DrizzleReportsRepository(db), clock.timeZone)),
+  );
   const brailleRouter = createBrailleRouter(
     new BrailleController(new BrailleService(catalogService)),
   );
@@ -143,6 +150,7 @@ export function buildApiRouters({
     createCatalogAdminRouter(catalogAdminControllers, requireAdmin(adminAuthService), [
       imagesRouter,
       brailleRouter,
+      reportsRouter,
     ]),
   ];
 }

@@ -31,7 +31,6 @@ describe('navigation', () => {
     expect(IN_DEVELOPMENT_MODULES.map((module) => module.path)).toEqual([
       '/bodega',
       '/compras',
-      '/reportes',
       '/clientes',
     ]);
   });

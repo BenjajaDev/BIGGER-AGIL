@@ -671,6 +671,82 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
+  /admin/reports/sales:
+    get:
+      tags: [Administración]
+      summary: Resumen de ventas de un período
+      description: |
+        Ventas (pagos no anulados), propinas, pedidos, ticket promedio, ventas por día y por medio de
+        pago, lo más vendido y lo de poca salida; incluye el período anterior de igual largo para comparar.
+        Los días siguen la zona horaria del local.
+      operationId: adminSalesReport
+      security: [{ adminSession: [] }]
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200': { description: Resumen de ventas }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/reports/export.csv:
+    get:
+      tags: [Administración]
+      summary: Exporta un reporte a CSV
+      description: |
+        CSV separado por punto y coma con BOM UTF-8, listo para Excel. Las celdas de texto que empiezan
+        con =, +, - o @ llevan un apóstrofe delante para que ninguna hoja de cálculo las ejecute como fórmula.
+      operationId: adminExportReportCsv
+      security: [{ adminSession: [] }]
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+        - {
+            name: kind,
+            in: query,
+            required: true,
+            schema: { type: string, enum: [daily, products, payments] },
+          }
+      responses:
+        '200': { description: Archivo CSV, content: { text/csv: { schema: { type: string } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/reports/cash-close:
+    get:
+      tags: [Administración]
+      summary: Resumen de caja de un día
+      description: Totales por medio de pago, efectivo esperado, pagos anulados y el cierre si ya se hizo.
+      operationId: adminCashClose
+      security: [{ adminSession: [] }]
+      parameters:
+        - { name: date, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200': { description: Resumen de caja }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Administración]
+      summary: Cierra la caja de un día
+      description: Guarda el efectivo contado y la diferencia con el esperado. Un día se cierra una sola vez (409 si ya está cerrado o es futuro).
+      operationId: adminCloseCash
+      security: [{ adminSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, countedCashClp]
+              properties:
+                date: { type: string, format: date }
+                countedCashClp: { type: integer, minimum: 0 }
+                note: { type: string, maxLength: 240 }
+      responses:
+        '201': { description: Caja cerrada }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
   /admin/modifier-groups:
     get:
       tags: [Administración]

@@ -391,3 +391,15 @@ export const printJobs = sqliteTable(
     index('print_jobs_due_idx').on(table.status, table.nextAttemptAt),
   ],
 );
+
+/** One closing per day: what the system expected in cash against what was counted. */
+export const cashCloses = sqliteTable('cash_closes', {
+  id: id(),
+  /** Calendar date (`YYYY-MM-DD`) in the shop's time zone. */
+  date: text().notNull().unique(),
+  expectedCashClp: integer().notNull(),
+  countedCashClp: integer().notNull(),
+  differenceClp: integer().notNull(),
+  note: text().notNull().default(''),
+  createdAt: timestamps.createdAt,
+});
