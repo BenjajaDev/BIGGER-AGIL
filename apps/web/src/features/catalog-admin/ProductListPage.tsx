@@ -236,6 +236,7 @@ export function ProductListPage({ kind }: { kind: ProductKind }) {
                     >
                       <CoverImage
                         image={product.image}
+                        motif={product.name}
                         ratio="4 / 3"
                         sizes="4.5rem"
                         className={styles.thumb}

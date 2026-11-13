@@ -19,7 +19,7 @@
   min-height: var(--touch-target);
   padding: 0.5em 0.75em;
   border: var(--border-width-strong) solid var(--menu-text);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background-color: var(--menu-card-bg);
   color: var(--menu-text);
   font-size: 0.9375em;

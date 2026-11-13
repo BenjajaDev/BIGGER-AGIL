@@ -14,10 +14,19 @@ import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { StatusBadge, type StatusTone } from '../../../components/ui/StatusBadge';
 import { localToday } from '../../../lib/dates';
-import { CircleAlert, CircleCheck, CircleSlash, Hourglass, TriangleAlert } from 'lucide-react';
+import {
+  CircleAlert,
+  CircleCheck,
+  CircleSlash,
+  Hourglass,
+  Pencil,
+  Trash2,
+  TriangleAlert,
+} from 'lucide-react';
 import { useArchiveSupply, useRegisterMovement, useSaveSupply } from '../useInventory';
-import { ALERT_LABELS, formatQuantity } from '../supply-text';
+import { ALERT_LABELS, formatExpiry, formatQuantity } from '../supply-text';
 import styles from './Inventory.module.css';
+import { StockMeter } from './StockMeter';
 
 const ALERT_PRESENTATION = {
   ok: { tone: 'success', icon: CircleCheck },
@@ -348,9 +357,10 @@ export function InventoryTab({
                   <span className={styles.rowMeta}>
                     Stock {formatQuantity(supply.stock, supply.unit)} · mínimo{' '}
                     {formatQuantity(supply.minStock, supply.unit)}
-                    {supply.expiresOn && ` · vence ${supply.expiresOn}`}
+                    {supply.expiresOn && ` · vence ${formatExpiry(supply.expiresOn)}`}
                     {supply.supplierName && ` · ${supply.supplierName}`}
                   </span>
+                  <StockMeter stock={supply.stock} minStock={supply.minStock} alert={alert} />
                 </div>
                 <div className={styles.actions}>
                   <Button
@@ -379,20 +389,26 @@ export function InventoryTab({
                   </Button>
                   <Button
                     variant="ghost"
+                    className={styles.iconAction}
+                    title="Editar"
                     onClick={() => {
                       setEditing({ kind: 'supply', supply });
                     }}
                   >
-                    Editar<span className="visually-hidden"> {supply.name}</span>
+                    <Pencil size={18} aria-hidden="true" />
+                    <span className="visually-hidden">Editar {supply.name}</span>
                   </Button>
                   <Button
                     variant="ghost"
+                    className={styles.iconAction}
+                    title="Eliminar"
                     disabled={archive.isPending}
                     onClick={() => {
                       archive.mutate(supply.id);
                     }}
                   >
-                    Eliminar<span className="visually-hidden"> {supply.name}</span>
+                    <Trash2 size={18} aria-hidden="true" />
+                    <span className="visually-hidden">Eliminar {supply.name}</span>
                   </Button>
                 </div>
               </Card>

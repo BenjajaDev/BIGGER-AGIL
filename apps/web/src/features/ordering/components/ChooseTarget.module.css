@@ -1,0 +1,78 @@
+.panel {
+  display: grid;
+  gap: var(--space-5);
+  width: min(100%, 52rem);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+}
+
+.header {
+  display: grid;
+  gap: var(--space-1);
+  text-align: center;
+}
+
+.title {
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+}
+
+.description {
+  color: var(--text-secondary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-3);
+}
+
+.table {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  min-height: 5.5rem;
+  padding: var(--space-4);
+  border: var(--border-width-strong) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-card);
+  color: var(--text-primary);
+  text-decoration: none;
+  box-shadow: var(--shadow-card);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.table:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-raised);
+}
+
+.table:active {
+  transform: scale(0.98);
+}
+
+.table[data-status='occupied'] {
+  border-color: var(--accent);
+}
+
+.table[data-status='awaiting-payment'] {
+  border-color: var(--status-highlight);
+}
+
+.label {
+  font-size: var(--text-button);
+  font-weight: var(--weight-bold);
+}
+
+@media (max-width: 47.99rem) {
+  .panel {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -85,6 +85,42 @@
   color: var(--status-warning);
 }
 
+.liveDot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--status-live);
+  box-shadow: 0 0 0 3px var(--hover-on-inverse);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .liveDot {
+    animation: live-pulse 2.4s var(--ease-in-out) infinite;
+  }
+}
+
+@keyframes live-pulse {
+  50% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+.liveLabel {
+  color: var(--text-inverse-soft);
+  font-weight: var(--weight-medium);
+}
+
+@media (max-width: 47.99rem) {
+  .liveLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 /* Second level: the tabs of the active area. */
 .subnav {
   height: var(--subnav-height);

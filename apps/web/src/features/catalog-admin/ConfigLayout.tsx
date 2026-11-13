@@ -3,6 +3,7 @@ import {
   ExternalLink,
   FolderTree,
   LogOut,
+  ShieldCheck,
   Hand,
   Package,
   QrCode,
@@ -40,18 +41,10 @@ export function ConfigLayout() {
         ) : (
           <div className={styles.layout}>
             <div className={styles.bar}>
-              <nav aria-label="Secciones de configuración">
-                <ul role="list" className={styles.tabs}>
-                  {SECTIONS.map(({ to, label, icon: Icon }) => (
-                    <li key={to}>
-                      <NavLink to={to} className={styles.tab}>
-                        <Icon size={18} aria-hidden="true" />
-                        {label}
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
+              <p className={styles.session}>
+                <ShieldCheck size={18} aria-hidden="true" />
+                Sesión de encargado
+              </p>
               <div className={styles.tools}>
                 <ButtonLink to="/carta" target="_blank" rel="noopener" variant="ghost">
                   <ExternalLink size={18} aria-hidden="true" />
@@ -69,6 +62,18 @@ export function ConfigLayout() {
                   Cerrar sesión
                 </Button>
               </div>
+              <nav aria-label="Secciones de configuración" className={styles.nav}>
+                <ul role="list" className={styles.tabs}>
+                  {SECTIONS.map(({ to, label, icon: Icon }) => (
+                    <li key={to}>
+                      <NavLink to={to} className={styles.tab}>
+                        <Icon size={18} aria-hidden="true" />
+                        {label}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
             </div>
             <Outlet />
           </div>

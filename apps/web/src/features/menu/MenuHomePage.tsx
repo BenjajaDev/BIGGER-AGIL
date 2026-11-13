@@ -1,5 +1,5 @@
 import type { MenuProduct } from '@bigger/shared';
-import { SearchX } from 'lucide-react';
+import { Search, SearchX } from 'lucide-react';
 import { useDeferredValue, useId, useState } from 'react';
 import { AsyncContent } from '../../components/ui/AsyncContent';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -34,16 +34,20 @@ export function MenuHomePage() {
         <label htmlFor={searchId} className={styles.searchLabel}>
           Buscar un producto
         </label>
-        <input
-          id={searchId}
-          type="search"
-          className={styles.searchInput}
-          value={search}
-          autoComplete="off"
-          onChange={(event) => {
-            setSearch(event.target.value);
-          }}
-        />
+        <div className={styles.searchBox}>
+          <Search className={styles.searchIcon} size={20} aria-hidden="true" />
+          <input
+            id={searchId}
+            type="search"
+            className={styles.searchInput}
+            value={search}
+            placeholder="Ej.: chacarero, pie de limón"
+            autoComplete="off"
+            onChange={(event) => {
+              setSearch(event.target.value);
+            }}
+          />
+        </div>
       </div>
 
       <AsyncContent query={menuQuery} loadingLabel="Cargando la carta…">

@@ -10,6 +10,7 @@ export function CategoryCard({ category }: { category: MenuCategory }) {
     <Link to={`/carta/${category.slug}`} className={styles.card}>
       <CoverImage
         image={category.image}
+        motif={category.name}
         ratio="2 / 1"
         sizes="(min-width: 64rem) 20vw, (min-width: 40rem) 33vw, 100vw"
       />

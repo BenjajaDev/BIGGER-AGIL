@@ -98,7 +98,6 @@ describe('AppShell navigation', () => {
     expect(sheet.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
       '/configuracion',
       '/bodega',
-      '/compras',
       '/reportes',
       '/clientes',
     ]);

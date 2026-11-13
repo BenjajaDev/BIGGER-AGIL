@@ -66,6 +66,7 @@ export function MenuCard({
       <div className={styles.media}>
         <CoverImage
           image={product.image}
+          motif={product.name}
           {...(previewImageSrc ? { previewSrc: previewImageSrc } : {})}
         />
         {product.promotion && (

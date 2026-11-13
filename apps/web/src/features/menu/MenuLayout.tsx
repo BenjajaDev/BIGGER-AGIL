@@ -1,4 +1,4 @@
-import { MessageCircle } from 'lucide-react';
+import { Accessibility, Hand, MapPin, MessageCircle, Utensils } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, Outlet, useSearchParams } from 'react-router';
 import { tableQrService } from '../../services/table-qr.service';
@@ -32,12 +32,30 @@ export function MenuLayout() {
             BIGGER
           </Link>
           <p className={styles.tagline}>Sándwiches · Fajitas · Ensaladas · Pasteles</p>
-          <p className={styles.address}>Calle Carmen 752, Curicó</p>
+          <p className={styles.address}>
+            <MapPin size={16} aria-hidden="true" />
+            Calle Carmen 752, Curicó
+          </p>
+          <ul className={styles.perks} aria-label="Accesibilidad de la carta">
+            <li>
+              <Accessibility size={16} aria-hidden="true" />
+              Funciona con lector de pantalla
+            </li>
+            <li>
+              <Hand size={16} aria-hidden="true" />
+              Pide la carta en braille en el local
+            </li>
+          </ul>
         </div>
       </header>
 
       <main className={styles.content}>
-        {table.data && <p className={styles.tableBanner}>Estás en la {table.data.label}</p>}
+        {table.data && (
+          <p className={styles.tableBanner}>
+            <Utensils size={20} aria-hidden="true" />
+            Estás en la {table.data.label}
+          </p>
+        )}
         <ReadingPreferencesToolbar
           preferences={preferences}
           onToggleLargeText={toggleLargeText}

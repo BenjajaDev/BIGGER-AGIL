@@ -1,4 +1,4 @@
-import { Wifi, WifiOff } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
 import { Link, NavLink, useLocation } from 'react-router';
 import {
   groupOf,
@@ -23,16 +23,18 @@ const GROUPS = Object.keys(NAV_GROUPS) as NavGroup[];
 
 function ConnectionIndicator({ state }: { state: RealtimeConnectionState }) {
   const isOnline = state === 'open';
-  const Icon = isOnline ? Wifi : WifiOff;
   return (
     <span
       role="status"
       className={cx(styles.connection, !isOnline && styles.offline)}
       title={isOnline ? 'En línea' : undefined}
     >
-      <Icon size={18} aria-hidden="true" />
-      {/* Online is the quiet default; losing the connection is spelled out for everyone. */}
-      <span className={isOnline ? 'visually-hidden' : undefined}>
+      {isOnline ? (
+        <span className={styles.liveDot} aria-hidden="true" />
+      ) : (
+        <WifiOff size={18} aria-hidden="true" />
+      )}
+      <span className={isOnline ? styles.liveLabel : undefined}>
         {isOnline ? 'En línea' : 'Reconectando…'}
       </span>
     </span>

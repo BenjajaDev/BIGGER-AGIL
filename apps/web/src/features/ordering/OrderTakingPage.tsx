@@ -1,14 +1,14 @@
 import type { MenuProduct, Product } from '@bigger/shared';
-import { CircleHelp, LayoutGrid, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { controlClassName } from '../../components/form/control';
 import { AsyncContent } from '../../components/ui/AsyncContent';
-import { ButtonLink } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useCreateOrder } from '../orders/useOrders';
 import { useTableOverview } from '../tables/useTableOverview';
 import { CategoryFilter } from './components/CategoryFilter';
+import { ChooseTarget } from './components/ChooseTarget';
 import { ComandaPanel } from './components/ComandaPanel';
 import { OptionsModal } from './components/OptionsModal';
 import { ProductGrid } from './components/ProductGrid';
@@ -38,24 +38,6 @@ function useOrderTarget(): Target | null {
   return table
     ? { kind: 'table', label: table.label, tableId: table.id, hasOpenCheck: table.checkId !== null }
     : { kind: 'none' };
-}
-
-function ChooseTarget() {
-  return (
-    <div className={styles.centered}>
-      <EmptyState
-        icon={CircleHelp}
-        title="¿Para quién es el pedido?"
-        description="Elige una mesa en el mapa o inicia un pedido para llevar desde Mesas."
-        action={
-          <ButtonLink to="/mesas" variant="secondary">
-            <LayoutGrid size={18} aria-hidden="true" />
-            Ir a Mesas
-          </ButtonLink>
-        }
-      />
-    </div>
-  );
 }
 
 export function OrderTakingPage() {

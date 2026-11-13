@@ -1,6 +1,7 @@
 import { count } from 'drizzle-orm';
 import type { AppDatabase } from '../client.js';
 import {
+  cashCloses,
   categories,
   checks,
   comboSlotOptions,
@@ -19,7 +20,11 @@ import {
   products,
   productSizes,
   productTypes,
+  recipeItems,
   sizeGroupRules,
+  stockMovements,
+  suppliers,
+  supplies,
 } from '../schema.js';
 import {
   SEED_CATEGORIES,
@@ -31,6 +36,9 @@ import {
   type SeedPromotion,
   type SeedSize,
 } from './seed-data.js';
+import { seedSalesHistory } from './seed-history.js';
+import { seedInventory } from './seed-inventory.js';
+import type { SeedTransaction } from './seed-types.js';
 
 export interface SeedOptions {
   withDemoOrders: boolean;
@@ -43,7 +51,7 @@ export type SeedResult = 'seeded' | 'reset' | 'skipped';
 
 const MINUTE_MS = 60_000;
 
-type Transaction = Parameters<Parameters<AppDatabase['transaction']>[0]>[0];
+type Transaction = SeedTransaction;
 
 interface SeededProduct {
   id: string;
@@ -54,6 +62,11 @@ interface SeededProduct {
 /** Children before parents, so foreign keys never block a delete. */
 function clearDatabase(tx: Transaction): void {
   for (const table of [
+    cashCloses,
+    recipeItems,
+    stockMovements,
+    supplies,
+    suppliers,
     printJobs,
     paymentItems,
     payments,
@@ -361,6 +374,13 @@ export function seedDatabase(db: AppDatabase, options: SeedOptions): SeedResult 
         }
       });
     }
+
+    seedSalesHistory(tx, now, productsByName);
+    seedInventory(
+      tx,
+      now,
+      new Map([...productsByName].map(([name, product]) => [name, product.id])),
+    );
   });
 
   return hasData ? 'reset' : 'seeded';

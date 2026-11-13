@@ -13,6 +13,18 @@ export function formatQuantity(quantity: number, unit: Supply['unit']): string {
   return `${new Intl.NumberFormat('es-CL').format(rounded)} ${UNIT_LABELS[unit]}`;
 }
 
+const EXPIRY_FORMAT = new Intl.DateTimeFormat('es-CL', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+});
+
+/** `2026-11-15` → «dom 15 nov»: the calendar date, read the same in every time zone. */
+export function formatExpiry(isoDate: string): string {
+  return EXPIRY_FORMAT.format(new Date(`${isoDate}T00:00:00Z`)).replace(/\./g, '');
+}
+
 /** The order message for a supplier, ready to send by WhatsApp. */
 export function purchaseMessage(group: PurchaseGroup): string {
   const lines = group.items.map(

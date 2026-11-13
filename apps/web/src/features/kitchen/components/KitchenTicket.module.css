@@ -2,7 +2,7 @@
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4);
-  border-top: 6px solid var(--border-subtle);
+  border-top: 6px solid var(--accent);
   border-radius: var(--radius-md);
   background-color: var(--surface-card);
   color: var(--text-primary);

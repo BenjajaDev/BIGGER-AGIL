@@ -1,5 +1,5 @@
 import type { ReportKind, ReportRange } from '@bigger/shared';
-import { Download } from 'lucide-react';
+import { Coins, Download, HandCoins, type LucideIcon, Receipt, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
 import { AsyncContent } from '../../components/ui/AsyncContent';
 import { ButtonLink } from '../../components/ui/Button';
@@ -29,12 +29,29 @@ const EXPORTS: readonly { kind: ReportKind; label: string }[] = [
   { kind: 'payments', label: 'Medios de pago' },
 ];
 
-function Kpi({ label, value, delta }: { label: string; value: string; delta?: string }) {
+interface KpiProps {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  current: number;
+  previous: number;
+}
+
+function Kpi({ label, value, icon: Icon, current, previous }: KpiProps) {
+  const change = deltaPercent(current, previous);
+  const trend = change === null || change === 0 ? 'flat' : change > 0 ? 'up' : 'down';
   return (
     <Card className={styles.kpi}>
-      <p className={styles.kpiLabel}>{label}</p>
+      <p className={styles.kpiLabel}>
+        <span className={styles.kpiIcon}>
+          <Icon size={18} aria-hidden="true" />
+        </span>
+        {label}
+      </p>
       <p className={styles.kpiValue}>{value}</p>
-      {delta && <p className={styles.kpiDelta}>{delta}</p>}
+      <p className={styles.kpiDelta} data-trend={trend}>
+        {formatDelta(change)}
+      </p>
     </Card>
   );
 }
@@ -48,22 +65,32 @@ function SalesView({ range }: { range: ReportRange }) {
           <div className={styles.kpis}>
             <Kpi
               label="Ventas"
+              icon={Coins}
               value={formatClp(report.totals.salesClp)}
-              delta={formatDelta(deltaPercent(report.totals.salesClp, report.previous.salesClp))}
+              current={report.totals.salesClp}
+              previous={report.previous.salesClp}
             />
             <Kpi
               label="Pedidos"
+              icon={ShoppingBag}
               value={String(report.totals.orders)}
-              delta={formatDelta(deltaPercent(report.totals.orders, report.previous.orders))}
+              current={report.totals.orders}
+              previous={report.previous.orders}
             />
             <Kpi
               label="Ticket promedio"
+              icon={Receipt}
               value={formatClp(report.totals.averageTicketClp)}
-              delta={formatDelta(
-                deltaPercent(report.totals.averageTicketClp, report.previous.averageTicketClp),
-              )}
+              current={report.totals.averageTicketClp}
+              previous={report.previous.averageTicketClp}
             />
-            <Kpi label="Propinas" value={formatClp(report.totals.tipsClp)} />
+            <Kpi
+              label="Propinas"
+              icon={HandCoins}
+              value={formatClp(report.totals.tipsClp)}
+              current={report.totals.tipsClp}
+              previous={report.previous.tipsClp}
+            />
           </div>
           <Card as="section" aria-labelledby="dia-titulo" className={styles.section}>
             <h2 id="dia-titulo" className={styles.h2}>

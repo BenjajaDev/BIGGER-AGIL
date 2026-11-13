@@ -3,6 +3,8 @@ import { formatClp } from '../../../lib/format';
 import { shortDate } from '../report-format';
 import styles from './SalesCharts.module.css';
 
+const COMPACT = new Intl.NumberFormat('es-CL', { notation: 'compact', maximumFractionDigits: 1 });
+
 const METHOD_LABELS = { cash: 'Efectivo', debit: 'Débito', junaeb: 'JUNAEB' } as const;
 
 /** Bars drawn with plain elements; the same numbers are always written next to them. */
@@ -13,9 +15,13 @@ export function DailyChart({ days }: { days: SalesReport['byDay'] }) {
       <ul role="list" className={styles.columns} aria-label="Ventas por día">
         {days.map((day) => (
           <li key={day.date} className={styles.column}>
-            <span className={styles.columnValue}>{formatClp(day.salesClp)}</span>
+            <span className={styles.columnValue}>
+              <span aria-hidden="true">${COMPACT.format(day.salesClp)}</span>
+              <span className="visually-hidden">{formatClp(day.salesClp)}</span>
+            </span>
             <span
               className={styles.columnBar}
+              data-best={day.salesClp === max ? 'true' : undefined}
               style={{ height: `${String((day.salesClp / max) * 100)}%` }}
             />
             <span className={styles.columnLabel}>{shortDate(day.date)}</span>

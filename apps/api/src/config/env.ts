@@ -45,7 +45,10 @@ const EnvObjectSchema = z.object({
   /** Prints each new order's comanda on the thermal printer. Off unless the shop turns it on. */
   PRINTER_ENABLED: z.stringbool().default(false),
   /** Bluetooth (COM5, /dev/rfcomm0) or USB (/dev/usb/lp0, \\\\localhost\\NOMBRE) device path. */
-  PRINTER_PATH: z.string().min(1).optional(),
+  PRINTER_PATH: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().min(1).optional(),
+  ),
   /** `auto` uses the serial port for COMn and /dev/rfcomm*, /dev/ttyUSB*, and a plain write otherwise. */
   PRINTER_TRANSPORT: z.enum(PRINTER_TRANSPORTS).default('auto'),
   /** Only used by the serial port; Bluetooth ignores it and USB-serial printers use 9600 or 19200. */

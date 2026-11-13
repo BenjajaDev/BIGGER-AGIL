@@ -36,3 +36,17 @@
   color: var(--text-secondary);
   font-size: var(--text-detail);
 }
+
+/* Celular: una fila que se desliza, en vez de varias líneas de filtros. */
+@media (max-width: 47.99rem) {
+  .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-block: var(--space-1);
+  }
+
+  .chips > * {
+    flex-shrink: 0;
+  }
+}

@@ -182,6 +182,7 @@ export function CategoriesPage() {
                       <>
                         <CoverImage
                           image={category.image}
+                          motif={category.name}
                           ratio="4 / 3"
                           sizes="4.5rem"
                           className={styles.thumb}
