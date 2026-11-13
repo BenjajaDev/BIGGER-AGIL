@@ -12,9 +12,9 @@ Contrato de API: [`docs/api/openapi.yaml`](api/openapi.yaml).
 | Carta digital y catálogo      | Activo        | INC-3/4     |
 | Configuración de la carta     | Activo        | INC-4       |
 | Vista de cocina               | Activo        | INC-3       |
-| Bodega                        | En desarrollo | INC-4       |
-| Compras                       | En desarrollo | INC-4       |
-| Reportes                      | En desarrollo | INC-5       |
+| Bodega                        | Activo        | INC-4       |
+| Compras                       | Activo        | INC-4       |
+| Reportes y cierre de caja     | Activo        | INC-4       |
 | Clientes (cuentas semanales)  | En desarrollo | Por definir |
 
 Los módulos en desarrollo aparecen en la navegación y muestran la pantalla «En desarrollo».
@@ -34,7 +34,7 @@ Para habilitar uno basta con cambiar su entrada en `apps/web/src/app/navigation.
 | Datos en UI  | TanStack Query                                                     | Caché + invalidación al recibir eventos SSE                   |
 | Estilos      | CSS Modules + tokens CSS                                           | Sin runtime; tokens explícitos de la paleta                   |
 | Calidad      | ESLint (strict type-checked, jsx-a11y), Prettier, Vitest, axe-core |                                                               |
-| Futuro       | `pdfkit` (API, reportes PDF) · `recharts` (UI, gráficos)           | Ya declarados para INC-5                                      |
+| Futuro       | `pdfkit` (API, reportes PDF) · `recharts` (UI, gráficos)           | Por definir tras el cierre                                      |
 
 ## 3. Patrón MVC
 
