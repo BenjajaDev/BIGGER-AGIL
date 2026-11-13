@@ -229,6 +229,8 @@ export const diningTables = sqliteTable('dining_tables', {
   label: text().notNull(),
   sortOrder: integer().notNull().default(0),
   isActive: integer({ mode: 'boolean' }).notNull().default(true),
+  /** Random token printed in the table's QR; rotating it invalidates the old QR. */
+  qrToken: text().unique(),
   ...timestamps,
 });
 

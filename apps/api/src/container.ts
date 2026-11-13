@@ -35,6 +35,12 @@ import { InventoryController } from './modules/inventory/inventory.controller.js
 import { DrizzleInventoryRepository } from './modules/inventory/inventory.repository.js';
 import { createInventoryRouter } from './modules/inventory/inventory.routes.js';
 import { InventoryService } from './modules/inventory/inventory.service.js';
+import { DrizzleTableQrRepository } from './modules/table-qr/table-qr.repository.js';
+import {
+  createTableLabelRouter,
+  createTableQrAdminRouter,
+} from './modules/table-qr/table-qr.routes.js';
+import { TableQrService } from './modules/table-qr/table-qr.service.js';
 import { ReportsController } from './modules/reports/reports.controller.js';
 import { DrizzleReportsRepository } from './modules/reports/reports.repository.js';
 import { createReportsRouter } from './modules/reports/reports.routes.js';
@@ -100,6 +106,7 @@ export function buildApiRouters({
   );
   inventoryService.start(eventHub);
   const inventoryRouter = createInventoryRouter(new InventoryController(inventoryService));
+  const tableQrService = new TableQrService(new DrizzleTableQrRepository(db));
   const reportsRouter = createReportsRouter(
     new ReportsController(new ReportsService(new DrizzleReportsRepository(db), clock.timeZone)),
   );
@@ -154,6 +161,7 @@ export function buildApiRouters({
     createCatalogRouter(catalogController),
     createOrdersRouter(ordersController),
     createTablesRouter(tablesController),
+    createTableLabelRouter(tableQrService),
     createChecksRouter(new ChecksController(checksService)),
     createPrintingRouter(new PrintingController(printService)),
     createRealtimeRouter(eventHub),
@@ -163,6 +171,7 @@ export function buildApiRouters({
       brailleRouter,
       reportsRouter,
       inventoryRouter,
+      createTableQrAdminRouter(tableQrService),
     ]),
   ];
 }

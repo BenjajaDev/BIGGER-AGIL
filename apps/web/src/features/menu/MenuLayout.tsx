@@ -1,5 +1,7 @@
 import { MessageCircle } from 'lucide-react';
-import { Link, Outlet } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { Link, Outlet, useSearchParams } from 'react-router';
+import { tableQrService } from '../../services/table-qr.service';
 import { webEnv } from '../../config/env';
 import { ReadingPreferencesToolbar } from './components/ReadingPreferencesToolbar';
 import styles from './MenuLayout.module.css';
@@ -9,6 +11,14 @@ import { buildWhatsAppOrderUrl } from './whatsapp';
 export function MenuLayout() {
   const { preferences, toggleLargeText, toggleHighContrast } = useReadingPreferences();
   const whatsappNumber = webEnv.VITE_WHATSAPP_NUMBER;
+  const token = useSearchParams()[0].get('mesa');
+  const table = useQuery({
+    queryKey: ['public', 'table', token],
+    queryFn: ({ signal }) => tableQrService.label(token ?? '', signal),
+    enabled: token !== null && /^[\w-]{16,64}$/.test(token),
+    retry: false,
+    staleTime: Infinity,
+  });
 
   return (
     <div
@@ -27,6 +37,7 @@ export function MenuLayout() {
       </header>
 
       <main className={styles.content}>
+        {table.data && <p className={styles.tableBanner}>Estás en la {table.data.label}</p>}
         <ReadingPreferencesToolbar
           preferences={preferences}
           onToggleLargeText={toggleLargeText}

@@ -807,6 +807,30 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /admin/tables/qr:
+    get:
+      tags: [Administración]
+      summary: Lista las mesas con el token de su QR
+      description: Cada mesa tiene un token aleatorio de 144 bits; las que no lo tenían lo reciben al consultar.
+      operationId: adminTableQr
+      security: [{ adminSession: [] }]
+      responses:
+        '200': { description: Mesas con su token }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/tables/{id}/qr/regenerate:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Administración]
+      summary: Genera un QR nuevo para una mesa
+      description: El token anterior deja de funcionar; sirve cuando una tarjeta se pierde o se filtra.
+      operationId: adminRegenerateTableQr
+      security: [{ adminSession: [] }]
+      responses:
+        '200': { description: Mesas con sus tokens actualizados }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /admin/modifier-groups:
     get:
       tags: [Administración]

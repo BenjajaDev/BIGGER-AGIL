@@ -5,6 +5,7 @@ import {
   LogOut,
   Hand,
   Package,
+  QrCode,
   Printer,
   Shapes,
   SlidersHorizontal,
@@ -22,6 +23,7 @@ const SECTIONS = [
   { to: 'tipos', label: 'Tipos', icon: Shapes },
   { to: 'personalizaciones', label: 'Personalizaciones', icon: SlidersHorizontal },
   { to: 'categorias', label: 'Categorías', icon: FolderTree },
+  { to: 'qr', label: 'QR por mesa', icon: QrCode },
   { to: 'braille', label: 'Carta braille', icon: Hand },
   { to: 'impresora', label: 'Impresora', icon: Printer },
 ] as const;
