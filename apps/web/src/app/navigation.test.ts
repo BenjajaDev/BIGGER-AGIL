@@ -11,7 +11,6 @@ describe('navigation', () => {
     expect(modulesIn('management').map((module) => module.path)).toEqual([
       '/configuracion',
       '/bodega',
-      '/compras',
       '/reportes',
       '/clientes',
     ]);
@@ -28,12 +27,7 @@ describe('navigation', () => {
   it('has unique paths and routes only the unfinished modules as «en desarrollo»', () => {
     const paths = APP_MODULES.map((module) => module.path);
     expect(new Set(paths).size).toBe(paths.length);
-    expect(IN_DEVELOPMENT_MODULES.map((module) => module.path)).toEqual([
-      '/bodega',
-      '/compras',
-      '/reportes',
-      '/clientes',
-    ]);
+    expect(IN_DEVELOPMENT_MODULES.map((module) => module.path)).toEqual(['/clientes']);
   });
 
   it('describes the live counters in plain Spanish', () => {

@@ -55,6 +55,8 @@ export type ProductSize = z.infer<typeof ProductSizeSchema>;
 export const PromotionSchema = z.object({
   startsOn: DateOnlySchema.nullable(),
   endsOn: DateOnlySchema.nullable(),
+  /** Real discount on the price while the promotion runs; 0 only features the product. */
+  discountPercent: z.number().int().min(0).max(90).optional(),
 });
 export type Promotion = z.infer<typeof PromotionSchema>;
 

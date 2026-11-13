@@ -72,6 +72,8 @@ export function MenuCard({
           <span className={styles.ribbon}>
             <Sparkles size={14} aria-hidden="true" />
             Promoción
+            {(product.promotion.discountPercent ?? 0) > 0 &&
+              ` −${String(product.promotion.discountPercent)} %`}
           </span>
         )}
       </div>

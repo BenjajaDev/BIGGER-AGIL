@@ -192,7 +192,10 @@ function setup(catalog: OrderableProduct[] = [capuchino, brownie]) {
     afterOrderChange: vi.fn(() => Promise.resolve()),
   };
   return {
-    service: new OrdersService(repository, publisher, checks),
+    service: new OrdersService(repository, publisher, checks, {
+      now: () => new Date('2026-10-21T12:00:00.000Z'),
+      timeZone: 'America/Santiago',
+    }),
     repository,
     checks,
     created,

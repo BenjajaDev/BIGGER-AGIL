@@ -1,0 +1,84 @@
+.columns {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  height: 12rem;
+  overflow-x: auto;
+}
+
+.column {
+  display: flex;
+  flex: 1 0 3rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  min-width: 3rem;
+}
+
+.columnValue,
+.columnLabel {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.columnBar {
+  width: 70%;
+  min-height: 2px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background-color: var(--accent);
+}
+
+.ranked {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.rankedRow {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) minmax(4rem, 2fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rankedName {
+  font-weight: var(--weight-semibold);
+}
+
+.rankedBar {
+  height: 0.75rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-muted);
+  overflow: hidden;
+}
+
+.rankedBar > span {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background-color: var(--accent);
+}
+
+.rankedValue {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  text-align: left;
+}
+
+.table td:last-child {
+  text-align: right;
+}

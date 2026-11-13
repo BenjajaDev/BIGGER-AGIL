@@ -2,12 +2,14 @@ import {
   CHECK_STATUSES,
   ORDER_CHANNELS,
   ORDER_ITEM_OPTION_KINDS,
+  MOVEMENT_KINDS,
   ORDER_STATUSES,
   PAYMENT_METHODS,
   PAYMENT_MODES,
   PRINT_JOB_KINDS,
   PRINT_JOB_STATUSES,
   PRODUCT_KINDS,
+  SUPPLY_UNITS,
   type Allergen,
   type ProductSize,
   type QuickNote,
@@ -19,6 +21,7 @@ import {
   index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -105,6 +108,7 @@ export const products = sqliteTable(
     /** Calendar dates (`YYYY-MM-DD`) in the shop's time zone; null = open-ended. */
     promoStartsOn: text(),
     promoEndsOn: text(),
+    promoDiscountPercent: integer().notNull().default(0),
     archivedAt: archivedAt(),
     ...timestamps,
   },
@@ -225,6 +229,8 @@ export const diningTables = sqliteTable('dining_tables', {
   label: text().notNull(),
   sortOrder: integer().notNull().default(0),
   isActive: integer({ mode: 'boolean' }).notNull().default(true),
+  /** Random token printed in the table's QR; rotating it invalidates the old QR. */
+  qrToken: text().unique(),
   ...timestamps,
 });
 
@@ -390,4 +396,74 @@ export const printJobs = sqliteTable(
     uniqueIndex('print_jobs_copy_uq').on(table.orderId, table.kind, table.copy),
     index('print_jobs_due_idx').on(table.status, table.nextAttemptAt),
   ],
+);
+
+/** One closing per day: what the system expected in cash against what was counted. */
+export const cashCloses = sqliteTable('cash_closes', {
+  id: id(),
+  /** Calendar date (`YYYY-MM-DD`) in the shop's time zone. */
+  date: text().notNull().unique(),
+  expectedCashClp: integer().notNull(),
+  countedCashClp: integer().notNull(),
+  differenceClp: integer().notNull(),
+  note: text().notNull().default(''),
+  createdAt: timestamps.createdAt,
+});
+
+export const suppliers = sqliteTable('suppliers', {
+  id: id(),
+  name: text().notNull(),
+  phone: text(),
+  archivedAt: archivedAt(),
+  ...timestamps,
+});
+
+export const supplies = sqliteTable(
+  'supplies',
+  {
+    id: id(),
+    name: text().notNull(),
+    unit: text({ enum: SUPPLY_UNITS }).notNull(),
+    stock: real().notNull().default(0),
+    minStock: real().notNull().default(0),
+    costPerUnitClp: integer().notNull().default(0),
+    supplierId: text().references(() => suppliers.id, { onDelete: 'set null' }),
+    /** Earliest expiry of what is in stock (`YYYY-MM-DD`), if the supply expires. */
+    expiresOn: text(),
+    archivedAt: archivedAt(),
+    ...timestamps,
+  },
+  (table) => [index('supplies_supplier_idx').on(table.supplierId)],
+);
+
+/** Every change to a supply's stock, so shrinkage and usage can be reported and audited. */
+export const stockMovements = sqliteTable(
+  'stock_movements',
+  {
+    id: id(),
+    supplyId: text()
+      .notNull()
+      .references(() => supplies.id, { onDelete: 'cascade' }),
+    kind: text({ enum: MOVEMENT_KINDS }).notNull(),
+    delta: real().notNull(),
+    costClp: integer().notNull().default(0),
+    note: text().notNull().default(''),
+    createdAt: timestamps.createdAt,
+  },
+  (table) => [index('stock_movements_supply_idx').on(table.supplyId)],
+);
+
+/** What a unit of a product uses: selling it takes these quantities out of the stock. */
+export const recipeItems = sqliteTable(
+  'recipe_items',
+  {
+    productId: text()
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    supplyId: text()
+      .notNull()
+      .references(() => supplies.id, { onDelete: 'cascade' }),
+    quantity: real().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.productId, table.supplyId] })],
 );

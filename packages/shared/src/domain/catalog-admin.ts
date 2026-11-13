@@ -132,7 +132,11 @@ function checkSizeRules(
 }
 
 export const PromotionInputSchema = z
-  .object({ startsOn: DateOnlySchema.nullable(), endsOn: DateOnlySchema.nullable() })
+  .object({
+    startsOn: DateOnlySchema.nullable(),
+    endsOn: DateOnlySchema.nullable(),
+    discountPercent: z.number().int().min(0, 'Entre 0 y 90').max(90, 'Entre 0 y 90').optional(),
+  })
   .refine((promo) => !promo.startsOn || !promo.endsOn || promo.startsOn <= promo.endsOn, {
     message: 'La fecha de término es anterior al inicio',
     path: ['endsOn'],

@@ -72,6 +72,7 @@ function productRow(input: ProductInput) {
     isPromotion: input.promotion !== null,
     promoStartsOn: input.promotion?.startsOn ?? null,
     promoEndsOn: input.promotion?.endsOn ?? null,
+    promoDiscountPercent: input.promotion?.discountPercent ?? 0,
   };
 }
 

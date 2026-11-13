@@ -5,6 +5,8 @@ export * from './domain/checks.js';
 export * from './domain/orders.js';
 export * from './domain/printing.js';
 export * from './domain/braille.js';
+export * from './domain/reports.js';
+export * from './domain/inventory.js';
 export * from './domain/product-rules.js';
 export * from './domain/receipts.js';
 export * from './domain/tables.js';

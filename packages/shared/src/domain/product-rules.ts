@@ -62,3 +62,31 @@ export function calendarDate(now: Date, timeZone: string): string {
     day: '2-digit',
   }).format(now);
 }
+
+/** Price after a percentage discount, in whole pesos. */
+export function discountedPrice(priceClp: number, discountPercent: number): number {
+  return Math.round((priceClp * (100 - discountPercent)) / 100);
+}
+
+/**
+ * The product with the prices customers pay today: base and size prices lowered while a promotion
+ * with a discount is running. Admin screens keep the base prices; sales and the menu use these.
+ */
+export function withPromotionPrices<
+  T extends {
+    priceClp: number;
+    sizes: readonly { priceClp: number }[];
+    promotion: Promotion | null;
+  },
+>(product: T, today: string): T {
+  const percent = product.promotion?.discountPercent ?? 0;
+  if (percent === 0 || !isPromotionActive(product.promotion, today)) return product;
+  return {
+    ...product,
+    priceClp: discountedPrice(product.priceClp, percent),
+    sizes: product.sizes.map((size) => ({
+      ...size,
+      priceClp: discountedPrice(size.priceClp, percent),
+    })),
+  };
+}

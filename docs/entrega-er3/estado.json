@@ -1,5 +1,19 @@
 {
-  "implementado": ["Mesas", "Pedido", "Cocina", "Cobro con división de cuenta", "Carta digital accesible por QR", "Administración de carta y productos", "Impresión de comandas en impresora térmica", "Resumen de hoy", "Exportación de la carta a braille 3D"],
-  "pendiente": ["Reportes y cierre de caja", "Bodega y Compras", "QR por mesa y Promociones"],
+  "implementado": [
+    "Mesas",
+    "Pedido",
+    "Cocina",
+    "Cobro con división de cuenta",
+    "Carta digital accesible por QR",
+    "Administración de carta y productos (buscar, filtrar y agotado hoy)",
+    "Promociones con descuento real",
+    "Impresión de comandas en impresora térmica",
+    "Resumen de hoy",
+    "Reportes y cierre de caja",
+    "Bodega y compras con recetas",
+    "QR por mesa",
+    "Exportación de la carta a braille 3D"
+  ],
+  "pendiente": ["Clientes (cuentas semanales)"],
   "braille": true
 }

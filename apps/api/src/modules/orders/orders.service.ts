@@ -1,6 +1,8 @@
 import {
+  calendarDate,
   canTransitionOrder,
   resolveGroupRules,
+  withPromotionPrices,
   type ApiFieldIssue,
   type CreateOrderInput,
   type CreateOrderItemInput,
@@ -19,12 +21,24 @@ import type {
   OrdersRepository,
 } from './orders.repository.js';
 
+export interface OrdersClock {
+  now: () => Date;
+  timeZone: string;
+}
+
 export class OrdersService {
+  readonly #clock: OrdersClock;
   readonly #repository: OrdersRepository;
   readonly #publisher: RealtimePublisher;
   readonly #checks: CheckHooks;
 
-  constructor(repository: OrdersRepository, publisher: RealtimePublisher, checks: CheckHooks) {
+  constructor(
+    repository: OrdersRepository,
+    publisher: RealtimePublisher,
+    checks: CheckHooks,
+    clock: OrdersClock,
+  ) {
+    this.#clock = clock;
     this.#repository = repository;
     this.#publisher = publisher;
     this.#checks = checks;
@@ -95,7 +109,12 @@ export class OrdersService {
 
   /** The server owns the price: it snapshots the current catalog, never trusting the client. */
   async #priceItems(lines: CreateOrderInput['items']): Promise<NewOrderItem[]> {
-    const products = await this.#repository.productsForOrder(lines.map((line) => line.productId));
+    const today = calendarDate(this.#clock.now(), this.#clock.timeZone);
+    const products = (
+      await this.#repository.productsForOrder(lines.map((line) => line.productId))
+    ).map((product) =>
+      withPromotionPrices({ ...product, promotion: product.promotion ?? null }, today),
+    );
     const byId = new Map(products.map((product) => [product.id, product]));
 
     const issues: ApiFieldIssue[] = [];

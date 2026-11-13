@@ -31,6 +31,20 @@ import { BrailleController } from './modules/braille/braille.controller.js';
 import { createBrailleRouter } from './modules/braille/braille.routes.js';
 import { BrailleService } from './modules/braille/braille.service.js';
 import { CatalogController } from './modules/catalog/catalog.controller.js';
+import { InventoryController } from './modules/inventory/inventory.controller.js';
+import { DrizzleInventoryRepository } from './modules/inventory/inventory.repository.js';
+import { createInventoryRouter } from './modules/inventory/inventory.routes.js';
+import { InventoryService } from './modules/inventory/inventory.service.js';
+import { DrizzleTableQrRepository } from './modules/table-qr/table-qr.repository.js';
+import {
+  createTableLabelRouter,
+  createTableQrAdminRouter,
+} from './modules/table-qr/table-qr.routes.js';
+import { TableQrService } from './modules/table-qr/table-qr.service.js';
+import { ReportsController } from './modules/reports/reports.controller.js';
+import { DrizzleReportsRepository } from './modules/reports/reports.repository.js';
+import { createReportsRouter } from './modules/reports/reports.routes.js';
+import { ReportsService } from './modules/reports/reports.service.js';
 import { ChecksController } from './modules/checks/checks.controller.js';
 import { DrizzleChecksRepository } from './modules/checks/checks.repository.js';
 import { createChecksRouter } from './modules/checks/checks.routes.js';
@@ -85,6 +99,17 @@ export function buildApiRouters({
 
   const catalogService = new CatalogService(new DrizzleCatalogRepository(db), clock);
   const catalogController = new CatalogController(catalogService);
+  const inventoryService = new InventoryService(
+    new DrizzleInventoryRepository(db),
+    clock.timeZone,
+    logger,
+  );
+  inventoryService.start(eventHub);
+  const inventoryRouter = createInventoryRouter(new InventoryController(inventoryService));
+  const tableQrService = new TableQrService(new DrizzleTableQrRepository(db));
+  const reportsRouter = createReportsRouter(
+    new ReportsController(new ReportsService(new DrizzleReportsRepository(db), clock.timeZone)),
+  );
   const brailleRouter = createBrailleRouter(
     new BrailleController(new BrailleService(catalogService)),
   );
@@ -104,7 +129,7 @@ export function buildApiRouters({
     logger.error({ err: error }, 'No se pudo iniciar la impresión');
   });
   const ordersController = new OrdersController(
-    new OrdersService(ordersRepository, eventHub, checksService),
+    new OrdersService(ordersRepository, eventHub, checksService, clock),
   );
   const tablesController = new TablesController(
     new TablesService(new DrizzleTablesRepository(db), checksService),
@@ -136,6 +161,7 @@ export function buildApiRouters({
     createCatalogRouter(catalogController),
     createOrdersRouter(ordersController),
     createTablesRouter(tablesController),
+    createTableLabelRouter(tableQrService),
     createChecksRouter(new ChecksController(checksService)),
     createPrintingRouter(new PrintingController(printService)),
     createRealtimeRouter(eventHub),
@@ -143,6 +169,9 @@ export function buildApiRouters({
     createCatalogAdminRouter(catalogAdminControllers, requireAdmin(adminAuthService), [
       imagesRouter,
       brailleRouter,
+      reportsRouter,
+      inventoryRouter,
+      createTableQrAdminRouter(tableQrService),
     ]),
   ];
 }

@@ -7,7 +7,6 @@ import {
   type LucideIcon,
   Package,
   Settings,
-  ShoppingCart,
   Users,
 } from 'lucide-react';
 
@@ -83,45 +82,12 @@ export const APP_MODULES: readonly AppModule[] = [
   },
   {
     path: '/bodega',
-    group: 'management',
-    label: 'Bodega',
+    label: 'Bodega y compras',
     icon: Package,
-    status: 'in-development',
-    summary: 'Control de insumos con descuento automático al vender.',
-    plannedFeatures: [
-      'Stock de insumos actualizado con cada venta',
-      'Alertas de stock bajo el mínimo',
-      'Avisos de productos por vencer',
-    ],
-    plannedIncrement: 'INC-4',
-  },
-  {
-    path: '/compras',
     group: 'management',
-    label: 'Compras',
-    icon: ShoppingCart,
-    status: 'in-development',
-    summary: 'Lista de compra sugerida según el stock y lo que se vende cada semana.',
-    plannedFeatures: [
-      'Lista de compra agrupada por proveedor',
-      'Envío del pedido al proveedor por WhatsApp',
-    ],
-    plannedIncrement: 'INC-4',
+    status: 'active',
   },
-  {
-    path: '/reportes',
-    group: 'management',
-    label: 'Reportes',
-    icon: BarChart3,
-    status: 'in-development',
-    summary: 'Resumen de ventas para decidir con datos reales.',
-    plannedFeatures: [
-      'Ventas, pedidos y ticket promedio por semana, mes y temporada',
-      'Lo más vendido y productos de poca salida',
-      'Exportación a PDF',
-    ],
-    plannedIncrement: 'INC-5',
-  },
+  { path: '/reportes', label: 'Reportes', icon: BarChart3, group: 'management', status: 'active' },
   {
     path: '/clientes',
     group: 'management',

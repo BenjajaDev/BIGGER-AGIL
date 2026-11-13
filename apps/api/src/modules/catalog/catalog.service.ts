@@ -1,6 +1,7 @@
 import {
   calendarDate,
   isPromotionActive,
+  withPromotionPrices,
   type Category,
   type Menu,
   type MenuProduct,
@@ -28,8 +29,11 @@ export class CatalogService {
     return this.#repository.listCategories();
   }
 
-  listProducts(filter: ProductFilter): Promise<MenuProduct[]> {
-    return this.#repository.listProducts(filter);
+  /** Sale prices: a running promotion's discount is already applied to the prices returned. */
+  async listProducts(filter: ProductFilter): Promise<MenuProduct[]> {
+    const today = calendarDate(this.#clock.now(), this.#clock.timeZone);
+    const products = await this.#repository.listProducts(filter);
+    return products.map((product) => withPromotionPrices(product, today));
   }
 
   /**
@@ -45,6 +49,7 @@ export class CatalogService {
     const today = calendarDate(this.#clock.now(), this.#clock.timeZone);
     const publicProducts = availableProducts
       .map((product) => toPublicMenuProduct(product, (p) => isPromotionActive(p.promotion, today)))
+      .map((product) => (product ? withPromotionPrices(product, today) : product))
       .filter((product): product is MenuProduct => product !== null);
 
     const categoriesWithProducts = allCategories

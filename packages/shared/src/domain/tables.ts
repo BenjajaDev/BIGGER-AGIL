@@ -24,3 +24,14 @@ export const TableOverviewSchema = DiningTableSchema.extend({
   openSince: z.iso.datetime().nullable(),
 });
 export type TableOverview = z.infer<typeof TableOverviewSchema>;
+
+/** What a table's QR needs: an unguessable token that opens the menu showing the table's name. */
+export const TableQrSchema = z.object({
+  id: z.uuid(),
+  number: z.number().int(),
+  label: z.string(),
+  token: z.string().min(16),
+});
+export type TableQr = z.infer<typeof TableQrSchema>;
+
+export const TableLabelSchema = z.object({ label: z.string() });

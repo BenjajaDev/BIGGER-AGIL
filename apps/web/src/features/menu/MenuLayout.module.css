@@ -108,3 +108,10 @@
   font-weight: var(--weight-semibold);
   text-decoration: none;
 }
+
+.tableBanner {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-muted);
+  font-weight: var(--weight-semibold);
+}

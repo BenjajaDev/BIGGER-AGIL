@@ -14,6 +14,7 @@ const loadCatalogAdmin = {
   typeEditor: () => import('../features/catalog-admin/ProductTypeEditorPage'),
   printer: () => import('../features/printing/PrinterPage'),
   braille: () => import('../features/braille/BraillePage'),
+  qr: () => import('../features/table-qr/TableQrPage'),
 };
 
 const configurationRoute: RouteObject = {
@@ -59,6 +60,10 @@ const configurationRoute: RouteObject = {
         loadCatalogAdmin.groupEditor().then((m) => ({ Component: m.ModifierGroupEditorPage })),
     })),
     {
+      path: 'qr',
+      lazy: () => loadCatalogAdmin.qr().then((m) => ({ Component: m.TableQrPage })),
+    },
+    {
       path: 'braille',
       lazy: () => loadCatalogAdmin.braille().then((m) => ({ Component: m.BraillePage })),
     },
@@ -100,6 +105,16 @@ const internalRoutes: RouteObject[] = [
     path: '/cocina',
     lazy: () =>
       import('../features/kitchen/KitchenPage').then((m) => ({ Component: m.KitchenPage })),
+  },
+  {
+    path: '/reportes',
+    lazy: () =>
+      import('../features/reports/ReportsPage').then((m) => ({ Component: m.ReportsPage })),
+  },
+  {
+    path: '/bodega',
+    lazy: () =>
+      import('../features/inventory/BodegaPage').then((m) => ({ Component: m.BodegaPage })),
   },
   configurationRoute,
   ...IN_DEVELOPMENT_MODULES.map((module) => ({
