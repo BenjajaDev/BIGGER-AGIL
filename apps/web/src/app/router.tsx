@@ -106,6 +106,11 @@ const internalRoutes: RouteObject[] = [
     lazy: () =>
       import('../features/reports/ReportsPage').then((m) => ({ Component: m.ReportsPage })),
   },
+  {
+    path: '/bodega',
+    lazy: () =>
+      import('../features/inventory/BodegaPage').then((m) => ({ Component: m.BodegaPage })),
+  },
   configurationRoute,
   ...IN_DEVELOPMENT_MODULES.map((module) => ({
     path: module.path,

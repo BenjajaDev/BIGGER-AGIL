@@ -31,6 +31,10 @@ import { BrailleController } from './modules/braille/braille.controller.js';
 import { createBrailleRouter } from './modules/braille/braille.routes.js';
 import { BrailleService } from './modules/braille/braille.service.js';
 import { CatalogController } from './modules/catalog/catalog.controller.js';
+import { InventoryController } from './modules/inventory/inventory.controller.js';
+import { DrizzleInventoryRepository } from './modules/inventory/inventory.repository.js';
+import { createInventoryRouter } from './modules/inventory/inventory.routes.js';
+import { InventoryService } from './modules/inventory/inventory.service.js';
 import { ReportsController } from './modules/reports/reports.controller.js';
 import { DrizzleReportsRepository } from './modules/reports/reports.repository.js';
 import { createReportsRouter } from './modules/reports/reports.routes.js';
@@ -89,6 +93,13 @@ export function buildApiRouters({
 
   const catalogService = new CatalogService(new DrizzleCatalogRepository(db), clock);
   const catalogController = new CatalogController(catalogService);
+  const inventoryService = new InventoryService(
+    new DrizzleInventoryRepository(db),
+    clock.timeZone,
+    logger,
+  );
+  inventoryService.start(eventHub);
+  const inventoryRouter = createInventoryRouter(new InventoryController(inventoryService));
   const reportsRouter = createReportsRouter(
     new ReportsController(new ReportsService(new DrizzleReportsRepository(db), clock.timeZone)),
   );
@@ -151,6 +162,7 @@ export function buildApiRouters({
       imagesRouter,
       brailleRouter,
       reportsRouter,
+      inventoryRouter,
     ]),
   ];
 }

@@ -747,6 +747,66 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/Conflict' }
 
+  /admin/inventory/supplies:
+    get:
+      tags: [Administración]
+      summary: Lista los insumos de bodega
+      operationId: adminListSupplies
+      security: [{ adminSession: [] }]
+      responses:
+        '200': { description: Insumos con stock, mínimo, costo, proveedor y vencimiento }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Administración]
+      summary: Crea un insumo
+      operationId: adminCreateSupply
+      security: [{ adminSession: [] }]
+      responses:
+        '201': { description: Insumo creado }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/inventory/supplies/{id}/movements:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Administración]
+      summary: Registra una entrada, una merma o un conteo de stock
+      description: |
+        `purchase` suma (y puede traer nueva fecha de vencimiento), `waste` resta y se valoriza al costo del insumo
+        para el reporte de merma, `adjustment` fija el stock contado. El stock nunca baja de cero.
+      operationId: adminRegisterMovement
+      security: [{ adminSession: [] }]
+      responses:
+        '201': { description: Insumo con el stock actualizado }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/inventory/purchase-list:
+    get:
+      tags: [Administración]
+      summary: Lista de compra sugerida por proveedor
+      description: Insumos bajo su mínimo, sin stock o vencidos; se sugiere comprar hasta el doble del mínimo.
+      operationId: adminPurchaseList
+      security: [{ adminSession: [] }]
+      responses:
+        '200': { description: Grupos por proveedor con cantidades y costo estimado }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/inventory/recipes/{productId}:
+    put:
+      tags: [Administración]
+      summary: Define lo que usa una unidad de un producto
+      description: Al crearse un pedido, el stock baja según la receta de cada producto (evento `order.created`).
+      operationId: adminSetRecipe
+      security: [{ adminSession: [] }]
+      parameters:
+        - { name: productId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Receta guardada }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /admin/modifier-groups:
     get:
       tags: [Administración]

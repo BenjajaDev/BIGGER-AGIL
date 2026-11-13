@@ -2,12 +2,14 @@ import {
   CHECK_STATUSES,
   ORDER_CHANNELS,
   ORDER_ITEM_OPTION_KINDS,
+  MOVEMENT_KINDS,
   ORDER_STATUSES,
   PAYMENT_METHODS,
   PAYMENT_MODES,
   PRINT_JOB_KINDS,
   PRINT_JOB_STATUSES,
   PRODUCT_KINDS,
+  SUPPLY_UNITS,
   type Allergen,
   type ProductSize,
   type QuickNote,
@@ -19,6 +21,7 @@ import {
   index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -403,3 +406,61 @@ export const cashCloses = sqliteTable('cash_closes', {
   note: text().notNull().default(''),
   createdAt: timestamps.createdAt,
 });
+
+export const suppliers = sqliteTable('suppliers', {
+  id: id(),
+  name: text().notNull(),
+  phone: text(),
+  archivedAt: archivedAt(),
+  ...timestamps,
+});
+
+export const supplies = sqliteTable(
+  'supplies',
+  {
+    id: id(),
+    name: text().notNull(),
+    unit: text({ enum: SUPPLY_UNITS }).notNull(),
+    stock: real().notNull().default(0),
+    minStock: real().notNull().default(0),
+    costPerUnitClp: integer().notNull().default(0),
+    supplierId: text().references(() => suppliers.id, { onDelete: 'set null' }),
+    /** Earliest expiry of what is in stock (`YYYY-MM-DD`), if the supply expires. */
+    expiresOn: text(),
+    archivedAt: archivedAt(),
+    ...timestamps,
+  },
+  (table) => [index('supplies_supplier_idx').on(table.supplierId)],
+);
+
+/** Every change to a supply's stock, so shrinkage and usage can be reported and audited. */
+export const stockMovements = sqliteTable(
+  'stock_movements',
+  {
+    id: id(),
+    supplyId: text()
+      .notNull()
+      .references(() => supplies.id, { onDelete: 'cascade' }),
+    kind: text({ enum: MOVEMENT_KINDS }).notNull(),
+    delta: real().notNull(),
+    costClp: integer().notNull().default(0),
+    note: text().notNull().default(''),
+    createdAt: timestamps.createdAt,
+  },
+  (table) => [index('stock_movements_supply_idx').on(table.supplyId)],
+);
+
+/** What a unit of a product uses: selling it takes these quantities out of the stock. */
+export const recipeItems = sqliteTable(
+  'recipe_items',
+  {
+    productId: text()
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    supplyId: text()
+      .notNull()
+      .references(() => supplies.id, { onDelete: 'cascade' }),
+    quantity: real().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.productId, table.supplyId] })],
+);
