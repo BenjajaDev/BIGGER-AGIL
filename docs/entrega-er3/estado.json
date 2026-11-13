@@ -1,0 +1,5 @@
+{
+  "implementado": ["Mesas", "Pedido", "Cocina", "Cobro con división de cuenta", "Carta digital accesible por QR", "Administración de carta y productos", "Impresión de comandas en impresora térmica", "Resumen de hoy", "Exportación de la carta a braille 3D"],
+  "pendiente": ["Reportes y cierre de caja", "Bodega y Compras", "QR por mesa y Promociones"],
+  "braille": true
+}

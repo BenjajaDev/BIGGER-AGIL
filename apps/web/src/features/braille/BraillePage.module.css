@@ -1,0 +1,66 @@
+.page {
+  display: grid;
+  gap: var(--space-4);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+.title {
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+}
+
+.lead {
+  max-width: 48rem;
+  color: var(--text-secondary);
+}
+
+.tips {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.tipsTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+}
+
+.tipList {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  gap: var(--space-4);
+}
+
+.plate {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.preview {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-page);
+}
+
+.plateHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.plateTitle {
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+}

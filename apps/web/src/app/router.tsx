@@ -13,6 +13,7 @@ const loadCatalogAdmin = {
   typeList: () => import('../features/catalog-admin/ProductTypeListPage'),
   typeEditor: () => import('../features/catalog-admin/ProductTypeEditorPage'),
   printer: () => import('../features/printing/PrinterPage'),
+  braille: () => import('../features/braille/BraillePage'),
 };
 
 const configurationRoute: RouteObject = {
@@ -57,6 +58,10 @@ const configurationRoute: RouteObject = {
       lazy: () =>
         loadCatalogAdmin.groupEditor().then((m) => ({ Component: m.ModifierGroupEditorPage })),
     })),
+    {
+      path: 'braille',
+      lazy: () => loadCatalogAdmin.braille().then((m) => ({ Component: m.BraillePage })),
+    },
     {
       path: 'impresora',
       lazy: () => loadCatalogAdmin.printer().then((m) => ({ Component: m.PrinterPage })),

@@ -3,6 +3,7 @@ import {
   ExternalLink,
   FolderTree,
   LogOut,
+  Hand,
   Package,
   Printer,
   Shapes,
@@ -21,6 +22,7 @@ const SECTIONS = [
   { to: 'tipos', label: 'Tipos', icon: Shapes },
   { to: 'personalizaciones', label: 'Personalizaciones', icon: SlidersHorizontal },
   { to: 'categorias', label: 'Categorías', icon: FolderTree },
+  { to: 'braille', label: 'Carta braille', icon: Hand },
   { to: 'impresora', label: 'Impresora', icon: Printer },
 ] as const;
 
