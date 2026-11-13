@@ -23,6 +23,7 @@ try {
   runMigrations(connection.db);
   const result = seedDatabase(connection.db, {
     withDemoOrders: !process.argv.includes('--no-demo'),
+    withHistory: !process.argv.includes('--no-demo'),
     reset: process.argv.includes('--reset'),
   });
   logger.info({ result }, SEED_MESSAGES[result]);

@@ -1,6 +1,7 @@
 .columns {
   display: flex;
   align-items: stretch;
+  padding-inline: var(--space-6);
   gap: var(--space-2);
   height: 13rem;
   padding-bottom: var(--space-1);
@@ -33,6 +34,37 @@
   background-color: var(--tone-accent-soft);
   box-shadow: inset 0 -3px 0 var(--accent);
   transition: height var(--duration-slow) var(--ease-out);
+}
+
+/* Many days: thinner columns, labels every few days and only the best day's amount. */
+.columns[data-dense='true'] {
+  gap: var(--space-1);
+}
+
+.columns[data-dense='true'] .column {
+  flex: 1 0 1.25rem;
+  min-width: 1.25rem;
+}
+
+.columns[data-dense='true'] .columnBar {
+  width: 80%;
+}
+
+/* Labels take no width of their own, so thirty columns fit the card. */
+.columns[data-dense='true'] .columnValue,
+.columns[data-dense='true'] .columnLabel {
+  display: flex;
+  justify-content: center;
+  width: 0;
+  overflow: visible;
+}
+
+.columns[data-dense='true'] .columnValue:not([data-best='true']) > [aria-hidden='true'] {
+  visibility: hidden;
+}
+
+.columns[data-dense='true'] .column:not(:nth-child(5n + 1)) .columnLabel {
+  visibility: hidden;
 }
 
 /* The best day stands out; every bar still says its amount in words. */

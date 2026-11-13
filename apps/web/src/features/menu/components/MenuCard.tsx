@@ -31,6 +31,8 @@ export interface MenuCardProps {
   headingLevel?: 'h2' | 'h3';
   /** Local object URL shown while a new photo uploads (admin preview). */
   previewImageSrc?: string;
+  /** Category name: picks the illustration when the product name alone says nothing («Solo»). */
+  categoryName?: string;
 }
 
 function Block({ title, items }: { title: string; items: string[] }) {
@@ -56,6 +58,7 @@ export function MenuCard({
   product,
   headingLevel: Heading = 'h3',
   previewImageSrc,
+  categoryName,
 }: MenuCardProps) {
   const titleId = useId();
   const price = describePrice(product);
@@ -66,7 +69,7 @@ export function MenuCard({
       <div className={styles.media}>
         <CoverImage
           image={product.image}
-          motif={product.name}
+          motif={categoryName ? `${product.name} ${categoryName}` : product.name}
           {...(previewImageSrc ? { previewSrc: previewImageSrc } : {})}
         />
         {product.promotion && (

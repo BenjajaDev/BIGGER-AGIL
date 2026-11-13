@@ -22,7 +22,7 @@ const BEST_SELLERS: readonly (readonly [string, number])[] = [
 ];
 
 const METHODS: readonly PaymentMethod[] = ['debit', 'debit', 'cash', 'cash', 'junaeb'];
-const HISTORY_DAYS = 35;
+const HISTORY_DAYS = 65;
 const DAY_MS = 86_400_000;
 
 /** Deterministic generator (mulberry32): the same seed always draws the same history. */
@@ -42,7 +42,7 @@ export interface HistoryProduct {
 }
 
 /**
- * Paid and delivered orders for the last weeks (today excluded), so Reportes shows trends,
+ * Paid orders for the last weeks (today excluded), so Reportes shows trends,
  * the comparison with the previous period and the best and slowest sellers.
  */
 export function seedSalesHistory(
@@ -57,7 +57,7 @@ export function seedSalesHistory(
   for (let daysAgo = HISTORY_DAYS; daysAgo >= 1; daysAgo -= 1) {
     const day = new Date(now.getTime() - daysAgo * DAY_MS);
     const weekend = day.getDay() === 0 || day.getDay() === 6;
-    const orderCount = (weekend ? 11 : 8) + Math.floor(random() * 5) + (HISTORY_DAYS - daysAgo) / 3;
+    const orderCount = (weekend ? 11 : 8) + Math.floor(random() * 5) + (HISTORY_DAYS - daysAgo) / 9;
 
     for (let index = 0; index < orderCount; index += 1) {
       const createdAt = new Date(day);
@@ -81,7 +81,7 @@ export function seedSalesHistory(
         .values({
           checkId: check.id,
           channel: random() < 0.2 ? 'whatsapp' : 'takeaway',
-          status: 'delivered',
+          status: 'paid',
           totalClp,
           createdAt,
           updatedAt: createdAt,

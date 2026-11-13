@@ -96,7 +96,7 @@ describe('buildCatalogProduct', () => {
       noRelations,
     );
     expect(product.image).toEqual({ id: 'img-1', width: 1200, height: 800, focusY: 30 });
-    expect(product.promotion).toEqual({ startsOn: null, endsOn: '2026-12-31' });
+    expect(product.promotion).toEqual({ startsOn: null, endsOn: '2026-12-31', discountPercent: 0 });
   });
 
   it('attaches sizes to single products', () => {

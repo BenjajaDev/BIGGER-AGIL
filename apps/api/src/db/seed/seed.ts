@@ -42,6 +42,8 @@ import type { SeedTransaction } from './seed-types.js';
 
 export interface SeedOptions {
   withDemoOrders: boolean;
+  /** Weeks of paid sales plus suppliers, supplies and recipes, so Reportes and Bodega have data. */
+  withHistory?: boolean;
   /** Deletes every row first (catalog, tables and orders) to load the catalog again. */
   reset?: boolean;
   now?: Date;
@@ -375,6 +377,7 @@ export function seedDatabase(db: AppDatabase, options: SeedOptions): SeedResult 
       });
     }
 
+    if (options.withHistory !== true) return;
     seedSalesHistory(tx, now, productsByName);
     seedInventory(
       tx,
