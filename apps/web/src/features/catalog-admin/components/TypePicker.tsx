@@ -1,6 +1,7 @@
 import type { ProductType } from '@bigger/shared';
 import { FilePlus2, LayoutTemplate } from 'lucide-react';
 import { Link } from 'react-router';
+import { SectionHeader } from '../../../components/ui/SectionHeader';
 import { pluralize } from '../../../lib/format';
 import styles from '../CatalogAdmin.module.css';
 
@@ -21,14 +22,12 @@ function summarize(type: ProductType): string {
 export function TypePicker({ types }: { types: readonly ProductType[] }) {
   return (
     <section className={styles.section} aria-labelledby="tipo-titulo">
-      <h2 id="tipo-titulo" className={styles.sectionTitle}>
-        ¿Qué vas a agregar?
-      </h2>
+      <SectionHeader id="tipo-titulo" title="¿Qué vas a agregar?" />
       <ul role="list" className={styles.typeGrid}>
         {types.map((type) => (
           <li key={type.id}>
             <Link to={`?tipo=${type.id}`} className={styles.typeCard}>
-              <span className={styles.rowTitle}>
+              <span className={styles.typeTitle}>
                 <LayoutTemplate size={20} aria-hidden="true" />
                 {type.name}
               </span>
@@ -39,7 +38,7 @@ export function TypePicker({ types }: { types: readonly ProductType[] }) {
         ))}
         <li>
           <Link to={`?tipo=${NO_TYPE}`} className={styles.typeCard}>
-            <span className={styles.rowTitle}>
+            <span className={styles.typeTitle}>
               <FilePlus2 size={20} aria-hidden="true" />
               Desde cero
             </span>

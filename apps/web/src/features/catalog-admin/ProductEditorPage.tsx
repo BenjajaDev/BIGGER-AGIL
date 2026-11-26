@@ -12,17 +12,18 @@ import {
 } from '@bigger/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Archive } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Controller, FormProvider, useForm, type UseFormReturn } from 'react-hook-form';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router';
 import { RouteFallback } from '../../app/RouteFallback';
 import { CheckboxGroup } from '../../components/form/CheckboxGroup';
 import { ButtonLink } from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { ALLERGEN_LABELS } from '../menu/allergens';
 import styles from './CatalogAdmin.module.css';
 import { ComboSlotsEditor, type ProductChoiceGroup } from './components/ComboSlotsEditor';
+import { EditorSection } from './components/EditorSection';
 import { FormAlert } from './components/FormAlert';
 import { ImageField } from './components/ImageField';
 import { LivePreview } from './components/LivePreview';
@@ -77,20 +78,9 @@ function useSubmitProduct<T extends SingleProductInput | ComboProductInput>(
   return { onSubmit, alert, isPending: save.isPending };
 }
 
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
-  return (
-    <Card as="section" className={styles.formCard} aria-labelledby={id}>
-      <h2 id={id} className={styles.sectionTitle}>
-        {title}
-      </h2>
-      {children}
-    </Card>
-  );
-}
-
 function PhotoSection() {
   return (
-    <Section id="foto-titulo" title="Foto de la tarjeta">
+    <EditorSection id="foto-titulo" title="Foto de la tarjeta">
       <Controller<SingleProductInput, 'image'>
         name="image"
         render={({ field, fieldState }) => (
@@ -102,7 +92,7 @@ function PhotoSection() {
           />
         )}
       />
-    </Section>
+    </EditorSection>
   );
 }
 
@@ -136,14 +126,14 @@ function SingleProductForm({
       <div className={styles.editor}>
         <form className={styles.form} onSubmit={(event) => void onSubmit(event)} noValidate>
           <FormAlert message={alert} />
-          <Section id="datos-titulo" title="Datos del producto">
+          <EditorSection id="datos-titulo" title="Datos del producto">
             <ProductBaseFields categories={categories} types={types} />
-          </Section>
+          </EditorSection>
           <PhotoSection />
-          <Section id="precio-titulo" title="Precio y tamaños">
+          <EditorSection id="precio-titulo" title="Precio y tamaños">
             <SizesEditor withBasePrice />
-          </Section>
-          <Section id="personalizaciones-titulo" title="Ingredientes, extras y reglas">
+          </EditorSection>
+          <EditorSection id="personalizaciones-titulo" title="Ingredientes, extras y reglas">
             <Controller
               control={form.control}
               name="modifierGroupIds"
@@ -172,8 +162,8 @@ function SingleProductForm({
               </p>
             )}
             <SizeRulesMatrix groups={modifierGroups} />
-          </Section>
-          <Section id="alergenos-titulo" title="Alérgenos">
+          </EditorSection>
+          <EditorSection id="alergenos-titulo" title="Alérgenos">
             <Controller
               control={form.control}
               name="allergens"
@@ -189,10 +179,10 @@ function SingleProductForm({
                 />
               )}
             />
-          </Section>
-          <Section id="promocion-titulo" title="Promoción">
+          </EditorSection>
+          <EditorSection id="promocion-titulo" title="Promoción">
             <PromotionFields />
-          </Section>
+          </EditorSection>
           <SaveBar cancelTo={copy.basePath} isPending={isPending} />
         </form>
         <LivePreview kind="single" groups={modifierGroups} products={products} />
@@ -239,25 +229,25 @@ function ComboProductForm({
       <div className={styles.editor}>
         <form className={styles.form} onSubmit={(event) => void onSubmit(event)} noValidate>
           <FormAlert message={alert} />
-          <Section id="datos-titulo" title="Datos del combo">
+          <EditorSection id="datos-titulo" title="Datos del combo">
             <ProductBaseFields
               categories={categories}
               types={types}
               priceHint="Precio del combo; cada opción puede sumar un extra."
             />
-          </Section>
+          </EditorSection>
           <PhotoSection />
-          <Section id="espacios-titulo" title="¿Qué incluye?">
+          <EditorSection id="espacios-titulo" title="¿Qué incluye?">
             <p className={styles.rowMeta}>
               Cada espacio es una elección del cliente («Café», «Donut»). Márcalo como opcional si
               se puede dejar vacío. Para un combo fijo, deja un solo producto por espacio. Los
               alérgenos se calculan solos.
             </p>
             <ComboSlotsEditor choices={comboChoices(products, categories)} />
-          </Section>
-          <Section id="promocion-titulo" title="Promoción">
+          </EditorSection>
+          <EditorSection id="promocion-titulo" title="Promoción">
             <PromotionFields />
-          </Section>
+          </EditorSection>
           <SaveBar cancelTo={copy.basePath} isPending={isPending} />
         </form>
         <LivePreview kind="combo" groups={modifierGroups} products={products} />
@@ -317,10 +307,8 @@ export function ProductEditorPage({ kind }: { kind: ProductKind }) {
   const title = product ? `Editar «${product.name}»` : copy.newLabel;
   if (!product && chosenType === null && types.length > 0) {
     return (
-      <section className={styles.page} aria-labelledby="editor-titulo">
-        <h1 id="editor-titulo" className={styles.title}>
-          {title}
-        </h1>
+      <section className={styles.page}>
+        <PageHeader title={title} back={{ to: copy.basePath, label: copy.title }} />
         <TypePicker types={types} />
       </section>
     );
@@ -340,17 +328,18 @@ export function ProductEditorPage({ kind }: { kind: ProductKind }) {
   };
 
   return (
-    <section className={styles.page} aria-labelledby="editor-titulo">
-      <div className={styles.header}>
-        <h1 id="editor-titulo" className={styles.title}>
-          {title}
-        </h1>
-        {template && (
-          <p className={styles.rowMeta}>
-            Basado en «{template.name}» · <Link to="?">Cambiar tipo</Link>
-          </p>
-        )}
-      </div>
+    <section className={styles.page}>
+      <PageHeader
+        title={title}
+        back={{ to: copy.basePath, label: copy.title }}
+        subtitle={
+          template ? (
+            <>
+              Basado en «{template.name}» · <Link to="?">Cambiar tipo</Link>
+            </>
+          ) : undefined
+        }
+      />
       {kind === 'single' ? (
         <SingleProductForm key={`${product?.id ?? 'nuevo'}-${chosenType ?? ''}`} {...sources} />
       ) : (

@@ -167,7 +167,16 @@ export function BodegaPage() {
   const session = useAdminSession();
   return (
     <AsyncContent query={session} loadingLabel="Verificando acceso…">
-      {(current) => (current.authenticated ? <BodegaContent /> : <PinLoginForm />)}
+      {(current) =>
+        current.authenticated ? (
+          <BodegaContent />
+        ) : (
+          <PinLoginForm
+            title="Bodega y compras"
+            description="Ingresa el PIN de encargado para ver el inventario y las compras."
+          />
+        )
+      }
     </AsyncContent>
   );
 }

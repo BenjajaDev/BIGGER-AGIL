@@ -1,23 +1,6 @@
 .page {
   display: grid;
-  gap: var(--space-4);
-  max-width: var(--content-max-width);
-  margin: 0 auto;
-}
-.head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.title {
-  font-size: var(--text-heading);
-  font-weight: var(--weight-bold);
-}
-.lead {
-  max-width: 48rem;
-  color: var(--text-secondary);
+  gap: var(--space-5);
 }
 .grid {
   display: grid;
@@ -41,6 +24,7 @@
   font-size: var(--text-detail);
 }
 
+/* Print: only the page title and the QR sheet; app bars and section nav stay out. */
 @media print {
   .noPrint {
     display: none;

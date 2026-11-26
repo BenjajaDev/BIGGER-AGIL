@@ -12,7 +12,7 @@ export function AppShell() {
 
   return (
     <div className={styles.shell}>
-      <a className={styles.skipLink} href="#contenido">
+      <a className={styles.skipLink} href="#contenido" data-no-print>
         Saltar al contenido
       </a>
       <TopNav connection={connection} badges={badges} />

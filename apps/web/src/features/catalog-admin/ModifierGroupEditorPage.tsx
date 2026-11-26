@@ -12,10 +12,11 @@ import { RouteFallback } from '../../app/RouteFallback';
 import { controlClassName } from '../../components/form/control';
 import { Field } from '../../components/form/Field';
 import { ButtonLink } from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { pluralize } from '../../lib/format';
 import styles from './CatalogAdmin.module.css';
+import { EditorSection } from './components/EditorSection';
 import { FormAlert } from './components/FormAlert';
 import { ModifierOptionsEditor } from './components/ModifierOptionsEditor';
 import { SaveBar } from './components/SaveBar';
@@ -57,10 +58,7 @@ function ModifierGroupForm({ group }: { group: AdminModifierGroup | undefined })
     <FormProvider {...form}>
       <form className={styles.form} onSubmit={(event) => void onSubmit(event)} noValidate>
         <FormAlert message={alert} />
-        <Card as="section" className={styles.formCard} aria-labelledby="regla-titulo">
-          <h2 id="regla-titulo" className={styles.sectionTitle}>
-            Nombre y regla
-          </h2>
+        <EditorSection id="regla-titulo" title="Nombre y regla">
           <Field
             label="Nombre"
             hint="Ej.: Tipo de leche, Tamaño, Sabores"
@@ -110,13 +108,10 @@ function ModifierGroupForm({ group }: { group: AdminModifierGroup | undefined })
           <p className={styles.summary} aria-live="polite">
             {rule}
           </p>
-        </Card>
-        <Card as="section" className={styles.formCard} aria-labelledby="opciones-titulo">
-          <h2 id="opciones-titulo" className={styles.sectionTitle}>
-            Opciones
-          </h2>
+        </EditorSection>
+        <EditorSection id="opciones-titulo" title="Opciones">
           <ModifierOptionsEditor />
-        </Card>
+        </EditorSection>
         <SaveBar cancelTo={BASE_PATH} isPending={save.isPending} />
       </form>
     </FormProvider>
@@ -141,16 +136,16 @@ export function ModifierGroupEditorPage() {
 
   const group = groupQuery.data;
   return (
-    <section className={styles.page} aria-labelledby="editor-titulo">
-      <h1 id="editor-titulo" className={styles.title}>
-        {group ? `Editar «${group.name}»` : 'Nueva personalización'}
-      </h1>
-      {group && group.productCount > 0 && (
-        <p className={styles.rowMeta}>
-          Usada en {pluralize(group.productCount, 'producto', 'productos')}: los cambios se aplican
-          a todos.
-        </p>
-      )}
+    <section className={styles.page}>
+      <PageHeader
+        title={group ? `Editar «${group.name}»` : 'Nueva personalización'}
+        back={{ to: BASE_PATH, label: 'Personalizaciones' }}
+        subtitle={
+          group && group.productCount > 0
+            ? `Usada en ${pluralize(group.productCount, 'producto', 'productos')}: los cambios se aplican a todos.`
+            : undefined
+        }
+      />
       <ModifierGroupForm key={group?.id ?? 'nueva'} group={group} />
     </section>
   );

@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AdminLoginInputSchema, type AdminLoginInput } from '@bigger/shared';
-import { LockKeyhole } from 'lucide-react';
+import { LockKeyhole, LogIn } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { Page } from '../../../components/layout/Page';
 import { controlClassName } from '../../../components/form/control';
 import { Field } from '../../../components/form/Field';
 import { Button } from '../../../components/ui/Button';
@@ -13,7 +14,15 @@ import { useLogin } from '../useCatalogAdmin';
 import { FormAlert } from './FormAlert';
 import styles from './PinLoginForm.module.css';
 
-export function PinLoginForm() {
+export interface PinLoginFormProps {
+  title?: string;
+  description?: string;
+}
+
+export function PinLoginForm({
+  title = 'Configuración de la carta',
+  description = 'Solo el encargado puede cambiar productos y precios. Ingresa el PIN de administración.',
+}: PinLoginFormProps) {
   const login = useLogin();
   const [alert, setAlert] = useState<string | null>(null);
   const {
@@ -43,23 +52,23 @@ export function PinLoginForm() {
   });
 
   return (
-    <div className={styles.wrapper}>
+    <Page width="narrow" className={styles.wrapper}>
       <Card as="section" className={styles.card} aria-labelledby="pin-titulo">
         <span className={styles.icon}>
           <LockKeyhole size={28} aria-hidden="true" />
         </span>
         <h1 id="pin-titulo" className={styles.title}>
-          Configuración de la carta
+          {title}
         </h1>
-        <p className={styles.lead}>
-          Solo el encargado puede cambiar productos y precios. Ingresa el PIN de administración.
-        </p>
+        <p className={styles.lead}>{description}</p>
         <FormAlert message={alert} />
         <form onSubmit={(event) => void onSubmit(event)} noValidate>
           <Field label="PIN" error={errors.pin?.message}>
             {(control) => (
               <input
                 {...control}
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
                 {...register('pin')}
                 type="password"
                 inputMode="numeric"
@@ -75,12 +84,13 @@ export function PinLoginForm() {
             size="lg"
             fullWidth
             disabled={login.isPending}
-            style={{ marginTop: 'var(--space-4)' }}
+            className={styles.submit}
           >
+            <LogIn size={20} aria-hidden="true" />
             {login.isPending ? 'Verificando…' : 'Entrar'}
           </Button>
         </form>
       </Card>
-    </div>
+    </Page>
   );
 }

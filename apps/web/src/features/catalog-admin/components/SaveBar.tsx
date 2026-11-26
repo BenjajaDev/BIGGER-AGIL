@@ -9,6 +9,7 @@ export interface SaveBarProps {
   extra?: ReactNode;
 }
 
+/** Sticky bar: sits above the phone bottom bar so Guardar is always reachable. */
 export function SaveBar({ cancelTo, isPending, extra }: SaveBarProps) {
   return (
     <div className={styles.saveBar}>

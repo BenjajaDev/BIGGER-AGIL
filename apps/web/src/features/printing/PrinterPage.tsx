@@ -6,13 +6,18 @@ import {
   LoaderCircle,
   Printer,
   PrinterCheck,
+  PrinterX,
   RotateCw,
+  TriangleAlert,
   type LucideIcon,
 } from 'lucide-react';
 import { AsyncContent } from '../../components/ui/AsyncContent';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { SectionHeader } from '../../components/ui/SectionHeader';
 import { StatusBadge, type StatusTone } from '../../components/ui/StatusBadge';
+import { cx } from '../../lib/cx';
 import { formatClockTime, pluralize } from '../../lib/format';
 import { FieldError } from '../../components/form/Field';
 import { ApiRequestError } from '../../services/http-client';
@@ -40,10 +45,11 @@ const PATH_EXAMPLES = [
 
 function DisabledNotice() {
   return (
-    <Card as="section" className={styles.card} aria-labelledby="como-activar">
-      <h2 id="como-activar" className={styles.cardTitle}>
-        La impresión está desactivada
-      </h2>
+    <Card as="section" className={cx(styles.card, styles.disabled)} aria-labelledby="como-activar">
+      <SectionHeader id="como-activar" icon={PrinterX} title="La impresión está desactivada" />
+      <div>
+        <StatusBadge tone="warning" icon={TriangleAlert} label="No se imprimen comandas" />
+      </div>
       <p>
         En el equipo donde corre la API, abre el archivo <code>.env</code> y agrega estas dos
         líneas. Luego reinicia la API.
@@ -86,16 +92,17 @@ function StatusCard({ status }: { status: PrinterStatus }) {
 
   return (
     <Card as="section" className={styles.card} aria-labelledby="estado-impresora">
-      <div className={styles.cardHead}>
-        <h2 id="estado-impresora" className={styles.cardTitle}>
-          Estado
-        </h2>
-        <StatusBadge
-          tone={health === 'attention' ? 'warning' : health === 'busy' ? 'accent' : 'success'}
-          icon={health === 'attention' ? CircleX : PrinterCheck}
-          label={describeHealth(status)}
-        />
-      </div>
+      <SectionHeader
+        id="estado-impresora"
+        title="Estado"
+        actions={
+          <StatusBadge
+            tone={health === 'attention' ? 'warning' : health === 'busy' ? 'accent' : 'success'}
+            icon={health === 'attention' ? CircleX : PrinterCheck}
+            label={describeHealth(status)}
+          />
+        }
+      />
       <dl className={styles.facts}>
         {rows.map(([label, value]) => (
           <div key={label}>
@@ -106,6 +113,7 @@ function StatusCard({ status }: { status: PrinterStatus }) {
       </dl>
       {status.lastError && (
         <p role="alert" className={styles.problem}>
+          <TriangleAlert size={20} aria-hidden="true" />
           {status.lastError}
         </p>
       )}
@@ -142,9 +150,7 @@ function JobsCard({ jobs }: { jobs: readonly PrintJob[] }) {
   const reprint = useReprintOrder();
   return (
     <Card as="section" className={styles.card} aria-labelledby="trabajos-impresion">
-      <h2 id="trabajos-impresion" className={styles.cardTitle}>
-        Comandas recientes
-      </h2>
+      <SectionHeader id="trabajos-impresion" title="Comandas recientes" />
       {jobs.length === 0 ? (
         <p className={styles.muted}>Todavía no se ha enviado ninguna comanda a la impresora.</p>
       ) : (
@@ -167,7 +173,7 @@ function JobsCard({ jobs }: { jobs: readonly PrintJob[] }) {
                 </div>
                 <StatusBadge tone={status.tone} icon={status.icon} label={status.label} />
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   disabled={reprint.isPending}
                   onClick={() => {
                     reprint.mutate(job.orderId);
@@ -204,14 +210,11 @@ export function PrinterPage() {
   const columns = statusQuery.data?.columns ?? DEFAULT_COLUMNS;
 
   return (
-    <section className={styles.page} aria-labelledby="impresora-titulo">
-      <h1 id="impresora-titulo" className={styles.title}>
-        Impresora de comandas
-      </h1>
-      <p className={styles.muted}>
-        Cada pedido nuevo imprime su comanda en la cocina, sin precios, con la mesa y los productos
-        en letra grande.
-      </p>
+    <section className={styles.page}>
+      <PageHeader
+        title="Impresora de comandas"
+        subtitle="Cada pedido nuevo imprime su comanda en la cocina, sin precios, con la mesa y los productos en letra grande."
+      />
       <AsyncContent query={statusQuery} loadingLabel="Consultando la impresora…">
         {(status) => (
           <div className={styles.layout}>
@@ -224,10 +227,11 @@ export function PrinterPage() {
               )}
             </div>
             <Card as="section" className={styles.card} aria-labelledby="vista-previa-ticket">
-              <h2 id="vista-previa-ticket" className={styles.cardTitle}>
-                Así sale la comanda
-              </h2>
-              <p className={styles.muted}>Pedido de ejemplo a {columns} columnas.</p>
+              <SectionHeader
+                id="vista-previa-ticket"
+                title="Así sale la comanda"
+                description={`Pedido de ejemplo a ${String(columns)} columnas.`}
+              />
               <TicketPreview
                 lines={sampleKitchenTicket(columns)}
                 columns={columns}

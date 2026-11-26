@@ -63,7 +63,7 @@ export function TopNav({ connection, badges }: TopNavProps) {
   const activeGroup = groupOf(pathname);
 
   return (
-    <header className={styles.header}>
+    <header className={styles.header} data-no-print>
       <div className={styles.bar}>
         <Link to="/" className={styles.brand} aria-label="BIGGER Ágil, ir al Resumen">
           BIGGER

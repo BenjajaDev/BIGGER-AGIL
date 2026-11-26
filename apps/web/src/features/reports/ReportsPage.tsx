@@ -146,7 +146,16 @@ export function ReportsPage() {
   const session = useAdminSession();
   return (
     <AsyncContent query={session} loadingLabel="Verificando acceso…">
-      {(current) => (current.authenticated ? <ReportsContent /> : <PinLoginForm />)}
+      {(current) =>
+        current.authenticated ? (
+          <ReportsContent />
+        ) : (
+          <PinLoginForm
+            title="Reportes y caja"
+            description="Ingresa el PIN de encargado para ver las ventas y cerrar la caja."
+          />
+        )
+      }
     </AsyncContent>
   );
 }

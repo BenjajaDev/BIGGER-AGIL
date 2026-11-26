@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router';
+import { Page } from '../../components/layout/Page';
 import { AsyncContent } from '../../components/ui/AsyncContent';
 import { Button, ButtonLink } from '../../components/ui/Button';
 import { PinLoginForm } from './components/PinLoginForm';
@@ -39,8 +40,8 @@ export function ConfigLayout() {
         !session.authenticated ? (
           <PinLoginForm />
         ) : (
-          <div className={styles.layout}>
-            <div className={styles.bar}>
+          <Page className={styles.layout}>
+            <div className={styles.bar} data-no-print>
               <p className={styles.session}>
                 <ShieldCheck size={18} aria-hidden="true" />
                 Sesión de encargado
@@ -76,7 +77,7 @@ export function ConfigLayout() {
               </nav>
             </div>
             <Outlet />
-          </div>
+          </Page>
         )
       }
     </AsyncContent>

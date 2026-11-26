@@ -39,7 +39,7 @@ export function ProductFilters({
         />
       </label>
 
-      <div role="group" aria-label="Filtrar por categoría" className={styles.chips}>
+      <div role="group" aria-label="Filtrar por categoría" className={styles.scrollChips}>
         <Chip
           pressed={filter.categoryId === null}
           onClick={() => {
@@ -61,23 +61,25 @@ export function ProductFilters({
         ))}
       </div>
 
-      <div role="group" aria-label="Filtrar por estado" className={styles.chips}>
-        {PRODUCT_STATUS_FILTERS.map((status) => (
-          <Chip
-            key={status}
-            pressed={filter.status === status}
-            onClick={() => {
-              onChange({ ...filter, status });
-            }}
-          >
-            {PRODUCT_STATUS_LABELS[status]}
-          </Chip>
-        ))}
-      </div>
+      <div className={styles.statusRow}>
+        <div role="group" aria-label="Filtrar por estado" className={styles.chips}>
+          {PRODUCT_STATUS_FILTERS.map((status) => (
+            <Chip
+              key={status}
+              pressed={filter.status === status}
+              onClick={() => {
+                onChange({ ...filter, status });
+              }}
+            >
+              {PRODUCT_STATUS_LABELS[status]}
+            </Chip>
+          ))}
+        </div>
 
-      <p role="status" className={styles.count}>
-        Mostrando {shown} de {total}
-      </p>
+        <p role="status" className={styles.count}>
+          Mostrando {shown} de {total}
+        </p>
+      </div>
     </div>
   );
 }

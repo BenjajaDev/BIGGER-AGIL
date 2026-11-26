@@ -1,9 +1,6 @@
 .layout {
-  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
-  max-width: var(--content-max-width);
-  margin: 0 auto;
-  padding: var(--space-6);
 }
 
 .bar {
@@ -76,19 +73,23 @@
 }
 
 @media (max-width: 47.99rem) {
-  .layout {
-    padding: var(--space-4);
-  }
-
   .session {
     display: none;
   }
 
   .bar {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .tools {
     justify-content: space-between;
+    gap: var(--space-2);
+  }
+
+  .tools > * {
+    justify-content: center;
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: var(--space-2);
   }
 }
