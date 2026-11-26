@@ -77,3 +77,18 @@
   color: var(--text-secondary);
   font-size: var(--text-detail);
 }
+
+/* Celular: dos tarjetas por fila, con el valor y la variación más compactos. */
+@media (max-width: 47.99rem) {
+  .link {
+    padding: var(--space-3);
+  }
+
+  .value {
+    font-size: var(--text-heading);
+  }
+
+  .trend {
+    padding-inline: var(--space-1);
+  }
+}
