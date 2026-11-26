@@ -1,5 +1,6 @@
 import { CircleCheck, Hammer, LayoutGrid } from 'lucide-react';
 import type { InDevelopmentModule } from '../../app/navigation';
+import { Page } from '../../components/layout/Page';
 import { ButtonLink } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { StatusBadge } from '../../components/ui/StatusBadge';
@@ -13,7 +14,7 @@ export function UnderDevelopmentPage({ module }: UnderDevelopmentPageProps) {
   const Icon = module.icon;
 
   return (
-    <div className={styles.wrapper}>
+    <Page width="narrow">
       <Card as="section" className={styles.card} aria-labelledby="en-desarrollo-titulo">
         <span className={styles.icon}>
           <Icon size={32} aria-hidden="true" />
@@ -48,6 +49,6 @@ export function UnderDevelopmentPage({ module }: UnderDevelopmentPageProps) {
           Volver a Mesas
         </ButtonLink>
       </Card>
-    </div>
+    </Page>
   );
 }

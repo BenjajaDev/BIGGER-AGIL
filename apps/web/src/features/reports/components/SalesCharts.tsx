@@ -13,7 +13,7 @@ export function DailyChart({ days }: { days: SalesReport['byDay'] }) {
   // With many days the amounts no longer fit: only the best day keeps its label on screen.
   const dense = days.length > 14;
   return (
-    <div>
+    <div className={styles.chart}>
       <ul
         role="list"
         className={styles.columns}

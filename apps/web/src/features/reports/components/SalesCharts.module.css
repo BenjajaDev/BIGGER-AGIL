@@ -1,7 +1,12 @@
+.chart {
+  min-width: 0;
+}
+
 .columns {
+  position: relative;
   display: flex;
   align-items: stretch;
-  padding-inline: var(--space-6);
+  padding-inline: var(--space-2);
   gap: var(--space-2);
   height: 13rem;
   padding-bottom: var(--space-1);
@@ -11,12 +16,12 @@
 
 .column {
   display: flex;
-  flex: 1 0 3rem;
+  flex: 1 0 4.5rem;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-1);
-  min-width: 3rem;
+  min-width: 4.5rem;
 }
 
 .columnValue,

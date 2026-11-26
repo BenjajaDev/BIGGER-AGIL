@@ -1,11 +1,21 @@
 .card {
   display: grid;
   gap: var(--space-4);
+  min-width: 0;
 }
 
-.title {
-  font-size: var(--text-heading);
-  font-weight: var(--weight-bold);
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.summary,
+.form {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .figures {
@@ -40,32 +50,39 @@
   font-size: var(--text-detail);
 }
 
-.form {
-  display: grid;
-  gap: var(--space-3);
-  max-width: 28rem;
-}
-
-.field {
-  display: grid;
-  gap: var(--space-1);
+.difference {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background-color: var(--tone-neutral-soft);
+  color: var(--tone-neutral-ink);
   font-weight: var(--weight-semibold);
 }
 
-.note {
-  min-height: var(--touch-target);
-  padding: 0 var(--space-3);
-  border: var(--border-width-strong) solid var(--text-secondary);
-  border-radius: var(--radius-sm);
-  background-color: var(--surface-card);
+.difference[data-tone='success'] {
+  background-color: var(--tone-success-soft);
+  color: var(--tone-success-ink);
+}
+
+.difference[data-tone='warning'] {
+  background-color: var(--tone-warning-soft);
+  color: var(--tone-warning-ink);
+}
+
+.difference[data-tone='danger'] {
+  background-color: var(--tone-danger-soft);
+  color: var(--tone-danger-ink);
 }
 
 .done {
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-sm);
-  background-color: var(--tone-success-soft);
-  color: var(--tone-success-ink);
-  font-weight: var(--weight-semibold);
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-muted);
 }
 
 .error {

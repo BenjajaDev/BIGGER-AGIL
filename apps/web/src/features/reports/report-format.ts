@@ -38,12 +38,48 @@ export function deltaPercent(current: number, previous: number): number | null {
 }
 
 export function formatDelta(delta: number | null): string {
-  if (delta === null) return 'sin período anterior';
-  if (delta === 0) return 'igual que el período anterior';
-  return `${delta > 0 ? '▲' : '▼'} ${String(Math.abs(delta))} % vs período anterior`;
+  if (delta === null) return 'Sin comparación';
+  if (delta === 0) return 'Igual';
+  return `${delta > 0 ? '+' : '−'}${String(Math.abs(delta))} %`;
 }
 
 export function shortDate(date: string): string {
   const [, month, day] = date.split('-');
   return `${day ?? ''}/${month ?? ''}`;
+}
+
+const LONG_DATE = new Intl.DateTimeFormat('es-CL', {
+  day: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+});
+const LONG_DATE_YEAR = new Intl.DateTimeFormat('es-CL', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+function parse(date: string): Date {
+  return new Date(`${date}T00:00:00Z`);
+}
+
+/** «26 de noviembre de 2026» for one day, «20 al 26 de noviembre de 2026» for a range. */
+export function describeRange(range: { from: string; to: string }): string {
+  if (range.from === range.to) return LONG_DATE_YEAR.format(parse(range.to));
+  const sameMonth = range.from.slice(0, 7) === range.to.slice(0, 7);
+  const start = sameMonth
+    ? String(parse(range.from).getUTCDate())
+    : LONG_DATE.format(parse(range.from));
+  return `${start} al ${LONG_DATE_YEAR.format(parse(range.to))}`;
+}
+
+/** Trend for a StatCard: direction plus the words for the change against the previous period. */
+export function trendFor(
+  current: number,
+  previous: number,
+): { direction: 'up' | 'down' | 'flat'; text: string } {
+  const change = deltaPercent(current, previous);
+  const direction = change === null || change === 0 ? 'flat' : change > 0 ? 'up' : 'down';
+  return { direction, text: formatDelta(change) };
 }
