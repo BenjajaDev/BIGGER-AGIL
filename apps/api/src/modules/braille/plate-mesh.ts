@@ -8,6 +8,14 @@ const fromTop = (mm: number) => S.plateHeightMm - mm;
 const BLOCK_MM = 1.7;
 const BLOCK_HEIGHT_MM = 1.2;
 
+const dotSpec = {
+  radius: S.dotDiameterMm / 2,
+  height: S.dotHeightMm,
+  footHeight: S.dotFootHeightMm,
+  flare: S.dotFootFlareMm,
+  sink: S.dotSinkMm,
+} as const;
+
 /** Dot positions inside a cell: columns 0/1 (dots 1-3 / 4-6), rows 0/1/2. */
 function cellDots(mask: number): { column: number; row: number }[] {
   const dots: { column: number; row: number }[] = [];
@@ -64,7 +72,7 @@ function addBlockText(mesh: Mesh, text: string): void {
     mesh.box(
       x,
       y - block * 0.92,
-      S.plateThicknessMm - 0.1,
+      S.plateThicknessMm - S.dotSinkMm,
       x + block * 0.92,
       y,
       S.plateThicknessMm + BLOCK_HEIGHT_MM,
@@ -81,7 +89,7 @@ function addQrMarker(mesh: Mesh): void {
   const yTop = 8,
     y1 = fromTop(yTop),
     y0 = y1 - size;
-  const z0 = S.plateThicknessMm - 0.1,
+  const z0 = S.plateThicknessMm - S.dotSinkMm,
     z1 = S.plateThicknessMm + 0.8;
   mesh.box(x0, y1 - bar, z0, x1, y1, z1);
   mesh.box(x0, y0, z0, x1, y0 + bar, z1);
@@ -99,12 +107,11 @@ export function plateToMesh(plate: BraillePlate): Mesh {
     line.cells.forEach((mask, cellIndex) => {
       const left = S.marginLeftMm + cellIndex * S.cellPitchMm;
       for (const { column, row } of cellDots(mask)) {
-        mesh.dome(
+        mesh.dot(
           left + column * S.dotSpacingMm,
           fromTop(top + row * S.dotSpacingMm),
           S.plateThicknessMm,
-          S.dotDiameterMm / 2,
-          S.dotHeightMm,
+          dotSpec,
         );
       }
     });

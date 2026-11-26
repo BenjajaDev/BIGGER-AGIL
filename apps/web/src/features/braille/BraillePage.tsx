@@ -55,7 +55,17 @@ export function BraillePage() {
         <ul role="list" className={styles.tipList}>
           <li>
             <CircleCheck size={18} aria-hidden="true" />
-            Imprime con los puntos hacia arriba y capas de 0,1 mm, para que queden redondeados.
+            Imprime la placa con los puntos hacia arriba, capa de 0,1–0,12 mm, boquilla de 0,4 mm,
+            al menos 3 perímetros y sin «planchado» (ironing).
+          </li>
+          <li>
+            <CircleCheck size={18} aria-hidden="true" />
+            Baja la velocidad de las últimas capas para que los puntos queden firmes.
+          </li>
+          <li>
+            <CircleCheck size={18} aria-hidden="true" />
+            Bambu Studio (A1): perfil 0.12 mm Fine, 3 paredes, sin planchado. Ender-3 V3 SE
+            (Creality Print o Cura): altura de capa 0,12 mm, 3 paredes, sin planchado.
           </li>
           <li>
             <CircleCheck size={18} aria-hidden="true" />
