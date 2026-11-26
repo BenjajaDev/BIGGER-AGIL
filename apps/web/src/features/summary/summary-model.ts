@@ -31,7 +31,8 @@ export function kitchenLanes(orders: readonly Order[]): KitchenLane[] {
   });
 }
 
-export type AttentionKind = 'printer-failed' | 'order-waiting' | 'order-ready' | 'table-to-pay';
+export type AttentionKind =
+  'printer-failed' | 'order-waiting' | 'order-ready' | 'table-to-pay' | 'supply-alert';
 
 export interface AttentionItem {
   key: string;
@@ -140,4 +141,42 @@ export function filterTables(
     case 'to-pay':
       return tables.filter((table) => table.status === 'awaiting-payment');
   }
+}
+
+const SUPPLY_ALERT_TEXT = {
+  expired: { title: 'vencido', detail: 'Retíralo de la bodega.' },
+  out: { title: 'agotado', detail: 'Ya no queda stock.' },
+  expiring: { title: 'por vencer', detail: 'Úsalo pronto.' },
+  low: { title: 'con stock bajo', detail: 'Conviene reponerlo.' },
+} as const;
+
+const MAX_SUPPLY_ITEMS = 3;
+
+/** Bodega alerts for «Ahora»: one per supply (most urgent first), then «y N más». */
+export function supplyAttentionItems(
+  alerted: readonly {
+    supply: { id: string; name: string };
+    alert: keyof typeof SUPPLY_ALERT_TEXT;
+  }[],
+): AttentionItem[] {
+  const items: AttentionItem[] = alerted.slice(0, MAX_SUPPLY_ITEMS).map(({ supply, alert }) => ({
+    key: `supply-${supply.id}`,
+    kind: 'supply-alert',
+    title: `${supply.name} ${SUPPLY_ALERT_TEXT[alert].title}`,
+    detail: SUPPLY_ALERT_TEXT[alert].detail,
+    to: '/bodega',
+    actionLabel: 'Ver bodega',
+  }));
+  const rest = alerted.length - MAX_SUPPLY_ITEMS;
+  if (rest > 0) {
+    items.push({
+      key: 'supply-more',
+      kind: 'supply-alert',
+      title: `y ${rest} más en bodega`,
+      detail: 'Hay más insumos con alertas.',
+      to: '/bodega',
+      actionLabel: 'Ver bodega',
+    });
+  }
+  return items;
 }

@@ -25,7 +25,7 @@ const tables = [
   buildTable({ number: 3, status: 'awaiting-payment', openTotalClp: 8000, balanceClp: 3000 }),
 ];
 
-function setup({ printerEnabled }: { printerEnabled: boolean }) {
+function setup({ printerEnabled, admin = false }: { printerEnabled: boolean; admin?: boolean }) {
   const calls = mockFetch((method, url) => {
     if (method === 'POST') return { status: 202, body: { data: printedJob } };
     switch (url.pathname) {
@@ -46,6 +46,42 @@ function setup({ printerEnabled }: { printerEnabled: boolean }) {
               lastPrintedAt: null,
               lastError: null,
             },
+          },
+        };
+      case '/api/v1/admin/session':
+        return { body: { data: { authenticated: admin, expiresAt: null } } };
+      case '/api/v1/admin/reports/sales': {
+        const totals = { salesClp: 12000, tipsClp: 0, orders: 3, averageTicketClp: 4000 };
+        return {
+          body: {
+            data: {
+              range: { from: '2026-11-05', to: '2026-11-05' },
+              totals,
+              previous: { ...totals, salesClp: 10000 },
+              byMethod: [],
+              byDay: [],
+              topProducts: [],
+              slowProducts: [],
+            },
+          },
+        };
+      }
+      case '/api/v1/admin/inventory/supplies':
+        return {
+          body: {
+            data: [
+              {
+                id: '5d2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
+                name: 'Palta',
+                unit: 'kg',
+                minStock: 2,
+                costPerUnitClp: 1000,
+                supplierId: null,
+                supplierName: null,
+                expiresOn: null,
+                stock: 0,
+              },
+            ],
           },
         };
       case '/api/v1/print-jobs':
@@ -105,6 +141,22 @@ describe('SummaryPage', () => {
     const last = within(await screen.findByRole('region', { name: 'Última comanda impresa' }));
     await userEvent.click(await last.findByRole('button', { name: /Reimprimir/ }));
     expect(calls.some((call) => call.method === 'POST' && call.path.endsWith('/print'))).toBe(true);
+  });
+
+  it('shows the cash figures and bodega alerts only with an admin session', async () => {
+    const off = setup({ printerEnabled: false });
+    await screen.findByRole('region', { name: 'Ahora' });
+    expect(screen.queryByRole('region', { name: 'Hoy en caja' })).not.toBeInTheDocument();
+    off.unmount();
+
+    setup({ printerEnabled: false, admin: true });
+    const cash = within(await screen.findByRole('region', { name: 'Hoy en caja' }));
+    expect(await cash.findAllByText('$ 12.000')).not.toHaveLength(0);
+    expect(cash.getByText('Ayer: $ 10.000')).toBeInTheDocument();
+    expect(cash.getAllByRole('link')[0]).toHaveAttribute('href', '/reportes');
+    const now = within(screen.getByRole('region', { name: 'Ahora' }));
+    expect(await now.findByText('Palta agotado')).toBeInTheDocument();
+    expect(now.getByRole('link', { name: 'Ver bodega' })).toHaveAttribute('href', '/bodega');
   });
 
   it('has no detectable accessibility violations', async () => {

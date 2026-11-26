@@ -1,19 +1,22 @@
 import type { Check, Payment } from '@bigger/shared';
 import {
-  ArrowLeft,
   CircleCheck,
+  CircleDollarSign,
   Plus,
   Printer,
   ReceiptText,
-  Undo2,
+  Trash2,
   UtensilsCrossed,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useParams } from 'react-router';
-import { RouteFallback } from '../../app/RouteFallback';
+import { Page } from '../../components/layout/Page';
 import { Button, ButtonLink } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { SectionHeader } from '../../components/ui/SectionHeader';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { ApiRequestError } from '../../services/http-client';
 import { formatClockTime, formatClp } from '../../lib/format';
@@ -30,12 +33,30 @@ import {
 import styles from './TableCheckPage.module.css';
 import { useTableCheck } from './useChecks';
 
-function BackToTables() {
+const BACK = { to: '/mesas', label: 'Mesas' } as const;
+
+function CheckBadge({ check, closed }: { check: Check; closed: boolean }) {
+  if (closed || check.balanceClp === 0) {
+    return <StatusBadge tone="success" icon={CircleCheck} label="Pagada" />;
+  }
+  if (check.paidClp > 0) {
+    return <StatusBadge tone="highlight" icon={CircleDollarSign} label="Pago parcial" />;
+  }
+  return <StatusBadge tone="accent" icon={UtensilsCrossed} label="Abierta" />;
+}
+
+function CheckLoading() {
   return (
-    <ButtonLink to="/mesas" variant="ghost">
-      <ArrowLeft size={18} aria-hidden="true" />
-      Mesas
-    </ButtonLink>
+    <Page>
+      <PageHeader title="Cuenta de mesa" back={BACK} />
+      <div role="status">
+        <span className="visually-hidden">Cargando cuenta…</span>
+        <div className={styles.layout}>
+          <Skeleton lines={3} height="6rem" />
+          <Skeleton lines={2} height="5rem" />
+        </div>
+      </div>
+    </Page>
   );
 }
 
@@ -137,9 +158,7 @@ function PaymentsList({
   if (payments.length === 0) return null;
   return (
     <section className={styles.section} aria-labelledby="pagos-titulo">
-      <h2 id="pagos-titulo" className={styles.sectionTitle}>
-        Pagos
-      </h2>
+      <SectionHeader title="Pagos" id="pagos-titulo" />
       <ul role="list" className={styles.payments}>
         {payments.map((payment) => {
           const { label, icon: Icon } = PAYMENT_METHOD_PRESENTATION[payment.method];
@@ -162,12 +181,12 @@ function PaymentsList({
               <span className={styles.amount}>{formatClp(payment.amountClp)}</span>
               {!voided && (
                 <Button
-                  variant="ghost"
+                  variant="danger"
                   onClick={() => {
                     onVoid(payment);
                   }}
                 >
-                  <Undo2 size={18} aria-hidden="true" />
+                  <Trash2 size={18} aria-hidden="true" />
                   Anular
                   <span className="visually-hidden"> pago de {formatClp(payment.amountClp)}</span>
                 </Button>
@@ -187,14 +206,14 @@ export function TableCheckPage() {
   const [paying, setPaying] = useState(false);
   const [voiding, setVoiding] = useState<Payment | null>(null);
 
-  if (checkQuery.isPending) return <RouteFallback />;
+  if (checkQuery.isPending) return <CheckLoading />;
   // After the last payment the table's check closes: keep showing it with a «free» notice.
   if (checkQuery.isError && checkQuery.data === undefined) {
     const free =
       checkQuery.error instanceof ApiRequestError && checkQuery.error.code === 'NOT_FOUND';
     return (
-      <div className={styles.page}>
-        <BackToTables />
+      <Page width="narrow">
+        <PageHeader title="Cuenta de mesa" back={BACK} />
         <EmptyState
           icon={free ? CircleCheck : ReceiptText}
           title={free ? 'La mesa está libre' : 'No pudimos abrir la cuenta'}
@@ -206,7 +225,7 @@ export function TableCheckPage() {
             </ButtonLink>
           }
         />
-      </div>
+      </Page>
     );
   }
 
@@ -214,17 +233,17 @@ export function TableCheckPage() {
   const closed = checkQuery.isError || check.status === 'closed';
   const settledButOpen = !closed && check.balanceClp === 0;
   return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <BackToTables />
-        <h1 className={styles.title}>Cuenta · {check.tableLabel}</h1>
-      </div>
+    <Page>
+      <PageHeader
+        back={BACK}
+        title={`Cuenta · ${check.tableLabel}`}
+        documentTitle={`${check.tableLabel} · BIGGER`}
+        subtitle={<CheckBadge check={check} closed={closed} />}
+      />
 
       <div className={styles.layout}>
         <section className={styles.section} aria-labelledby="pedidos-titulo">
-          <h2 id="pedidos-titulo" className={styles.sectionTitle}>
-            Pedidos de la mesa
-          </h2>
+          <SectionHeader title="Pedidos de la mesa" id="pedidos-titulo" />
           <OrdersList check={check} />
           <PaymentsList payments={check.payments} onVoid={setVoiding} />
         </section>
@@ -274,6 +293,6 @@ export function TableCheckPage() {
           setVoiding(null);
         }}
       />
-    </div>
+    </Page>
   );
 }

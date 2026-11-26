@@ -46,11 +46,13 @@
 
 .footer > :first-child {
   flex: 1;
+  min-height: var(--touch-comfortable);
 }
 
 .reprint {
   flex-shrink: 0;
-  min-width: var(--touch-target);
+  min-width: var(--touch-comfortable);
+  min-height: var(--touch-comfortable);
   padding-inline: var(--space-3);
 }
 

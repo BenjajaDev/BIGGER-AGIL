@@ -63,7 +63,7 @@ export function TakeawayOrdersPanel({ now }: TakeawayOrdersPanelProps) {
                     <div className={styles.itemFooter}>
                       <span className={styles.total}>{formatClp(order.totalClp)}</span>
                       <Button
-                        variant="secondary"
+                        variant="primary"
                         onClick={() => {
                           setPayingCheckId(order.checkId);
                         }}

@@ -1,32 +1,3 @@
-.page {
-  display: grid;
-  gap: var(--space-5);
-  max-width: var(--content-max-width);
-  margin: 0 auto;
-  padding: var(--space-6);
-}
-
-.header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
-
-.title {
-  font-size: var(--text-heading);
-  font-weight: var(--weight-bold);
-}
-
-.date {
-  color: var(--text-secondary);
-}
-
-.date::first-letter {
-  text-transform: uppercase;
-}
-
 /*
  * Wide: Mesas and the live kitchen in the main column; the urgent list and the figures on the side.
  * Narrow: the columns dissolve and «Ahora» comes first, because that is what the person standing needs.
@@ -82,11 +53,38 @@
 
 /* On phones «+ Pedido» already sits in the middle of the bottom bar. */
 @media (max-width: 47.99rem) {
-  .page {
-    padding: var(--space-4);
-  }
-
   .create {
     display: none;
+  }
+}
+
+/* Phones: Ahora → Hoy en caja → Mesas → Cocina; the grid wrappers dissolve into the page. */
+@media (max-width: 47.99rem) {
+  .grid {
+    display: contents;
+  }
+
+  .attention {
+    order: 1;
+  }
+
+  .cash {
+    order: 2;
+  }
+
+  .tables {
+    order: 3;
+  }
+
+  .kitchen {
+    order: 4;
+  }
+
+  .progress {
+    order: 5;
+  }
+
+  .printed {
+    order: 6;
   }
 }

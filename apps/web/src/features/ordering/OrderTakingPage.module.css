@@ -1,21 +1,15 @@
+/* Same 60rem breakpoint as the comanda panel, which sticks beside the catalog above it. */
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 24rem;
   align-items: start;
   gap: var(--space-6);
-  max-width: var(--content-max-width);
-  margin: 0 auto;
-  padding: var(--space-6);
 }
 
 .catalog {
   display: grid;
   gap: var(--space-4);
-}
-
-.title {
-  font-size: var(--text-heading);
-  font-weight: var(--weight-bold);
+  min-width: 0;
 }
 
 .search {
@@ -32,18 +26,44 @@
 }
 
 .search input {
-  padding-left: var(--space-8);
+  padding-left: 2.75rem;
 }
 
-.centered {
-  max-width: 32rem;
-  margin: var(--space-10) auto;
+/* Only where the comanda is stacked under the catalog: a way to reach it and send. */
+.jump {
+  display: none;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 60rem) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-4);
-    padding: var(--space-4);
+  }
+
+  .jump {
+    position: sticky;
+    bottom: var(--space-3);
+    z-index: var(--z-sticky);
+    display: block;
+    box-shadow: var(--shadow-overlay);
+    border-radius: var(--radius-md);
+    transition:
+      opacity var(--duration-base) var(--ease-out),
+      transform var(--duration-base) var(--ease-out),
+      visibility var(--duration-base);
+  }
+
+  /* The comanda itself is on screen: the shortcut would only sit on top of it. */
+  .jumpHidden {
+    transform: translateY(var(--space-3));
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .jump {
+    bottom: calc(var(--bottombar-height) + var(--space-3) + env(safe-area-inset-bottom));
   }
 }

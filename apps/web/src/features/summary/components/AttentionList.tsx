@@ -1,7 +1,9 @@
 import {
+  ChevronRight,
   CircleCheck,
   CircleDollarSign,
   HandPlatter,
+  Package,
   Printer,
   Timer,
   type LucideIcon,
@@ -16,6 +18,7 @@ const ICONS: Readonly<Record<AttentionKind, LucideIcon>> = {
   'order-waiting': Timer,
   'order-ready': HandPlatter,
   'table-to-pay': CircleDollarSign,
+  'supply-alert': Package,
 };
 
 /** «Ahora»: what needs someone right now, each with one action a tap away. */
@@ -42,7 +45,8 @@ export function AttentionList({ items }: { items: readonly AttentionItem[] }) {
                   <p className={styles.detail}>{item.detail}</p>
                 </div>
                 <Link to={item.to} viewTransition className={styles.action}>
-                  {item.actionLabel}
+                  <span className={styles.actionText}>{item.actionLabel}</span>
+                  <ChevronRight className={styles.chevron} size={20} aria-hidden="true" />
                 </Link>
               </li>
             );

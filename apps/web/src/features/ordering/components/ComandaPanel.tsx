@@ -53,69 +53,69 @@ export function ComandaPanel({
 
   return (
     <Card as="aside" className={styles.panel} aria-labelledby="comanda-titulo">
-      <div className={styles.head}>
-        <p className={styles.eyebrow}>BIGGER</p>
-        <h2 id="comanda-titulo" className={styles.heading}>
-          {heading}
-        </h2>
-        <p className={styles.subtitle}>{subtitle}</p>
+      <div className={styles.scroll}>
+        <div className={styles.head}>
+          <p className={styles.eyebrow}>BIGGER</p>
+          <h2 id="comanda-titulo" className={styles.heading}>
+            {heading}
+          </h2>
+          <p className={styles.subtitle}>{subtitle}</p>
 
-        <p className={styles.meta}>
-          <span>Comanda nueva</span>
-          <time dateTime={openedAt.toISOString()}>{formatClockTime(openedAt.toISOString())}</time>
-        </p>
+          <p className={styles.meta}>
+            <span>Comanda nueva</span>
+            <time dateTime={openedAt.toISOString()}>{formatClockTime(openedAt.toISOString())}</time>
+          </p>
 
-        <div className={styles.name}>
-          <label htmlFor={nameId}>{requireName ? 'Nombre' : '¿Para quién? (opcional)'}</label>
-          <input
-            id={nameId}
-            type="text"
-            className={controlClassName}
-            value={customerName}
-            maxLength={60}
-            required={requireName}
-            aria-describedby={hintId}
-            placeholder={requireName ? '¿Para quién es?' : 'Ej.: Juan'}
-            onChange={(event) => {
-              onSetCustomerName(event.target.value);
-            }}
-          />
-          <p id={hintId} className={styles.nameHint}>
-            {requireName
-              ? 'Obligatorio para pedidos para llevar'
-              : 'Ayuda a dividir la cuenta si la mesa paga por separado'}
+          <div className={styles.name}>
+            <label htmlFor={nameId}>{requireName ? 'Nombre' : '¿Para quién? (opcional)'}</label>
+            <input
+              id={nameId}
+              type="text"
+              className={controlClassName}
+              value={customerName}
+              maxLength={60}
+              required={requireName}
+              aria-describedby={hintId}
+              placeholder={requireName ? '¿Para quién es?' : 'Ej.: Juan'}
+              onChange={(event) => {
+                onSetCustomerName(event.target.value);
+              }}
+            />
+            <p id={hintId} className={styles.nameHint}>
+              {requireName ? 'Obligatorio para pedidos para llevar' : 'Ayuda a dividir la cuenta'}
+            </p>
+          </div>
+
+          <p className={styles.columns} aria-hidden="true">
+            <span>Cant</span>
+            <span className={styles.columnsProduct}>
+              <span>Producto</span>
+              <span>Total</span>
+            </span>
           </p>
         </div>
 
-        <p className={styles.columns} aria-hidden="true">
-          <span>Cant</span>
-          <span className={styles.columnsProduct}>
-            <span>Producto</span>
-            <span>Total</span>
-          </span>
-        </p>
-      </div>
-
-      <div className={styles.lines}>
-        {lines.length === 0 ? (
-          <EmptyState
-            icon={ReceiptText}
-            title="Comanda vacía"
-            description="Toca un producto para agregarlo."
-          />
-        ) : (
-          <ul role="list" className={styles.list}>
-            {lines.map((line) => (
-              <ComandaLine
-                key={line.lineId}
-                line={line}
-                onIncrement={onIncrement}
-                onDecrement={onDecrement}
-                onSetNote={onSetNote}
-              />
-            ))}
-          </ul>
-        )}
+        <div className={styles.lines}>
+          {lines.length === 0 ? (
+            <EmptyState
+              icon={ReceiptText}
+              title="Comanda vacía"
+              description="Toca un producto para agregarlo."
+            />
+          ) : (
+            <ul role="list" className={styles.list}>
+              {lines.map((line) => (
+                <ComandaLine
+                  key={line.lineId}
+                  line={line}
+                  onIncrement={onIncrement}
+                  onDecrement={onDecrement}
+                  onSetNote={onSetNote}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       <div className={styles.footer}>

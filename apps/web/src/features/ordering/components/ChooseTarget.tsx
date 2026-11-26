@@ -1,7 +1,9 @@
 import { ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router';
+import { Page } from '../../../components/layout/Page';
 import { AsyncContent } from '../../../components/ui/AsyncContent';
 import { ButtonLink } from '../../../components/ui/Button';
+import { PageHeader } from '../../../components/ui/PageHeader';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { TABLE_STATUS_PRESENTATION } from '../../tables/table-status';
 import { useTableOverview } from '../../tables/useTableOverview';
@@ -12,15 +14,12 @@ export function ChooseTarget() {
   const tablesQuery = useTableOverview();
 
   return (
-    <section className={styles.panel} aria-labelledby="destino-titulo">
-      <header className={styles.header}>
-        <h1 id="destino-titulo" className={styles.title}>
-          ¿Para quién es el pedido?
-        </h1>
-        <p className={styles.description}>
-          Toca la mesa. Si ya tiene una cuenta abierta, el pedido se suma a ella.
-        </p>
-      </header>
+    <Page width="narrow">
+      <PageHeader
+        title="¿Para quién es el pedido?"
+        documentTitle="Pedido · BIGGER"
+        subtitle="Toca la mesa. Si ya tiene una cuenta abierta, el pedido se suma a ella."
+      />
 
       <AsyncContent query={tablesQuery} loadingLabel="Cargando mesas…">
         {(tables) => (
@@ -53,6 +52,6 @@ export function ChooseTarget() {
         <ShoppingBag size={20} aria-hidden="true" />
         Pedido para llevar
       </ButtonLink>
-    </section>
+    </Page>
   );
 }
