@@ -1,0 +1,21 @@
+.page {
+  display: grid;
+  align-content: start;
+  gap: var(--space-6);
+  width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+  padding: var(--page-gutter);
+}
+
+.wide {
+  max-width: var(--content-max-width);
+}
+
+.narrow {
+  max-width: var(--content-narrow);
+}
+
+.full {
+  max-width: none;
+}

@@ -133,11 +133,21 @@
   /* Alto de lo que queda fijo arriba: barra y pestañas en PC y tablet, solo la barra en celular. */
   --header-height: calc(var(--topbar-height) + var(--subnav-height));
   --content-max-width: 80rem;
+  --content-narrow: 52rem;
+  --page-gutter: var(--space-6);
+  --text-page-title: 1.75rem; /* 28 px */
+  --text-section: 1.125rem; /* 18 px */
+  --z-sticky: 10;
+  --z-bar: 20;
+  --z-dialog: 50;
+  --z-toast: 60;
+  --shadow-overlay: 0 12px 40px rgb(30 30 30 / 22%);
 }
 
 @media (max-width: 47.99rem) {
   :root {
     --header-height: var(--topbar-height);
+    --page-gutter: var(--space-4);
   }
 }
 

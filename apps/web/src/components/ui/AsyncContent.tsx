@@ -10,6 +10,7 @@ export interface AsyncContentProps<T> {
   query: UseQueryResult<T>;
   loadingLabel: string;
   inverse?: boolean;
+  skeleton?: ReactNode;
   children: (data: T) => ReactNode;
 }
 
@@ -18,9 +19,18 @@ export function AsyncContent<T>({
   query,
   loadingLabel,
   inverse = false,
+  skeleton,
   children,
 }: AsyncContentProps<T>) {
   if (query.isPending) {
+    if (skeleton) {
+      return (
+        <div role="status">
+          <span className="visually-hidden">{loadingLabel}</span>
+          {skeleton}
+        </div>
+      );
+    }
     return (
       <div role="status" className={cx(styles.status, inverse && styles.inverse)}>
         <LoaderCircle className={styles.spinner} size={20} aria-hidden="true" />

@@ -86,3 +86,19 @@
 .ghost:hover:not(:disabled) {
   background-color: var(--hover-neutral);
 }
+
+.danger {
+  background-color: transparent;
+  border-color: var(--border-subtle);
+  color: var(--tone-danger-ink);
+}
+
+.danger:hover:not(:disabled) {
+  background-color: var(--tone-danger-soft);
+}
+
+.iconOnly {
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+}
