@@ -111,7 +111,7 @@ if (!parsed.ok) {
     say('Listo.');
   } catch (error) {
     process.stderr.write(
-      `${error instanceof SetupError ? error.message : `No se pudo completar la configuración: ${String(error)}`}\n`,
+      `${error instanceof SetupError ? error.message : `No se pudo completar la configuración: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`}\n`,
     );
     process.exitCode = 1;
   } finally {
