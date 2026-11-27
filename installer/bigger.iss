@@ -371,8 +371,8 @@ begin
       ExpandConstant('{app}\api'), SW_HIDE, ewWaitUntilTerminated, RC) then
     Failure := 'No se pudo ejecutar el programa de configuración (' + SysErrorMessage(RC) + ').'
   else if RC <> 0 then
-    Failure := 'El programa de configuración terminó con el código ' + IntToStr(RC) + '.' +
-      #13#10#13#10 + 'Detalle:' + #13#10 + SetupLogTail;
+    Failure := 'El programa de configuración terminó con el código ' + IntToStr(RC) + '.' + #13#10#13#10 +
+      'Detalle:' + #13#10 + SetupLogTail;
   DeleteFile(PinFile);
 
   if Failure <> '' then
