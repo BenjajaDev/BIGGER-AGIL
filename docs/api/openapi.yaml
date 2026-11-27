@@ -840,6 +840,28 @@ paths:
         '200': { description: Mesas con su token }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /admin/system/info:
+    get:
+      tags: [Administración]
+      summary: Dirección del sistema para conectar tablets y celulares
+      description: |
+        Versión instalada, puerto y las direcciones `http://<IPv4>:<puerto>` de las redes del equipo
+        (sin la interna ni las 169.254.x.x), con las redes privadas primero. Vacío si el equipo no
+        tiene red.
+      operationId: adminSystemInfo
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: Datos del sistema
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/SystemInfo' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /admin/tables/{id}/qr/regenerate:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     post:
@@ -1410,6 +1432,16 @@ components:
           required: [productCount]
           properties:
             productCount: { type: integer, minimum: 0, description: Productos activos que la usan }
+
+    SystemInfo:
+      type: object
+      required: [version, port, addresses]
+      properties:
+        version: { type: string, example: 0.1.0 }
+        port: { type: integer, minimum: 1, maximum: 65535, example: 3000 }
+        addresses:
+          type: array
+          items: { type: string, format: uri, example: 'http://192.168.1.20:3000' }
 
     AdminSessionResponse:
       type: object

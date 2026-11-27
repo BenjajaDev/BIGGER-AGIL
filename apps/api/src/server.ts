@@ -1,7 +1,10 @@
+import { networkInterfaces } from 'node:os';
 import { createApp } from './app.js';
+import { startBackups } from './core/backup.js';
 import { loadEnv } from './config/env.js';
 import { createLogger } from './core/logger.js';
 import { openDatabase, runMigrations } from './db/client.js';
+import { readApiVersion } from './paths.js';
 import { buildPrintingSetup } from './modules/printing/printing.config.js';
 import { EventHub } from './realtime/event-hub.js';
 
@@ -19,7 +22,19 @@ const app = createApp({
   uploadsDir: env.UPLOADS_DIR,
   clock: { timeZone: env.BUSINESS_TIMEZONE, now: () => new Date() },
   printing: buildPrintingSetup(env),
+  system: { version: readApiVersion(), port: env.PORT, networkInterfaces },
 });
+
+const backups =
+  env.BACKUP_DIR === undefined
+    ? null
+    : startBackups({
+        directory: env.BACKUP_DIR,
+        keep: env.BACKUP_KEEP,
+        timeZone: env.BUSINESS_TIMEZONE,
+        logger,
+        backup: connection.backup,
+      });
 
 const server = app.listen(env.PORT, env.HOST, () => {
   logger.info({ host: env.HOST, port: env.PORT }, 'BIGGER Ágil API escuchando');
@@ -27,6 +42,7 @@ const server = app.listen(env.PORT, env.HOST, () => {
 
 function shutdown(signal: NodeJS.Signals): void {
   logger.info({ signal }, 'Cerrando servidor');
+  backups?.stop();
   server.close(() => {
     connection.close();
     process.exit(0);

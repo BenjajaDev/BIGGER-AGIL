@@ -16,6 +16,7 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "start:prod": "node scripts/start-prod.mjs",
     "check:tokens": "node scripts/check-tokens.mjs",
     "check": "pnpm format:check && pnpm check:tokens && pnpm lint && pnpm typecheck && pnpm test",
     "db:migrate": "pnpm --filter @bigger/api db:migrate",
