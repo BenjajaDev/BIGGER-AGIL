@@ -1,0 +1,40 @@
+.form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.suffixWrap {
+  position: relative;
+}
+
+.suffixInput {
+  padding-right: 4.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.suffix {
+  position: absolute;
+  top: 50%;
+  right: var(--space-4);
+  color: var(--text-secondary);
+  font-weight: var(--weight-semibold);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  align-items: start;
+  gap: var(--space-4);
+}
+
+.unitTitle {
+  margin-bottom: var(--space-2);
+  font-weight: var(--weight-semibold);
+}
+
+.error {
+  color: var(--status-error);
+  font-weight: var(--weight-semibold);
+}

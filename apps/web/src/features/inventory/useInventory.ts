@@ -19,6 +19,12 @@ export const usePurchaseList = () =>
     queryKey: [...ROOT, 'purchases'],
     queryFn: ({ signal }) => inventoryService.purchaseList(signal),
   });
+/** The latest movements of one supply, for its «Últimos movimientos». */
+export const useSupplyMovements = (supplyId: string, limit = 5) =>
+  useQuery({
+    queryKey: [...ROOT, 'movements', supplyId, limit],
+    queryFn: ({ signal }) => inventoryService.movements({ supplyId, limit }, signal),
+  });
 export const useRecipes = () =>
   useQuery({
     queryKey: [...ROOT, 'recipes'],
@@ -26,7 +32,9 @@ export const useRecipes = () =>
   });
 
 /** Any change refreshes stock, alerts and the purchase list together: they all derive from it. */
-function useInventoryMutation<TVariables>(mutationFn: (variables: TVariables) => Promise<unknown>) {
+function useInventoryMutation<TVariables, TResult>(
+  mutationFn: (variables: TVariables) => Promise<TResult>,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,

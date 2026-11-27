@@ -1,0 +1,178 @@
+.stack {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  min-width: 0;
+}
+
+.rows {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.hint {
+  color: var(--text-secondary);
+}
+
+/* Tappable row used by suppliers and recipes */
+.rowItem {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.rowButton {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+  min-height: 4.5rem;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-card);
+  box-shadow: var(--shadow-card);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.rowButton:hover {
+  background-color: var(--surface-page);
+}
+
+.rowText {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.rowTitle {
+  overflow-wrap: anywhere;
+  font-size: 1.0625rem;
+  font-weight: var(--weight-bold);
+}
+
+.rowMeta {
+  color: var(--text-secondary);
+  font-size: var(--text-detail);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.sideLink {
+  flex-shrink: 0;
+  min-height: 4.5rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.chip {
+  padding: 0.125rem var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--tone-neutral-soft);
+  color: var(--tone-neutral-ink);
+  font-size: var(--text-detail);
+  font-weight: var(--weight-semibold);
+}
+
+/* Sheet forms */
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.error {
+  color: var(--status-error);
+  font-weight: var(--weight-semibold);
+}
+
+.lineRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(6rem, 9rem) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.lineHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* Purchase list */
+.purchaseList {
+  display: grid;
+}
+
+.purchaseRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.purchaseText {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.purchaseName {
+  font-weight: var(--weight-bold);
+}
+
+.purchaseAsk {
+  color: var(--text-secondary);
+  font-size: var(--text-detail);
+}
+
+.money,
+.total {
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  text-align: right;
+}
+
+.money {
+  font-weight: var(--weight-semibold);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 47.99rem) {
+  .footer > * {
+    flex: 1 1 auto;
+  }
+
+  .lineRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .lineRow > :first-child {
+    grid-column: 1 / -1;
+  }
+}
