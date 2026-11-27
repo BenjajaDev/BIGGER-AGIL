@@ -34,10 +34,14 @@ jobs:
           } else {
             $v = '0.0.0-' + $env:GITHUB_SHA.Substring(0, 7)
           }
+          # El nombre del tag lo escribe una persona: solo se aceptan caracteres de versión.
+          if ($v -notmatch '^[0-9A-Za-z.-]{1,40}$') { throw "Versión no válida: $v" }
           "version=$v" >> $env:GITHUB_OUTPUT
       - name: Construir instalador
         shell: pwsh
-        run: ./installer/build.ps1 -Version '${{ steps.version.outputs.version }}'
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+        run: ./installer/build.ps1 -Version $env:APP_VERSION
       - name: Prueba de humo
         shell: pwsh
         run: ./installer/smoke-test.ps1

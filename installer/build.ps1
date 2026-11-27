@@ -8,6 +8,7 @@
   Requisitos: Node (ver .nvmrc) y pnpm en el PATH, y acceso a internet.
 #>
 param(
+  [ValidatePattern('^[0-9A-Za-z.-]{1,40}$')]
   [string]$Version = '0.0.0'
 )
 
