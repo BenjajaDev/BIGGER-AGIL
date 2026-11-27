@@ -1,5 +1,6 @@
 import {
   MovementInputSchema,
+  MovementsQuerySchema,
   RecipeInputSchema,
   ReportRangeSchema,
   SupplierInputSchema,
@@ -50,8 +51,8 @@ export class InventoryController {
     );
   };
 
-  movements: RequestHandler = async (_req, res) => {
-    sendData(res, await this.#service.movements());
+  movements: RequestHandler = async (req, res) => {
+    sendData(res, await this.#service.movements(parseOrThrow(MovementsQuerySchema, req.query)));
   };
 
   suppliers: RequestHandler = async (_req, res) => {

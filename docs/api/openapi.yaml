@@ -782,6 +782,28 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /admin/inventory/movements:
+    get:
+      tags: [Administración]
+      summary: Últimos movimientos de stock
+      description: Sin parámetros devuelve los 100 más recientes; con `supplyId` solo los de ese insumo.
+      operationId: adminListMovements
+      security: [{ adminSession: [] }]
+      parameters:
+        - name: supplyId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          required: false
+          description: Máximo de movimientos a devolver (1 a 50).
+          schema: { type: integer, minimum: 1, maximum: 50 }
+      responses:
+        '200': { description: Movimientos del más reciente al más antiguo }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /admin/inventory/purchase-list:
     get:
       tags: [Administración]

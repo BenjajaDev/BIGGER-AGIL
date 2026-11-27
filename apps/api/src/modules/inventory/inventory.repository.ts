@@ -43,7 +43,7 @@ export interface InventoryRepository {
   updateSupplier: (id: string, input: SupplierInput) => Promise<void>;
   archiveSupplier: (id: string) => Promise<void>;
   applyMovement: (movement: MovementRecord) => Promise<void>;
-  listMovements: (limit: number) => Promise<StockMovement[]>;
+  listMovements: (limit: number, supplyId?: string) => Promise<StockMovement[]>;
   wasteBetween: (from: Date, to: Date) => Promise<WasteRow[]>;
   listRecipes: () => Promise<Recipe[]>;
   recipeLinesFor: (
@@ -156,7 +156,7 @@ export class DrizzleInventoryRepository implements InventoryRepository {
     return Promise.resolve();
   }
 
-  async listMovements(limit: number): Promise<StockMovement[]> {
+  async listMovements(limit: number, supplyId?: string): Promise<StockMovement[]> {
     const rows = await this.#db
       .select({
         id: stockMovements.id,
@@ -170,6 +170,7 @@ export class DrizzleInventoryRepository implements InventoryRepository {
       })
       .from(stockMovements)
       .innerJoin(supplies, eq(stockMovements.supplyId, supplies.id))
+      .where(supplyId === undefined ? undefined : eq(stockMovements.supplyId, supplyId))
       .orderBy(desc(stockMovements.createdAt))
       .limit(limit);
     return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));

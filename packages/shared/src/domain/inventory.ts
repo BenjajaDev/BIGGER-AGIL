@@ -74,6 +74,13 @@ export const StockMovementSchema = z.object({
 });
 export type StockMovement = z.infer<typeof StockMovementSchema>;
 
+/** Query of `GET /inventory/movements`: all recent movements, or those of one supply. */
+export const MovementsQuerySchema = z.object({
+  supplyId: z.uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+});
+export type MovementsQuery = z.infer<typeof MovementsQuerySchema>;
+
 export const RecipeInputSchema = z.object({
   lines: z
     .array(z.object({ supplyId: z.uuid(), quantity: z.number().positive().max(1_000_000) }))

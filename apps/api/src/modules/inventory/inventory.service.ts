@@ -1,5 +1,6 @@
 import type {
   MovementInput,
+  MovementsQuery,
   Order,
   PurchaseGroup,
   Recipe,
@@ -116,8 +117,8 @@ export class InventoryService {
     return this.#get(id);
   }
 
-  movements(): Promise<StockMovement[]> {
-    return this.#repository.listMovements(MOVEMENT_LIMIT);
+  movements(query: MovementsQuery = {}): Promise<StockMovement[]> {
+    return this.#repository.listMovements(query.limit ?? MOVEMENT_LIMIT, query.supplyId);
   }
 
   suppliers(): Promise<Supplier[]> {

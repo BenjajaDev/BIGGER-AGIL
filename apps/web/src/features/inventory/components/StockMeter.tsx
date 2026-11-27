@@ -1,6 +1,6 @@
 import type { SupplyAlert } from '@bigger/shared';
 import type { CSSProperties } from 'react';
-import styles from './Inventory.module.css';
+import styles from './InventoryList.module.css';
 
 /**
  * Stock level at a glance: the bar fills up to twice the minimum and the notch marks the minimum.

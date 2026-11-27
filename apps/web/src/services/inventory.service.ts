@@ -26,8 +26,16 @@ export const inventoryService = {
   archiveSupply: (id: string) => requestJson('DELETE', `${BASE}/supplies/${id}`, z.null()),
   registerMovement: (id: string, input: MovementInput) =>
     requestJson('POST', `${BASE}/supplies/${id}/movements`, SupplySchema, { body: input }),
-  movements: (signal?: AbortSignal) =>
-    getJson(`${BASE}/movements`, z.array(StockMovementSchema), undefined, signal),
+  movements: (query: { supplyId?: string; limit?: number } = {}, signal?: AbortSignal) =>
+    getJson(
+      `${BASE}/movements`,
+      z.array(StockMovementSchema),
+      {
+        supplyId: query.supplyId,
+        limit: query.limit === undefined ? undefined : String(query.limit),
+      },
+      signal,
+    ),
   suppliers: (signal?: AbortSignal) =>
     getJson(`${BASE}/suppliers`, z.array(SupplierSchema), undefined, signal),
   createSupplier: (input: SupplierInput) =>
