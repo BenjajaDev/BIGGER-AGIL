@@ -13,6 +13,11 @@ function isTimeZone(value: string): boolean {
   }
 }
 
+/** Blank values in a config file (`KEY=`) count as not set. */
+function optionalText() {
+  return z.preprocess((value) => (value === '' ? undefined : value), z.string().min(1).optional());
+}
+
 const EnvObjectSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().min(1).default('127.0.0.1'),
@@ -42,13 +47,19 @@ const EnvObjectSchema = z.object({
   ADMIN_SESSION_SECRET: z
     .string()
     .min(32, 'Usa al menos 32 caracteres aleatorios (pnpm --filter @bigger/api admin:pin)'),
+  /** Compiled web app (index.html and assets). When set, the API serves it too: one server for everything. */
+  WEB_DIST_DIR: optionalText(),
+  /** Daily SQLite backups go here. Off when not set. */
+  BACKUP_DIR: optionalText(),
+  /** How many daily backups to keep. */
+  BACKUP_KEEP: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.coerce.number().int().min(1).max(365).default(14),
+  ),
   /** Prints each new order's comanda on the thermal printer. Off unless the shop turns it on. */
   PRINTER_ENABLED: z.stringbool().default(false),
   /** Bluetooth (COM5, /dev/rfcomm0) or USB (/dev/usb/lp0, \\\\localhost\\NOMBRE) device path. */
-  PRINTER_PATH: z.preprocess(
-    (value) => (value === '' ? undefined : value),
-    z.string().min(1).optional(),
-  ),
+  PRINTER_PATH: optionalText(),
   /** `auto` uses the serial port for COMn and /dev/rfcomm*, /dev/ttyUSB*, and a plain write otherwise. */
   PRINTER_TRANSPORT: z.enum(PRINTER_TRANSPORTS).default('auto'),
   /** Only used by the serial port; Bluetooth ignores it and USB-serial printers use 9600 or 19200. */
@@ -79,7 +90,15 @@ export function parseEnv(source: NodeJS.ProcessEnv): Env {
   return result.data;
 }
 
-export function loadEnv(envFilePath = '.env'): Env {
+/** `BIGGER_CONFIG` (the installed system's config file) wins over the `.env` of a development checkout. */
+export function resolveEnvFile(source: NodeJS.ProcessEnv = process.env): string {
+  const configured = source.BIGGER_CONFIG;
+  return configured !== undefined && configured !== '' && existsSync(configured)
+    ? configured
+    : '.env';
+}
+
+export function loadEnv(envFilePath = resolveEnvFile()): Env {
   if (existsSync(envFilePath)) {
     process.loadEnvFile(envFilePath);
   }

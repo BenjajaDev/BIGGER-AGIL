@@ -40,6 +40,25 @@ respáldalo junto con la base de datos.
 Para usar la app desde las tablets del local, define `HOST=0.0.0.0` en `apps/api/.env` y
 agrega el origen de la tablet a `CORS_ORIGINS`.
 
+## Modo producción (un solo servidor)
+
+En producción la API también sirve la web compilada: un solo proceso y un solo puerto. Las
+tablets entran a `http://IP-del-equipo:3000`, sin Vite ni CORS.
+
+```bash
+pnpm start:prod   # compila web y API y arranca la API sirviendo apps/web/dist
+```
+
+Variables opcionales en el archivo de configuración (`apps/api/.env`, o el que indique
+`BIGGER_CONFIG`):
+
+- `WEB_DIST_DIR`: carpeta de la web compilada (`pnpm start:prod` la define sola).
+- `BACKUP_DIR` y `BACKUP_KEEP` (14 por defecto): respaldo diario de la base, `bigger-AAAA-MM-DD.db`.
+- `BIGGER_CONFIG`: ruta del archivo de configuración; si existe, se usa en vez de `.env`.
+
+El instalador de Windows prepara todo esto con `node dist/setup.js` (ver `apps/api/src/scripts/setup.ts`).
+En Configuración → «Conectar equipos» aparecen las direcciones y los QR para abrir el sistema.
+
 ## Impresora de comandas (térmica 58 mm)
 
 La API imprime la comanda de cada pedido nuevo y corre en el mismo equipo que la impresora.
@@ -74,6 +93,7 @@ timbre. Aunque el sonido esté apagado, la pestaña muestra «(2) Cocina» con l
 | --------------------------------------- | -------------------------------------------------- |
 | `pnpm dev`                              | API (tsx watch) y web (Vite) en paralelo           |
 | `pnpm build`                            | Build de producción de API (tsup) y web (Vite)     |
+| `pnpm start:prod`                       | Compila y arranca API + web en un solo servidor    |
 | `pnpm check`                            | Formato, lint, typecheck y tests (lo mismo que CI) |
 | `pnpm test`                             | Vitest en todos los paquetes                       |
 | `pnpm db:migrate`                       | Aplica migraciones pendientes                      |

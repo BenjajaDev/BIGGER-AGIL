@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseEnv } from './env.js';
+import { parseEnv, resolveEnvFile } from './env.js';
 
 const ADMIN = {
   ADMIN_PIN_HASH: 'scrypt:16384:8:1:c2FsdA:aGFzaA',
@@ -17,6 +17,7 @@ describe('parseEnv', () => {
       LOG_LEVEL: 'info',
       UPLOADS_DIR: './data/uploads',
       BUSINESS_TIMEZONE: 'America/Santiago',
+      BACKUP_KEEP: 14,
       PRINTER_ENABLED: false,
       PRINTER_TRANSPORT: 'auto',
       PRINTER_BAUD_RATE: 9600,
@@ -63,7 +64,31 @@ describe('parseEnv', () => {
     expect(env.CORS_ORIGINS).toEqual(['http://localhost:5173', 'http://192.168.1.20:5173']);
   });
 
+  it('reads the production folders and treats blank values as not set', () => {
+    const env = parseEnv({
+      ...ADMIN,
+      WEB_DIST_DIR: '/app/web',
+      BACKUP_DIR: '/data/respaldos',
+      BACKUP_KEEP: '7',
+    });
+    expect(env).toMatchObject({ WEB_DIST_DIR: '/app/web', BACKUP_DIR: '/data/respaldos' });
+    expect(env.BACKUP_KEEP).toBe(7);
+
+    const blank = parseEnv({ ...ADMIN, WEB_DIST_DIR: '', BACKUP_DIR: '', BACKUP_KEEP: '' });
+    expect(blank.WEB_DIST_DIR).toBeUndefined();
+    expect(blank.BACKUP_DIR).toBeUndefined();
+    expect(blank.BACKUP_KEEP).toBe(14);
+  });
+
+  it('prefers BIGGER_CONFIG when that file exists', () => {
+    expect(resolveEnvFile({})).toBe('.env');
+    expect(resolveEnvFile({ BIGGER_CONFIG: '/no/existe/config.env' })).toBe('.env');
+    expect(resolveEnvFile({ BIGGER_CONFIG: import.meta.filename })).toBe(import.meta.filename);
+  });
+
   it.each([
+    [{ ...ADMIN, BACKUP_KEEP: '0' }],
+    [{ ...ADMIN, BACKUP_KEEP: '400' }],
     [{ ...ADMIN, PORT: 'abc' }],
     [{ ...ADMIN, PORT: '70000' }],
     [{ ...ADMIN, CORS_ORIGINS: 'not-a-url' }],

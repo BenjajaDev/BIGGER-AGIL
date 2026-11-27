@@ -8,6 +8,7 @@ import { openDatabase, runMigrations, type DatabaseConnection } from '../../src/
 import { seedDatabase } from '../../src/db/seed/seed.js';
 import { hashPin } from '../../src/modules/admin-auth/pin-hash.js';
 import type { PrintingSetup } from '../../src/modules/printing/printing.config.js';
+import type { NetworkInterfaces } from '../../src/modules/system/system.service.js';
 import { EventHub } from '../../src/realtime/event-hub.js';
 
 export const TEST_ADMIN_PIN = '482915';
@@ -25,12 +26,17 @@ export interface TestContextOptions {
   now?: () => Date;
   /** Printing is off unless a test brings a printer. */
   printing?: Partial<PrintingSetup>;
+  /** Serves this folder as the web app, like `WEB_DIST_DIR` in production. */
+  webDistDir?: string;
+  networkInterfaces?: NetworkInterfaces;
 }
 
 export async function createTestContext({
   withDemoOrders = true,
   now = () => new Date(),
   printing = {},
+  webDistDir,
+  networkInterfaces = {},
 }: TestContextOptions = {}): Promise<TestContext> {
   const connection = openDatabase(':memory:');
   runMigrations(connection.db);
@@ -39,13 +45,17 @@ export async function createTestContext({
   const uploadsDir = mkdtempSync(join(tmpdir(), 'bigger-uploads-'));
 
   const app = createApp({
-    env: { CORS_ORIGINS: ['http://localhost:5173'] },
+    env: {
+      CORS_ORIGINS: ['http://localhost:5173'],
+      ...(webDistDir === undefined ? {} : { WEB_DIST_DIR: webDistDir }),
+    },
     logger: createLogger('silent'),
     db: connection.db,
     eventHub,
     adminAuth: { pinHash: await pinHash, sessionSecret: 'test-session-secret-0123456789abcdef' },
     uploadsDir,
     clock: { timeZone: 'America/Santiago', now },
+    system: { version: '9.9.9', port: 3000, networkInterfaces: () => networkInterfaces },
     printing: {
       printer: null,
       options: {

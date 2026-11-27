@@ -15,6 +15,7 @@ const loadCatalogAdmin = {
   printer: () => import('../features/printing/PrinterPage'),
   braille: () => import('../features/braille/BraillePage'),
   qr: () => import('../features/table-qr/TableQrPage'),
+  devices: () => import('../features/connect-devices/ConnectDevicesPage'),
 };
 
 const configurationRoute: RouteObject = {
@@ -66,6 +67,10 @@ const configurationRoute: RouteObject = {
     {
       path: 'braille',
       lazy: () => loadCatalogAdmin.braille().then((m) => ({ Component: m.BraillePage })),
+    },
+    {
+      path: 'equipos',
+      lazy: () => loadCatalogAdmin.devices().then((m) => ({ Component: m.ConnectDevicesPage })),
     },
     {
       path: 'impresora',

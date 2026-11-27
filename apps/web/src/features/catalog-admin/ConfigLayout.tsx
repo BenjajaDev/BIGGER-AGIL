@@ -3,6 +3,7 @@ import {
   ExternalLink,
   FolderTree,
   LogOut,
+  MonitorSmartphone,
   ShieldCheck,
   Hand,
   Package,
@@ -27,6 +28,7 @@ const SECTIONS = [
   { to: 'categorias', label: 'Categorías', icon: FolderTree },
   { to: 'qr', label: 'QR por mesa', icon: QrCode },
   { to: 'braille', label: 'Carta braille', icon: Hand },
+  { to: 'equipos', label: 'Conectar equipos', icon: MonitorSmartphone },
   { to: 'impresora', label: 'Impresora', icon: Printer },
 ] as const;
 

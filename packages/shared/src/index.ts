@@ -9,5 +9,6 @@ export * from './domain/reports.js';
 export * from './domain/inventory.js';
 export * from './domain/product-rules.js';
 export * from './domain/receipts.js';
+export * from './domain/system.js';
 export * from './domain/tables.js';
 export * from './realtime/events.js';

@@ -78,13 +78,15 @@ Type: dirifempty; Name: "{app}"
 
 [Run]
 ; Se ejecutan al terminar, como el usuario original (no como administrador).
-Filename: "{code:GetEdgePath}"; Parameters: "--app={#AppUrl}"; Description: "Abrir {#AppName} ahora"; Flags: nowait postinstall skipifsilent runasoriginaluser; Check: HasEdge
-Filename: "{#AppUrl}"; Description: "Abrir {#AppName} ahora"; Flags: shellexec nowait postinstall skipifsilent runasoriginaluser; Check: not HasEdge
+Filename: "{code:GetEdgePath}"; Parameters: "--app={#AppUrl}"; Description: "Abrir {#AppName} ahora"; Flags: nowait postinstall skipifsilent runasoriginaluser; Check: HasEdge and SetupOk
+Filename: "{#AppUrl}"; Description: "Abrir {#AppName} ahora"; Flags: shellexec nowait postinstall skipifsilent runasoriginaluser; Check: (not HasEdge) and SetupOk
 
 [Code]
 var
   OptionsPage: TWizardPage;
   FirstInstall: Boolean;
+  { False si la configuración inicial o el servicio fallaron: no se ofrece abrir el sistema. }
+  ConfigOk: Boolean;
   PinLabel, PinConfirmLabel, PinHint, PrinterLabel, PrinterHint: TNewStaticText;
   PinEdit, PinConfirmEdit: TPasswordEdit;
   PrinterEdit: TNewEdit;
@@ -280,6 +282,42 @@ begin
   end;
 end;
 
+function SetupOk: Boolean;
+begin
+  Result := ConfigOk;
+end;
+
+{ El servidor está listo cuando la API responde 200; se consulta con WinHTTP, sin programas extra. }
+function ServerResponds: Boolean;
+var
+  Http: Variant;
+begin
+  Result := False;
+  try
+    Http := CreateOleObject('WinHttp.WinHttpRequest.5.1');
+    Http.SetTimeouts(1000, 1000, 1000, 2000);
+    Http.Open('GET', 'http://localhost:3000/api/v1/tables', False);
+    Http.Send('');
+    Result := Http.Status = 200;
+  except
+    Result := False;
+  end;
+end;
+
+procedure WaitForServer;
+var
+  I: Integer;
+begin
+  for I := 1 to 30 do
+  begin
+    if ServerResponds then
+      Exit;
+    Sleep(1000);
+  end;
+end;
+
+{ Después de copiar los archivos ya no se puede deshacer la instalación: ante un error se avisa
+  con instrucciones claras y no se ofrece abrir el sistema. Los datos nunca se tocan. }
 procedure ConfigureAndStart;
 var
   RC: Integer;
@@ -303,6 +341,7 @@ begin
   if SeedCheck.Checked then
     Params := Params + ' --seed-catalog';
 
+  ConfigOk := False;
   WizardForm.StatusLabel.Caption := 'Preparando la base de datos y la configuración...';
   Failure := '';
   if not Exec(Node, Params, ExpandConstant('{app}\api'), SW_HIDE, ewWaitUntilTerminated, RC) then
@@ -314,10 +353,10 @@ begin
   if Failure <> '' then
   begin
     MsgBox('No se pudo terminar la instalación de {#AppName}.' + #13#10#13#10 + Failure + #13#10#13#10 +
-      'Se deshará la instalación. Sus datos en ' + ExpandConstant('{commonappdata}\BIGGER') +
-      ' no se tocan. Revise que el PIN tenga entre 4 y 12 dígitos y vuelva a ejecutar el instalador; ' +
-      'si el problema sigue, avise a quien le dio el instalador.', mbCriticalError, MB_OK);
-    Abort;
+      'Sus datos en ' + ExpandConstant('{commonappdata}\BIGGER') + ' no se tocaron. ' +
+      'Vuelva a ejecutar el instalador; si el problema sigue, avise a quien le dio el instalador ' +
+      '(los registros están en ' + ExpandConstant('{commonappdata}\BIGGER\logs') + ').', mbCriticalError, MB_OK);
+    Exit;
   end;
 
   WizardForm.StatusLabel.Caption := 'Instalando el servicio de Windows...';
@@ -326,8 +365,8 @@ begin
     if (not RunHidden(ServiceExePath, 'install', RC)) or (RC <> 0) then
     begin
       MsgBox('No se pudo instalar el servicio de Windows (código ' + IntToStr(RC) + ').' + #13#10 +
-        'Se deshará la instalación. Ejecute el instalador de nuevo como administrador.', mbCriticalError, MB_OK);
-      Abort;
+        'Ejecute el instalador de nuevo como administrador.', mbCriticalError, MB_OK);
+      Exit;
     end;
   end;
 
@@ -345,7 +384,11 @@ begin
       'Reinicie el PC o inícielo desde services.msc ("BIGGER Ágil"). Los registros están en ' +
       ExpandConstant('{commonappdata}\BIGGER\logs') + '.', mbInformation, MB_OK)
   else
-    Sleep(3000); { da tiempo a que el servidor responda antes de abrir la ventana }
+  begin
+    WizardForm.StatusLabel.Caption := 'Esperando a que {#AppName} responda...';
+    WaitForServer;
+    ConfigOk := True;
+  end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

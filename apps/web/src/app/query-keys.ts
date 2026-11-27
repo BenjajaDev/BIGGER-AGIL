@@ -17,6 +17,7 @@ export const queryKeys = {
   orderList: (params: OrderListParams) => ['orders', params] as const,
   admin: ['admin'] as const,
   adminSession: ['admin', 'session'] as const,
+  systemInfo: ['admin', 'system', 'info'] as const,
   adminCategories: (includeArchived: boolean) =>
     ['admin', 'categories', { includeArchived }] as const,
   adminProducts: (includeArchived: boolean) => ['admin', 'products', { includeArchived }] as const,

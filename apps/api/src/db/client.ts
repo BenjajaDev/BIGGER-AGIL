@@ -11,6 +11,8 @@ export type AppDatabase = BetterSQLite3Database<typeof schema>;
 
 export interface DatabaseConnection {
   db: AppDatabase;
+  /** Consistent copy of the live database (SQLite online backup, safe while it is in use). */
+  backup: (destination: string) => Promise<void>;
   close: () => void;
 }
 
@@ -25,6 +27,9 @@ export function openDatabase(path: string): DatabaseConnection {
   sqlite.pragma('foreign_keys = ON');
   return {
     db: drizzle({ client: sqlite, schema, casing: 'snake_case' }),
+    backup: async (destination) => {
+      await sqlite.backup(destination);
+    },
     close: () => {
       sqlite.close();
     },

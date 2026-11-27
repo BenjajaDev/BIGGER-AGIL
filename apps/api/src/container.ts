@@ -41,6 +41,8 @@ import {
   createTableQrAdminRouter,
 } from './modules/table-qr/table-qr.routes.js';
 import { TableQrService } from './modules/table-qr/table-qr.service.js';
+import { createSystemAdminRouter } from './modules/system/system.routes.js';
+import { SystemService, type SystemInfoSource } from './modules/system/system.service.js';
 import { ReportsController } from './modules/reports/reports.controller.js';
 import { DrizzleReportsRepository } from './modules/reports/reports.repository.js';
 import { createReportsRouter } from './modules/reports/reports.routes.js';
@@ -79,6 +81,8 @@ export interface ContainerDependencies {
   clock: CatalogClock;
   /** The thermal printer (or none) and how it prints. */
   printing: PrintingSetup;
+  /** Version, port and network of this computer, for the «Conectar equipos» screen. */
+  system: SystemInfoSource;
   logger: Logger;
 }
 
@@ -90,6 +94,7 @@ export function buildApiRouters({
   uploadsDir,
   clock,
   printing,
+  system,
   logger,
 }: ContainerDependencies): Router[] {
   const ordersRepository = new DrizzleOrdersRepository(db);
@@ -172,6 +177,7 @@ export function buildApiRouters({
       reportsRouter,
       inventoryRouter,
       createTableQrAdminRouter(tableQrService),
+      createSystemAdminRouter(new SystemService(system)),
     ]),
   ];
 }
