@@ -22,6 +22,12 @@ const STEPS = [
   'Agrégala a la pantalla de inicio para abrirla como app.',
 ] as const;
 
+const HELP = [
+  'Revisa que esté en el mismo Wi-Fi que este computador, no en datos móviles ni en el Wi-Fi de invitados.',
+  'Si aparece más de una dirección, prueba con la siguiente.',
+  'Si ninguna abre, vuelve a ejecutar el instalador de BIGGER Ágil: deja abierto el acceso en el firewall de Windows.',
+] as const;
+
 function AddressCard({ address }: { address: string }) {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -68,11 +74,21 @@ function Addresses({ info }: { info: SystemInfo }) {
     );
   }
   return (
-    <ul role="list" className={styles.list}>
-      {info.addresses.map((address) => (
-        <AddressCard key={address} address={address} />
-      ))}
-    </ul>
+    <>
+      <ul role="list" className={styles.list}>
+        {info.addresses.map((address) => (
+          <AddressCard key={address} address={address} />
+        ))}
+      </ul>
+      <Card as="section" aria-labelledby="no-abre" className={styles.steps}>
+        <SectionHeader id="no-abre" title="¿No abre en el celular?" />
+        <ul className={styles.stepList}>
+          {HELP.map((tip) => (
+            <li key={tip}>{tip}</li>
+          ))}
+        </ul>
+      </Card>
+    </>
   );
 }
 

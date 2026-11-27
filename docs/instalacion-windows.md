@@ -70,8 +70,9 @@ _Configuración de Windows → Aplicaciones → BIGGER Ágil → Desinstalar_. S
 **La tablet no abre la dirección.**
 
 - Compruebe que la tablet está en el mismo Wi-Fi que el PC y que la dirección es la que muestra _Conectar tablets y celulares_.
-- Revise el firewall: en una consola de administrador, `netsh advfirewall firewall show rule name="BIGGER Agil"`. Si no existe, créela con `netsh advfirewall firewall add rule name="BIGGER Agil" dir=in action=allow protocol=TCP localport=3000 profile=private,domain`.
-- Si Windows clasificó la red como «Pública», cámbiela a «Privada» (_Configuración → Red e Internet → propiedades de la red_).
+- Si hay varias direcciones, pruebe la siguiente. Las de adaptadores virtuales (Hyper-V, WSL, VirtualBox, VPN) no se muestran.
+- Revise el firewall: en una consola de administrador, `netsh advfirewall firewall show rule name="BIGGER Agil"`. La regla debe decir `Perfiles: Dominio,Privado,Público` e `IP remota: LocalSubnet`. Si no existe o es distinta, vuelva a ejecutar el instalador o créela con `netsh advfirewall firewall delete rule name="BIGGER Agil"` y luego `netsh advfirewall firewall add rule name="BIGGER Agil" dir=in action=allow protocol=TCP localport=3000 profile=any remoteip=localsubnet`.
+- La regla solo acepta equipos de la misma red local: el Wi-Fi de invitados o los datos móviles no sirven.
 
 **El puerto 3000 está ocupado.** Otro programa usa el puerto; el servicio no inicia. Averigüe cuál con `netstat -ano | findstr :3000` y ciérrelo, o reinicie el PC.
 
