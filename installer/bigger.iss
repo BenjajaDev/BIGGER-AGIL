@@ -395,10 +395,11 @@ begin
     end;
   end;
 
+  { Todos los perfiles: Windows suele marcar el Wi-Fi como «Pública». Solo equipos de la red local. }
   WizardForm.StatusLabel.Caption := 'Abriendo el puerto 3000 en el firewall...';
   RunHidden(ExpandConstant('{sys}\netsh.exe'), 'advfirewall firewall delete rule name="BIGGER Agil"', RC);
   if (not RunHidden(ExpandConstant('{sys}\netsh.exe'),
-      'advfirewall firewall add rule name="BIGGER Agil" dir=in action=allow protocol=TCP localport=3000 profile=private,domain', RC))
+      'advfirewall firewall add rule name="BIGGER Agil" dir=in action=allow protocol=TCP localport=3000 profile=any remoteip=localsubnet', RC))
      or (RC <> 0) then
     MsgBox('No se pudo abrir el puerto 3000 en el firewall. Las tablets podrían no conectarse; ' +
       'vea docs/instalacion-windows.md (solución de problemas).', mbInformation, MB_OK);
