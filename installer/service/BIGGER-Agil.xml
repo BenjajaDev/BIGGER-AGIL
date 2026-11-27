@@ -1,0 +1,26 @@
+<service>
+  <id>BIGGER-Agil</id>
+  <name>BIGGER Ágil</name>
+  <description>Sistema de comandas, cocina y carta digital de BIGGER. Sirve la web y la API en el puerto 3000.</description>
+
+  <executable>%BASE%\..\node\node.exe</executable>
+  <arguments>"%BASE%\..\api\dist\server.js"</arguments>
+  <workingdirectory>%BASE%\..\api</workingdirectory>
+
+  <env name="BIGGER_CONFIG" value="%ProgramData%\BIGGER\config.env" />
+
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>false</delayedAutoStart>
+  <stoptimeout>15 sec</stoptimeout>
+
+  <onfailure action="restart" delay="5 sec" />
+  <onfailure action="restart" delay="5 sec" />
+  <onfailure action="restart" delay="5 sec" />
+  <resetfailure>1 hour</resetfailure>
+
+  <logpath>%ProgramData%\BIGGER\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>5120</sizeThreshold>
+    <keepFiles>5</keepFiles>
+  </log>
+</service>
