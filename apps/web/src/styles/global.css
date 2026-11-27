@@ -110,3 +110,14 @@ svg {
     scroll-behavior: auto !important;
   }
 }
+
+/* Impresión (QR por mesa, comandas): sin la barra, la navegación ni los controles de la app. */
+@media print {
+  [data-no-print] {
+    display: none !important;
+  }
+
+  body {
+    background: none;
+  }
+}

@@ -43,9 +43,13 @@
 }
 
 .header {
-  padding: 1.5em var(--menu-gutter) 1.25em;
+  padding: 1.75em var(--menu-gutter) 1.5em;
   border-bottom: 6px solid var(--accent);
-  background-color: var(--surface-inverse);
+  background:
+    radial-gradient(circle at 1px 1px, var(--hover-on-inverse) 1px, transparent 1.5px) 0 0 / 18px
+      18px,
+    radial-gradient(80% 140% at 100% 0%, var(--tone-accent-ink), transparent 70%),
+    var(--surface-inverse);
   color: var(--text-inverse);
 }
 
@@ -63,7 +67,33 @@
 }
 
 .address {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  margin-top: 0.25em;
+  color: var(--text-inverse-soft);
   font-size: 0.875em;
+}
+
+.perks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin: 0.9em 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.perks li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.3em 0.75em;
+  border: var(--border-width) solid var(--highlight-on-cover-strong);
+  border-radius: var(--radius-pill);
+  background-color: var(--hover-on-inverse);
+  font-size: 0.875em;
+  font-weight: var(--weight-medium);
 }
 
 .content {
@@ -110,7 +140,11 @@
 }
 
 .tableBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
+  border-inline-start: 4px solid var(--accent);
   border-radius: var(--radius-sm);
   background-color: var(--surface-muted);
   font-weight: var(--weight-semibold);

@@ -5,21 +5,32 @@ import {
   type AdminProduct,
   type ProductKind,
 } from '@bigger/shared';
-import { ArchiveRestore, Pencil, Plus, SearchX, Shapes, Trash2 } from 'lucide-react';
+import {
+  ArchiveRestore,
+  Combine,
+  Package,
+  Pencil,
+  Plus,
+  SearchX,
+  Shapes,
+  Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { AsyncContent } from '../../components/ui/AsyncContent';
 import { Button, ButtonLink } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Chip } from '../../components/ui/Chip';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { SectionHeader } from '../../components/ui/SectionHeader';
 import { CoverImage } from '../../components/ui/CoverImage';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { UndoToast } from '../../components/ui/UndoToast';
-import { cx } from '../../lib/cx';
 import { localToday } from '../../lib/dates';
 import { formatClp } from '../../lib/format';
 import styles from './CatalogAdmin.module.css';
+import { AdminListRow } from './components/AdminListRow';
 import { AvailabilityToggle } from './components/AvailabilityToggle';
 import { FlashNotice } from './components/FlashNotice';
 import { FormAlert } from './components/FormAlert';
@@ -60,10 +71,10 @@ function groupByCategory(
 function ProductPrice({ product }: { product: AdminProduct }) {
   const from = product.sizes.length > 1 ? 'desde ' : '';
   return (
-    <span className={styles.price}>
+    <>
       {from}
       {formatClp(startingPrice(product))}
-    </span>
+    </>
   );
 }
 
@@ -143,26 +154,26 @@ export function ProductListPage({ kind }: { kind: ProductKind }) {
   };
 
   return (
-    <section className={styles.page} aria-labelledby="lista-titulo">
-      <div className={styles.header}>
-        <h1 id="lista-titulo" className={styles.title}>
-          {copy.title}
-        </h1>
-        <div className={styles.headerActions}>
-          <Chip
-            pressed={showArchived}
-            onClick={() => {
-              setShowArchived((value) => !value);
-            }}
-          >
-            Mostrar eliminados
-          </Chip>
-          <ButtonLink to={`${copy.basePath}/nuevo`} variant="primary">
-            <Plus size={20} aria-hidden="true" />
-            {copy.newLabel}
-          </ButtonLink>
-        </div>
-      </div>
+    <section className={styles.page}>
+      <PageHeader
+        title={copy.title}
+        actions={
+          <>
+            <Chip
+              pressed={showArchived}
+              onClick={() => {
+                setShowArchived((value) => !value);
+              }}
+            >
+              Mostrar eliminados
+            </Chip>
+            <ButtonLink to={`${copy.basePath}/nuevo`} variant="primary">
+              <Plus size={20} aria-hidden="true" />
+              {copy.newLabel}
+            </ButtonLink>
+          </>
+        }
+      />
 
       <FlashNotice />
       {kind === 'single' && activeCategories.length > 0 && (
@@ -177,7 +188,21 @@ export function ProductListPage({ kind }: { kind: ProductKind }) {
           const ofKind = products.filter((product) => product.kind === kind);
           if (ofKind.length === 0) {
             return (
-              <EmptyState icon={SearchX} title={`Todavía no hay ${copy.title.toLowerCase()}`} />
+              <EmptyState
+                icon={kind === 'combo' ? Combine : Package}
+                title={`Todavía no hay ${copy.title.toLowerCase()}`}
+                description={
+                  kind === 'combo'
+                    ? 'Agrupa productos en un combo con precio propio.'
+                    : 'Agrega el primero con la carga rápida o con el botón de abajo.'
+                }
+                action={
+                  <ButtonLink to={`${copy.basePath}/nuevo`} variant="primary">
+                    <Plus size={20} aria-hidden="true" />
+                    {copy.newLabel}
+                  </ButtonLink>
+                }
+              />
             );
           }
           const visible = filterProducts(ofKind, filter, localToday());
@@ -223,40 +248,33 @@ export function ProductListPage({ kind }: { kind: ProductKind }) {
                 className={styles.section}
                 aria-labelledby={`cat-${category.id}`}
               >
-                <h2 id={`cat-${category.id}`} className={styles.sectionTitle}>
-                  {category.name}
-                </h2>
+                <SectionHeader id={`cat-${category.id}`} title={category.name} />
                 <ul role="list" className={styles.rows}>
                   {items.map((product) => (
-                    <Card
-                      as="li"
+                    <AdminListRow
                       key={product.id}
-                      padded={false}
-                      className={cx(styles.row, product.archivedAt !== null && styles.rowArchived)}
-                    >
-                      <CoverImage
-                        image={product.image}
-                        ratio="4 / 3"
-                        sizes="4.5rem"
-                        className={styles.thumb}
-                      />
-                      <div className={styles.rowMain}>
-                        <span className={styles.rowTitle}>
-                          {product.name}
-                          <ProductBadges
-                            product={product}
-                            typeName={
-                              typesQuery.data?.find((type) => type.id === product.typeId)?.name
-                            }
-                          />
-                        </span>
-                        <span className={styles.rowMeta}>
-                          {describeProductConfiguration(product, groupsQuery.data ?? [])}
-                        </span>
-                      </div>
-                      <ProductPrice product={product} />
-                      <div className={styles.rowActions}>
-                        {product.archivedAt === null ? (
+                      archived={product.archivedAt !== null}
+                      leading={
+                        <CoverImage
+                          image={product.image}
+                          motif={product.name}
+                          ratio="4 / 3"
+                          sizes="4.5rem"
+                        />
+                      }
+                      title={product.name}
+                      badges={
+                        <ProductBadges
+                          product={product}
+                          typeName={
+                            typesQuery.data?.find((type) => type.id === product.typeId)?.name
+                          }
+                        />
+                      }
+                      meta={describeProductConfiguration(product, groupsQuery.data ?? [])}
+                      trailing={<ProductPrice product={product} />}
+                      actions={
+                        product.archivedAt === null ? (
                           <>
                             <AvailabilityToggle
                               product={product}
@@ -269,7 +287,7 @@ export function ProductListPage({ kind }: { kind: ProductKind }) {
                               Editar<span className="visually-hidden"> {product.name}</span>
                             </ButtonLink>
                             <Button
-                              variant="ghost"
+                              variant="danger"
                               onClick={() => {
                                 setPendingArchive(product);
                               }}
@@ -294,9 +312,9 @@ export function ProductListPage({ kind }: { kind: ProductKind }) {
                             <ArchiveRestore size={18} aria-hidden="true" />
                             Restaurar<span className="visually-hidden"> {product.name}</span>
                           </Button>
-                        )}
-                      </div>
-                    </Card>
+                        )
+                      }
+                    />
                   ))}
                 </ul>
               </section>

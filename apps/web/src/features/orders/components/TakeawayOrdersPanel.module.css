@@ -4,8 +4,10 @@
 }
 
 .title {
-  font-size: var(--text-button);
+  margin: 0;
+  font-size: var(--text-section);
   font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
 }
 
 .list {
@@ -15,10 +17,12 @@
 
 .item {
   display: grid;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  border-radius: var(--radius-sm);
-  background-color: var(--surface-muted);
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-card);
+  box-shadow: var(--shadow-card);
   animation: pop-in var(--duration-base) var(--ease-out);
 }
 
@@ -48,6 +52,7 @@
 }
 
 .total {
+  font-size: var(--text-button);
   font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
 }

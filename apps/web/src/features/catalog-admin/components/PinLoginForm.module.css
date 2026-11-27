@@ -1,19 +1,20 @@
 .wrapper {
-  display: grid;
-  place-items: center;
+  align-content: center;
   min-height: calc(100dvh - var(--header-height));
-  padding: var(--space-6);
 }
 
 .card {
   display: grid;
   gap: var(--space-4);
   width: min(26rem, 100%);
+  justify-self: center;
   padding: var(--space-8);
+  text-align: center;
 }
 
 .icon {
   display: grid;
+  justify-self: center;
   place-items: center;
   width: 3.5rem;
   height: 3.5rem;
@@ -37,4 +38,9 @@
   font-size: var(--text-heading);
   letter-spacing: 0.3em;
   text-align: center;
+}
+
+.submit {
+  min-height: var(--touch-large);
+  margin-top: var(--space-4);
 }

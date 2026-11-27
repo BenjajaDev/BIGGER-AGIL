@@ -1,6 +1,7 @@
 import type { Payment } from '@bigger/shared';
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { controlClassName } from '../../../components/form/control';
+import { Field } from '../../../components/form/Field';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { formatClp } from '../../../lib/format';
 import { PAYMENT_METHOD_PRESENTATION } from '../payment-presentation';
@@ -17,7 +18,6 @@ export interface VoidPaymentDialogProps {
 export function VoidPaymentDialog({ payment, onClose }: VoidPaymentDialogProps) {
   const voidPayment = useVoidPayment();
   const [reason, setReason] = useState('');
-  const reasonId = useId();
 
   const close = () => {
     setReason('');
@@ -44,17 +44,20 @@ export function VoidPaymentDialog({ payment, onClose }: VoidPaymentDialogProps) 
         if (payment) voidPayment.mutate({ paymentId: payment.id, reason }, { onSuccess: close });
       }}
     >
-      <label htmlFor={reasonId}>Motivo</label>
-      <input
-        id={reasonId}
-        className={controlClassName}
-        value={reason}
-        maxLength={140}
-        placeholder="Ej.: se pasó la tarjeta equivocada"
-        onChange={(event) => {
-          setReason(event.target.value);
-        }}
-      />
+      <Field label="Motivo" hint="Queda guardado en el historial de pagos.">
+        {(control) => (
+          <input
+            {...control}
+            className={controlClassName}
+            value={reason}
+            maxLength={140}
+            placeholder="Ej.: se pasó la tarjeta equivocada"
+            onChange={(event) => {
+              setReason(event.target.value);
+            }}
+          />
+        )}
+      </Field>
     </ConfirmDialog>
   );
 }

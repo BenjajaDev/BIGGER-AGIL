@@ -1,5 +1,6 @@
 import type { ComboProductInput, ProductKind, SingleProductInput } from '@bigger/shared';
 import { useFormContext, useWatch } from 'react-hook-form';
+import { SectionHeader } from '../../../components/ui/SectionHeader';
 import { MenuCard } from '../../menu/components/MenuCard';
 import styles from '../CatalogAdmin.module.css';
 import { previewCombo, previewSingleProduct, type PreviewSources } from '../card-preview';
@@ -19,9 +20,7 @@ export function LivePreview({ kind, ...sources }: LivePreviewProps) {
 
   return (
     <aside className={styles.preview} aria-labelledby="vista-previa-titulo">
-      <h2 id="vista-previa-titulo" className={styles.previewTitle}>
-        Así se verá en la carta
-      </h2>
+      <SectionHeader id="vista-previa-titulo" title="Así se verá en la carta" />
       <MenuCard product={product} />
     </aside>
   );

@@ -4,12 +4,13 @@ import {
   type QuickProductInput,
 } from '@bigger/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Zap } from 'lucide-react';
+import { Plus, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { controlClassName } from '../../../components/form/control';
 import { Field } from '../../../components/form/Field';
 import { MoneyInput } from '../../../components/form/MoneyInput';
+import { SectionHeader } from '../../../components/ui/SectionHeader';
 import { Button } from '../../../components/ui/Button';
 import styles from '../CatalogAdmin.module.css';
 import { applyServerErrors } from '../form-errors';
@@ -47,14 +48,17 @@ export function QuickAddForm({ categories }: { categories: readonly AdminCategor
 
   return (
     <form
-      className={styles.form}
+      className={styles.formCard}
       onSubmit={(event) => void onSubmit(event)}
       noValidate
       aria-labelledby="carga-rapida-titulo"
     >
-      <h2 id="carga-rapida-titulo" className={styles.sectionTitle}>
-        Carga rápida
-      </h2>
+      <SectionHeader
+        id="carga-rapida-titulo"
+        icon={Zap}
+        title="Carga rápida"
+        description="Nombre, categoría y precio. La foto y los detalles se agregan después con «Editar»."
+      />
       <FormAlert message={alert} />
       <div className={styles.quickRow}>
         <Field label="Nombre" error={errors.name?.message}>
@@ -89,7 +93,7 @@ export function QuickAddForm({ categories }: { categories: readonly AdminCategor
           className={styles.alignWithControl}
           disabled={save.isPending}
         >
-          <Zap size={18} aria-hidden="true" />
+          <Plus size={18} aria-hidden="true" />
           Agregar rápido
         </Button>
       </div>

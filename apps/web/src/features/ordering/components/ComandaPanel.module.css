@@ -1,17 +1,30 @@
 .panel {
   position: sticky;
   top: calc(var(--header-height) + var(--space-6));
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
   max-height: calc(100dvh - var(--header-height) - var(--space-6) * 2);
 }
 
 /* Stacked under the catalog on narrow screens: let it flow instead of sticking. */
-@media (max-width: 960px) {
+@media (max-width: 60rem) {
   .panel {
     position: static;
     max-height: none;
+  }
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 60rem) {
+  .scroll {
+    overflow-y: visible;
   }
 }
 
@@ -33,7 +46,7 @@
 .heading {
   text-align: center;
   font-family: var(--font-ticket-display);
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: var(--weight-regular);
   line-height: var(--leading-tight);
   text-transform: uppercase;
@@ -63,7 +76,7 @@
 .name {
   display: grid;
   gap: var(--space-1);
-  margin-top: var(--space-3);
+  margin-top: var(--space-2);
 }
 
 .name label {
@@ -98,8 +111,7 @@
 }
 
 .lines {
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  min-height: 4rem;
 }
 
 .list {
@@ -145,7 +157,7 @@
 
 .totalAmount {
   font-family: var(--font-ticket-display);
-  font-size: var(--text-title);
+  font-size: var(--text-subtitle);
   font-weight: var(--weight-regular);
   letter-spacing: normal;
   color: var(--text-primary);

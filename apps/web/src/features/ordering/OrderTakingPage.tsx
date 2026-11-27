@@ -1,14 +1,19 @@
 import type { MenuProduct, Product } from '@bigger/shared';
-import { CircleHelp, LayoutGrid, Search } from 'lucide-react';
-import { useId, useMemo, useState } from 'react';
+import { ReceiptText, Search } from 'lucide-react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { controlClassName } from '../../components/form/control';
+import { Page } from '../../components/layout/Page';
 import { AsyncContent } from '../../components/ui/AsyncContent';
-import { ButtonLink } from '../../components/ui/Button';
+import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { cx } from '../../lib/cx';
+import { formatClp } from '../../lib/format';
 import { useCreateOrder } from '../orders/useOrders';
 import { useTableOverview } from '../tables/useTableOverview';
 import { CategoryFilter } from './components/CategoryFilter';
+import { ChooseTarget } from './components/ChooseTarget';
 import { ComandaPanel } from './components/ComandaPanel';
 import { OptionsModal } from './components/OptionsModal';
 import { ProductGrid } from './components/ProductGrid';
@@ -40,24 +45,6 @@ function useOrderTarget(): Target | null {
     : { kind: 'none' };
 }
 
-function ChooseTarget() {
-  return (
-    <div className={styles.centered}>
-      <EmptyState
-        icon={CircleHelp}
-        title="¿Para quién es el pedido?"
-        description="Elige una mesa en el mapa o inicia un pedido para llevar desde Mesas."
-        action={
-          <ButtonLink to="/mesas" variant="secondary">
-            <LayoutGrid size={18} aria-hidden="true" />
-            Ir a Mesas
-          </ButtonLink>
-        }
-      />
-    </div>
-  );
-}
-
 export function OrderTakingPage() {
   const target = useOrderTarget();
   const categoriesQuery = useCategories();
@@ -75,6 +62,34 @@ export function OrderTakingPage() {
     if (search.trim()) return searchProducts(products, search);
     return products.filter((product) => product.categoryId === activeCategoryId);
   }, [productsQuery.data, activeCategoryId, search]);
+
+  const categoryNames = useMemo(
+    () => new Map((categoriesQuery.data ?? []).map((category) => [category.id, category.name])),
+    [categoriesQuery.data],
+  );
+  const quantities = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const line of draft.lines) {
+      totals.set(line.productId, (totals.get(line.productId) ?? 0) + line.quantity);
+    }
+    return totals;
+  }, [draft.lines]);
+
+  const [comandaVisible, setComandaVisible] = useState(false);
+  const hasTarget = target !== null && target.kind !== 'none';
+  useEffect(() => {
+    if (!hasTarget || typeof IntersectionObserver === 'undefined') return;
+    const panel = document.getElementById('comanda-titulo')?.closest('aside');
+    if (!panel) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setComandaVisible(entry?.isIntersecting ?? false);
+    });
+    observer.observe(panel);
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasTarget]);
+  const totalUnits = draft.lines.reduce((sum, line) => sum + line.quantity, 0);
 
   if (target === null) return null;
   if (target.kind === 'none') return <ChooseTarget />;
@@ -111,83 +126,110 @@ export function OrderTakingPage() {
   };
 
   return (
-    <div className={styles.layout}>
-      <section className={styles.catalog} aria-labelledby="pedido-titulo">
-        <h1 id="pedido-titulo" className={styles.title}>
-          {targetLabel} · Agregar productos
-        </h1>
-        <div className={styles.search}>
-          <label htmlFor={searchId} className="visually-hidden">
-            Buscar producto
-          </label>
-          <Search className={styles.searchIcon} size={20} aria-hidden="true" />
-          <input
-            id={searchId}
-            type="search"
-            className={controlClassName}
-            value={search}
-            placeholder="Buscar producto…"
-            onChange={(event) => {
-              setSearch(event.target.value);
-            }}
-          />
-        </div>
-        {!search.trim() && (
-          <AsyncContent query={categoriesQuery} loadingLabel="Cargando categorías…">
-            {(categories) => (
-              <CategoryFilter
-                categories={categories}
-                selectedId={activeCategoryId}
-                onSelect={setSelectedCategoryId}
-              />
-            )}
+    <Page>
+      <PageHeader
+        title={`${targetLabel} · Agregar productos`}
+        titleId="pedido-titulo"
+        documentTitle="Pedido · BIGGER"
+        back={{ to: '/mesas', label: 'Mesas' }}
+      />
+      <div className={styles.layout}>
+        <section className={styles.catalog} aria-labelledby="pedido-titulo">
+          <div className={styles.search}>
+            <label htmlFor={searchId} className="visually-hidden">
+              Buscar producto
+            </label>
+            <Search className={styles.searchIcon} size={20} aria-hidden="true" />
+            <input
+              id={searchId}
+              type="search"
+              className={controlClassName}
+              value={search}
+              placeholder="Buscar producto…"
+              onChange={(event) => {
+                setSearch(event.target.value);
+              }}
+            />
+          </div>
+          {!search.trim() && (
+            <AsyncContent query={categoriesQuery} loadingLabel="Cargando categorías…">
+              {(categories) => (
+                <CategoryFilter
+                  categories={categories}
+                  selectedId={activeCategoryId}
+                  onSelect={setSelectedCategoryId}
+                />
+              )}
+            </AsyncContent>
+          )}
+          <AsyncContent query={productsQuery} loadingLabel="Cargando productos…">
+            {() =>
+              visibleProducts.length === 0 ? (
+                <EmptyState
+                  icon={Search}
+                  title="Sin resultados"
+                  description="Prueba con otro nombre o cambia de categoría."
+                />
+              ) : (
+                <ProductGrid
+                  products={visibleProducts}
+                  categoryNames={categoryNames}
+                  quantities={quantities}
+                  onAdd={handleAdd}
+                />
+              )
+            }
           </AsyncContent>
-        )}
-        <AsyncContent query={productsQuery} loadingLabel="Cargando productos…">
-          {() =>
-            visibleProducts.length === 0 ? (
-              <EmptyState
-                icon={Search}
-                title="Sin resultados"
-                description="Prueba con otro nombre o cambia de categoría."
-              />
-            ) : (
-              <ProductGrid products={visibleProducts} onAdd={handleAdd} />
-            )
+          {draft.lines.length > 0 && (
+            <div className={cx(styles.jump, comandaVisible && styles.jumpHidden)}>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                onClick={() => {
+                  document
+                    .getElementById('comanda-titulo')
+                    ?.scrollIntoView({ block: 'center', behavior: 'auto' });
+                }}
+              >
+                <ReceiptText size={20} aria-hidden="true" />
+                Ver comanda · {totalUnits} · {formatClp(draft.totalClp)}
+              </Button>
+            </div>
+          )}
+        </section>
+
+        <ComandaPanel
+          heading={targetLabel}
+          subtitle={targetSubtitle}
+          customerName={draft.customerName}
+          requireName={target.kind === 'takeaway'}
+          lines={draft.lines}
+          totalClp={draft.totalClp}
+          onSetCustomerName={draft.setCustomerName}
+          onIncrement={draft.increment}
+          onDecrement={draft.decrement}
+          onSetNote={draft.setNote}
+          onSubmit={handleSubmit}
+          isSubmitting={createOrder.isPending}
+          error={
+            createOrder.isError
+              ? 'No se pudo enviar la comanda. Revisa la conexión e inténtalo de nuevo.'
+              : undefined
           }
-        </AsyncContent>
-      </section>
+        />
 
-      <ComandaPanel
-        heading={targetLabel}
-        subtitle={targetSubtitle}
-        customerName={draft.customerName}
-        requireName={target.kind === 'takeaway'}
-        lines={draft.lines}
-        totalClp={draft.totalClp}
-        onSetCustomerName={draft.setCustomerName}
-        onIncrement={draft.increment}
-        onDecrement={draft.decrement}
-        onSetNote={draft.setNote}
-        onSubmit={handleSubmit}
-        isSubmitting={createOrder.isPending}
-        error={
-          createOrder.isError
-            ? 'No se pudo enviar la comanda. Revisa la conexión e inténtalo de nuevo.'
-            : undefined
-        }
-      />
-
-      <OptionsModal
-        product={modalProduct}
-        onClose={() => {
-          setModalProduct(null);
-        }}
-        onConfirm={(config) => {
-          if (modalProduct) draft.addLine(modalProduct, config);
-          setModalProduct(null);
-        }}
-      />
-    </div>
+        <OptionsModal
+          product={modalProduct}
+          onClose={() => {
+            setModalProduct(null);
+          }}
+          onConfirm={(config) => {
+            if (modalProduct) draft.addLine(modalProduct, config);
+            setModalProduct(null);
+          }}
+        />
+      </div>
+    </Page>
   );
 }

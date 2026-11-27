@@ -3,7 +3,7 @@
   align-content: start;
   justify-items: start;
   gap: var(--space-2);
-  min-height: 7.5rem;
+  min-height: 8rem;
   padding: var(--space-4);
   border: var(--border-width-strong) solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -18,7 +18,12 @@
 }
 
 .card:hover {
+  border-color: var(--border-strong);
   box-shadow: var(--shadow-raised);
+}
+
+.card:focus-visible {
+  outline-offset: 2px;
 }
 
 .card:active {
@@ -27,18 +32,23 @@
 
 .occupied {
   border-color: var(--accent);
+  background-color: var(--tone-accent-soft);
 }
 
 .awaiting-payment {
   border-color: var(--status-highlight);
+  background-color: var(--tone-warning-soft);
 }
 
 .label {
-  font-size: var(--text-button);
+  font-size: var(--text-heading);
   font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
 }
 
 .detail {
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
   font-size: var(--text-detail);
 }

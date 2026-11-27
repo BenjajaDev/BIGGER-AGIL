@@ -1,11 +1,23 @@
+/** Building a formatter is expensive and reports call this once per row and day: reuse them. */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+function formatterFor(timeZone: string): Intl.DateTimeFormat {
+  let formatter = formatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    formatters.set(timeZone, formatter);
+  }
+  return formatter;
+}
+
 /** `YYYY-MM-DD` of an instant as seen in the shop's time zone (the sales day does not follow UTC). */
 export function localDate(instant: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(instant);
+  return formatterFor(timeZone).format(instant);
 }
 
 export function addDays(date: string, days: number): string {

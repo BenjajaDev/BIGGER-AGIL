@@ -15,10 +15,11 @@ import { CheckboxGroup } from '../../components/form/CheckboxGroup';
 import { controlClassName } from '../../components/form/control';
 import { Field } from '../../components/form/Field';
 import { ButtonLink } from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { pluralize } from '../../lib/format';
 import styles from './CatalogAdmin.module.css';
+import { EditorSection } from './components/EditorSection';
 import { FormAlert } from './components/FormAlert';
 import { SaveBar } from './components/SaveBar';
 import { SizeRulesMatrix } from './components/SizeRulesMatrix';
@@ -71,10 +72,7 @@ function ProductTypeForm({ type, groups }: ProductTypeFormProps) {
     <FormProvider {...form}>
       <form className={styles.form} onSubmit={(event) => void onSubmit(event)} noValidate>
         <FormAlert message={alert} />
-        <Card as="section" className={styles.formCard} aria-labelledby="tipo-datos-titulo">
-          <h2 id="tipo-datos-titulo" className={styles.sectionTitle}>
-            Datos del tipo
-          </h2>
+        <EditorSection id="tipo-datos-titulo" title="Datos del tipo">
           <Field label="Nombre" hint="Ej.: Ensalada armable, Fajita" error={errors.name?.message}>
             {(controlProps) => (
               <input
@@ -115,23 +113,17 @@ function ProductTypeForm({ type, groups }: ProductTypeFormProps) {
               )}
             </Field>
           )}
-        </Card>
+        </EditorSection>
 
         {kind === 'single' ? (
           <>
-            <Card as="section" className={styles.formCard} aria-labelledby="tipo-tamanos-titulo">
-              <h2 id="tipo-tamanos-titulo" className={styles.sectionTitle}>
-                Tamaños y precios sugeridos
-              </h2>
+            <EditorSection id="tipo-tamanos-titulo" title="Tamaños y precios sugeridos">
               <p className={styles.rowMeta}>
                 Sin tamaños, cada producto tendrá un precio único que se define al crearlo.
               </p>
               <SizesEditor withBasePrice={false} />
-            </Card>
-            <Card as="section" className={styles.formCard} aria-labelledby="tipo-reglas-titulo">
-              <h2 id="tipo-reglas-titulo" className={styles.sectionTitle}>
-                Ingredientes, extras y reglas
-              </h2>
+            </EditorSection>
+            <EditorSection id="tipo-reglas-titulo" title="Ingredientes, extras y reglas">
               <Controller
                 control={control}
                 name="modifierGroupIds"
@@ -151,18 +143,15 @@ function ProductTypeForm({ type, groups }: ProductTypeFormProps) {
                 )}
               />
               <SizeRulesMatrix groups={groups} />
-            </Card>
+            </EditorSection>
           </>
         ) : (
-          <Card as="section" className={styles.formCard} aria-labelledby="tipo-espacios-titulo">
-            <h2 id="tipo-espacios-titulo" className={styles.sectionTitle}>
-              Espacios del combo
-            </h2>
+          <EditorSection id="tipo-espacios-titulo" title="Espacios del combo">
             <p className={styles.rowMeta}>
               Cada combo de este tipo elige qué productos ofrece en cada espacio.
             </p>
             <TemplateSlotsEditor />
-          </Card>
+          </EditorSection>
         )}
         <SaveBar cancelTo={PRODUCT_TYPES_PATH} isPending={save.isPending} />
       </form>
@@ -190,15 +179,16 @@ export function ProductTypeEditorPage() {
 
   const type = typeQuery.data;
   return (
-    <section className={styles.page} aria-labelledby="editor-titulo">
-      <h1 id="editor-titulo" className={styles.title}>
-        {type ? `Editar «${type.name}»` : 'Nuevo tipo de producto'}
-      </h1>
-      <p className={styles.rowMeta}>
-        {type && type.productCount > 0
-          ? `Creado en ${pluralize(type.productCount, 'producto', 'productos')}. Los cambios solo se aplican a los productos nuevos.`
-          : 'Un tipo es una plantilla: al crear un producto con él, parte con estos tamaños, reglas y espacios.'}
-      </p>
+    <section className={styles.page}>
+      <PageHeader
+        title={type ? `Editar «${type.name}»` : 'Nuevo tipo de producto'}
+        back={{ to: PRODUCT_TYPES_PATH, label: 'Tipos' }}
+        subtitle={
+          type && type.productCount > 0
+            ? `Creado en ${pluralize(type.productCount, 'producto', 'productos')}. Los cambios solo se aplican a los productos nuevos.`
+            : 'Un tipo es una plantilla: al crear un producto con él, parte con estos tamaños, reglas y espacios.'
+        }
+      />
       <ProductTypeForm key={type?.id ?? 'nuevo'} type={type} groups={groupsQuery.data ?? []} />
     </section>
   );

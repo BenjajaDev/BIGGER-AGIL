@@ -4,12 +4,18 @@ import { buttonClassName, type ButtonStyleProps } from './button-styles';
 
 export type { ButtonSize, ButtonVariant } from './button-styles';
 
-export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & ButtonStyleProps;
+/** Icon-only buttons have no visible text, so an accessible name is mandatory. */
+type IconOnlyProps = { iconOnly?: false } | { iconOnly: true; 'aria-label': string };
+
+export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
+  Omit<ButtonStyleProps, 'iconOnly'> &
+  IconOnlyProps;
 
 export function Button({
   variant,
   size,
   fullWidth,
+  iconOnly,
   className,
   type = 'button',
   ...props
@@ -17,14 +23,26 @@ export function Button({
   return (
     <button
       type={type}
-      className={buttonClassName({ variant, size, fullWidth }, className)}
+      className={buttonClassName({ variant, size, fullWidth, iconOnly }, className)}
       {...props}
     />
   );
 }
 
-export type ButtonLinkProps = LinkProps & ButtonStyleProps;
+export type ButtonLinkProps = LinkProps & Omit<ButtonStyleProps, 'iconOnly'> & IconOnlyProps;
 
-export function ButtonLink({ variant, size, fullWidth, className, ...props }: ButtonLinkProps) {
-  return <Link className={buttonClassName({ variant, size, fullWidth }, className)} {...props} />;
+export function ButtonLink({
+  variant,
+  size,
+  fullWidth,
+  iconOnly,
+  className,
+  ...props
+}: ButtonLinkProps) {
+  return (
+    <Link
+      className={buttonClassName({ variant, size, fullWidth, iconOnly }, className)}
+      {...props}
+    />
+  );
 }

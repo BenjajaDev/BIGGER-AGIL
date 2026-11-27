@@ -7,9 +7,10 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { Page } from '../../components/layout/Page';
 import { AsyncContent } from '../../components/ui/AsyncContent';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { queryKeys } from '../../app/query-keys';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useNow } from '../../hooks/useNow';
 import { ApiRequestError } from '../../services/http-client';
 import { orderTitle } from '../orders/order-text';
@@ -24,6 +25,8 @@ import { useKitchenSound } from './sound/useKitchenSound';
 import { useNewOrderAlerts } from './sound/useNewOrderAlerts';
 import { groupByKitchenStatus, useKitchenOrders } from './useKitchenOrders';
 
+const HEADING_ID = 'cocina-titulo';
+
 export function KitchenPage() {
   const ordersQuery = useKitchenOrders();
   const queryClient = useQueryClient();
@@ -33,7 +36,7 @@ export function KitchenPage() {
   const reprint = useReprintOrder();
   const sound = useKitchenSound();
   const waiting = (ordersQuery.data ?? []).filter((order) => order.status === 'new').length;
-  useDocumentTitle(waiting > 0 ? `(${waiting}) Cocina · BIGGER Ágil` : 'Cocina · BIGGER Ágil');
+  const documentTitle = waiting > 0 ? `(${waiting}) Cocina · BIGGER Ágil` : 'Cocina · BIGGER Ágil';
   const pendingIdsRef = useRef(new Set<string>());
   const [pendingOrderIds, setPendingOrderIds] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -47,11 +50,17 @@ export function KitchenPage() {
     },
   });
   const pageRef = useRef<HTMLDivElement>(null);
-  const headingRef = useRef<HTMLHeadingElement>(null);
   const [focusTarget, setFocusTarget] = useState<{
     orderId: string;
     origin: Element | null;
   } | null>(null);
+
+  const findHeading = () => document.getElementById(HEADING_ID);
+
+  // The page title is visually hidden but can take focus when the card that had it disappears.
+  useEffect(() => {
+    findHeading()?.setAttribute('tabindex', '-1');
+  }, []);
 
   useEffect(() => {
     if (!focusTarget || !focusTarget.origin || document.activeElement !== document.body) return;
@@ -65,7 +74,7 @@ export function KitchenPage() {
       pageRef.current?.querySelector<HTMLButtonElement>(
         `[data-order-id="${focusTarget.orderId}"] [data-order-action]`,
       );
-    (button ?? headingRef.current)?.focus();
+    (button ?? findHeading())?.focus();
   }, [focusTarget]);
 
   const advanceOrder = async (order: Order, destination?: KitchenOrderStatus) => {
@@ -127,34 +136,37 @@ export function KitchenPage() {
 
   return (
     <div className={styles.page} ref={pageRef}>
-      <h1 className="visually-hidden" tabIndex={-1} ref={headingRef}>
-        Vista de cocina
-      </h1>
-      <p role="status" className="visually-hidden">
-        {announcement}
-      </p>
-      <div className={styles.toolbar}>
-        <SoundToggle soundOn={sound.soundOn} onToggle={sound.toggle} />
-      </div>
-      {error && (
-        <p role="alert" className={styles.error}>
-          <AlertCircle size={20} aria-hidden="true" />
-          {error}
+      <Page width="full" className={styles.content}>
+        <PageHeader
+          title="Vista de cocina"
+          titleId={HEADING_ID}
+          hideTitle
+          documentTitle={documentTitle}
+          actions={<SoundToggle soundOn={sound.soundOn} onToggle={sound.toggle} />}
+        />
+        <p role="status" className="visually-hidden">
+          {announcement}
         </p>
-      )}
-      <AsyncContent query={ordersQuery} loadingLabel="Cargando pedidos…" inverse>
-        {(orders) => (
-          <KitchenBoard
-            orders={groupByKitchenStatus(orders)}
-            now={now}
-            pendingOrderIds={pendingOrderIds}
-            onAdvance={(order, destination) => {
-              void advanceOrder(order, destination);
-            }}
-            {...(printer.data?.enabled ? { onReprint: reprintOrder } : {})}
-          />
+        {error && (
+          <p role="alert" className={styles.error}>
+            <AlertCircle size={20} aria-hidden="true" />
+            {error}
+          </p>
         )}
-      </AsyncContent>
+        <AsyncContent query={ordersQuery} loadingLabel="Cargando pedidos…" inverse>
+          {(orders) => (
+            <KitchenBoard
+              orders={groupByKitchenStatus(orders)}
+              now={now}
+              pendingOrderIds={pendingOrderIds}
+              onAdvance={(order, destination) => {
+                void advanceOrder(order, destination);
+              }}
+              {...(printer.data?.enabled ? { onReprint: reprintOrder } : {})}
+            />
+          )}
+        </AsyncContent>
+      </Page>
     </div>
   );
 }

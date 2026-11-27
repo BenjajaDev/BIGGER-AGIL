@@ -1,9 +1,9 @@
 import type { ImageAsset } from '@bigger/shared';
-import { ImageIcon } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { cx } from '../../lib/cx';
 import { focusPosition, imageSrcSet, imageUrl } from '../../lib/media';
 import styles from './CoverImage.module.css';
+import { coverMotif } from './cover-motif';
 
 export interface CoverImageProps {
   image: Pick<ImageAsset, 'id' | 'focusY'> | null;
@@ -15,6 +15,8 @@ export interface CoverImageProps {
   previewSrc?: string;
   className?: string;
   priority?: boolean;
+  /** Product or category name: picks the illustration shown while there is no photo. */
+  motif?: string;
 }
 
 /**
@@ -28,6 +30,7 @@ export function CoverImage({
   previewSrc,
   className,
   priority = false,
+  motif,
 }: CoverImageProps) {
   const style = ratio ? ({ '--cover-ratio': ratio } as CSSProperties) : undefined;
   const position = image ? focusPosition(image) : '50% 50%';
@@ -53,10 +56,19 @@ export function CoverImage({
           style={{ objectPosition: position }}
         />
       ) : (
-        <div className={styles.placeholder} aria-hidden="true">
-          <ImageIcon size={32} />
-        </div>
+        <Placeholder label={motif} />
       )}
+    </div>
+  );
+}
+
+function Placeholder({ label }: { label: string | undefined }) {
+  const { icon: Icon, tone } = coverMotif(label);
+  return (
+    <div className={cx(styles.placeholder, styles[tone])} aria-hidden="true">
+      <span className={styles.badge}>
+        <Icon className={styles.icon} strokeWidth={1.5} />
+      </span>
     </div>
   );
 }

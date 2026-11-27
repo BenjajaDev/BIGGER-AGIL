@@ -1,27 +1,31 @@
 import type { ReportKind, ReportRange } from '@bigger/shared';
 import { Download } from 'lucide-react';
 import { useState } from 'react';
+import { Field } from '../../components/form/Field';
+import { controlClassName } from '../../components/form/control';
+import { Page } from '../../components/layout/Page';
 import { AsyncContent } from '../../components/ui/AsyncContent';
 import { ButtonLink } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { Chip } from '../../components/ui/Chip';
+import { SectionHeader } from '../../components/ui/SectionHeader';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { Tabs, tabPanelProps } from '../../components/ui/Tabs';
 import { localToday } from '../../lib/dates';
-import { formatClp } from '../../lib/format';
+import { reportsService } from '../../services/reports.service';
 import { PinLoginForm } from '../catalog-admin/components/PinLoginForm';
 import { useAdminSession } from '../catalog-admin/useCatalogAdmin';
-import { reportsService } from '../../services/reports.service';
 import { CashCloseCard } from './components/CashCloseCard';
-import { DailyChart, MethodTable, RankedBars } from './components/SalesCharts';
+import { SalesView } from './components/SalesView';
 import styles from './ReportsPage.module.css';
 import {
-  deltaPercent,
-  formatDelta,
+  describeRange,
   PERIOD_LABELS,
   PERIOD_PRESETS,
   presetRange,
   type PeriodPreset,
 } from './report-format';
-import { useCashClose, useSalesReport } from './useReports';
+import { useCashClose } from './useReports';
 
 const EXPORTS: readonly { kind: ReportKind; label: string }[] = [
   { kind: 'daily', label: 'Ventas por día' },
@@ -29,85 +33,45 @@ const EXPORTS: readonly { kind: ReportKind; label: string }[] = [
   { kind: 'payments', label: 'Medios de pago' },
 ];
 
-function Kpi({ label, value, delta }: { label: string; value: string; delta?: string }) {
-  return (
-    <Card className={styles.kpi}>
-      <p className={styles.kpiLabel}>{label}</p>
-      <p className={styles.kpiValue}>{value}</p>
-      {delta && <p className={styles.kpiDelta}>{delta}</p>}
-    </Card>
-  );
-}
-
-function SalesView({ range }: { range: ReportRange }) {
-  const query = useSalesReport(range);
-  return (
-    <AsyncContent query={query} loadingLabel="Calculando ventas…">
-      {(report) => (
-        <>
-          <div className={styles.kpis}>
-            <Kpi
-              label="Ventas"
-              value={formatClp(report.totals.salesClp)}
-              delta={formatDelta(deltaPercent(report.totals.salesClp, report.previous.salesClp))}
-            />
-            <Kpi
-              label="Pedidos"
-              value={String(report.totals.orders)}
-              delta={formatDelta(deltaPercent(report.totals.orders, report.previous.orders))}
-            />
-            <Kpi
-              label="Ticket promedio"
-              value={formatClp(report.totals.averageTicketClp)}
-              delta={formatDelta(
-                deltaPercent(report.totals.averageTicketClp, report.previous.averageTicketClp),
-              )}
-            />
-            <Kpi label="Propinas" value={formatClp(report.totals.tipsClp)} />
-          </div>
-          <Card as="section" aria-labelledby="dia-titulo" className={styles.section}>
-            <h2 id="dia-titulo" className={styles.h2}>
-              Ventas por día
-            </h2>
-            <DailyChart days={report.byDay} />
-          </Card>
-          <div className={styles.two}>
-            <Card as="section" aria-labelledby="top-titulo" className={styles.section}>
-              <h2 id="top-titulo" className={styles.h2}>
-                Lo más vendido
-              </h2>
-              {report.topProducts.length === 0 ? (
-                <p className={styles.empty}>Todavía no hay ventas en este período.</p>
-              ) : (
-                <RankedBars rows={report.topProducts} unit="un." />
-              )}
-            </Card>
-            <Card as="section" aria-labelledby="lento-titulo" className={styles.section}>
-              <h2 id="lento-titulo" className={styles.h2}>
-                Poca salida
-              </h2>
-              <p className={styles.empty}>Candidatos para comprar menos y evitar mermas.</p>
-              <RankedBars rows={report.slowProducts} unit="un." />
-            </Card>
-          </div>
-          <Card as="section" aria-labelledby="medio-titulo" className={styles.section}>
-            <h2 id="medio-titulo" className={styles.h2}>
-              Medios de pago
-            </h2>
-            <MethodTable rows={report.byMethod} />
-          </Card>
-        </>
-      )}
-    </AsyncContent>
-  );
-}
+const PERIOD_TABS = PERIOD_PRESETS.map((value) => ({ value, label: PERIOD_LABELS[value] }));
 
 function CashView({ date }: { date: string }) {
   const query = useCashClose(date);
   return (
-    <AsyncContent query={query} loadingLabel="Cargando la caja…">
+    <AsyncContent
+      query={query}
+      loadingLabel="Cargando la caja…"
+      skeleton={<Skeleton lines={4} height="1.5rem" />}
+    >
       {(summary) => <CashCloseCard summary={summary} />}
     </AsyncContent>
+  );
+}
+
+function ExportSection({ range }: { range: ReportRange }) {
+  return (
+    <Card as="section" aria-labelledby="descargar-titulo" className={styles.section}>
+      <SectionHeader
+        id="descargar-titulo"
+        title="Descargar datos"
+        description="Archivos CSV para abrir en Excel o Google Sheets"
+      />
+      <div role="group" aria-label="Descargar en CSV" className={styles.exports}>
+        {EXPORTS.map(({ kind, label }) => (
+          <ButtonLink
+            key={kind}
+            to={reportsService.csvUrl(range, kind)}
+            reloadDocument
+            download
+            variant="secondary"
+          >
+            <Download size={18} aria-hidden="true" />
+            {label}
+            <span className="visually-hidden"> (CSV)</span>
+          </ButtonLink>
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -117,74 +81,64 @@ function ReportsContent() {
   const [custom, setCustom] = useState<ReportRange>({ from: today, to: today });
   const range = preset === 'custom' ? custom : presetRange(preset, today);
   const validCustom = custom.from <= custom.to;
+  const valid = preset !== 'custom' || validCustom;
 
   return (
-    <section className={styles.page} aria-labelledby="reportes-titulo">
-      <h1 id="reportes-titulo" className={styles.title}>
-        Reportes y caja
-      </h1>
-      <div role="group" aria-label="Período" className={styles.chips}>
-        {PERIOD_PRESETS.map((option) => (
-          <Chip
-            key={option}
-            pressed={preset === option}
-            onClick={() => {
-              setPreset(option);
-            }}
-          >
-            {PERIOD_LABELS[option]}
-          </Chip>
-        ))}
-      </div>
-      {preset === 'custom' && (
-        <div className={styles.dates}>
-          <label>
-            Desde
-            <input
-              type="date"
-              value={custom.from}
-              max={today}
-              onChange={(event) => {
-                setCustom({ ...custom, from: event.target.value });
-              }}
-            />
-          </label>
-          <label>
-            Hasta
-            <input
-              type="date"
-              value={custom.to}
-              max={today}
-              onChange={(event) => {
-                setCustom({ ...custom, to: event.target.value });
-              }}
-            />
-          </label>
-        </div>
-      )}
-      {validCustom ? (
-        <>
-          <SalesView range={range} />
-          <div className={styles.exports}>
-            {EXPORTS.map(({ kind, label }) => (
-              <ButtonLink
-                key={kind}
-                to={reportsService.csvUrl(range, kind)}
-                reloadDocument
-                download
-                variant="secondary"
-              >
-                <Download size={18} aria-hidden="true" />
-                CSV · {label}
-              </ButtonLink>
-            ))}
+    <Page>
+      <PageHeader
+        title="Reportes y caja"
+        subtitle={valid ? describeRange(range) : 'Elige un período válido'}
+      />
+      <Tabs
+        label="Período"
+        idBase="reportes"
+        items={PERIOD_TABS}
+        value={preset}
+        onChange={setPreset}
+      />
+      <div {...tabPanelProps('reportes', preset)} className={styles.panel}>
+        {preset === 'custom' && (
+          <div className={styles.dates}>
+            <Field label="Desde">
+              {(control) => (
+                <input
+                  {...control}
+                  type="date"
+                  className={controlClassName}
+                  value={custom.from}
+                  max={today}
+                  onChange={(event) => {
+                    setCustom({ ...custom, from: event.target.value });
+                  }}
+                />
+              )}
+            </Field>
+            <Field
+              label="Hasta"
+              error={validCustom ? undefined : 'La fecha final no puede ser anterior a la inicial.'}
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  type="date"
+                  className={controlClassName}
+                  value={custom.to}
+                  max={today}
+                  onChange={(event) => {
+                    setCustom({ ...custom, to: event.target.value });
+                  }}
+                />
+              )}
+            </Field>
           </div>
-        </>
-      ) : (
-        <p role="alert">La fecha final no puede ser anterior a la inicial.</p>
-      )}
+        )}
+        {valid && (
+          <SalesView range={range} inProgress={range.from === range.to && range.to === today} />
+        )}
+      </div>
       <CashView date={today} />
-    </section>
+      {valid && <ExportSection range={range} />}
+    </Page>
   );
 }
 
@@ -192,7 +146,16 @@ export function ReportsPage() {
   const session = useAdminSession();
   return (
     <AsyncContent query={session} loadingLabel="Verificando acceso…">
-      {(current) => (current.authenticated ? <ReportsContent /> : <PinLoginForm />)}
+      {(current) =>
+        current.authenticated ? (
+          <ReportsContent />
+        ) : (
+          <PinLoginForm
+            title="Reportes y caja"
+            description="Ingresa el PIN de encargado para ver las ventas y cerrar la caja."
+          />
+        )
+      }
     </AsyncContent>
   );
 }

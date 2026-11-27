@@ -14,14 +14,34 @@
   font-weight: var(--weight-semibold);
 }
 
+.searchBox {
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0.9em;
+  margin-block: auto;
+  color: var(--menu-text-secondary);
+  pointer-events: none;
+}
+
 .searchInput {
-  min-height: var(--touch-target);
-  padding: 0.5em 0.75em;
+  width: 100%;
+  min-height: var(--touch-comfortable);
+  padding: 0.5em 0.75em 0.5em 2.75em;
+  box-shadow: var(--shadow-card);
   border: var(--border-width-strong) solid var(--menu-card-border);
   border-radius: var(--radius-sm);
   background-color: var(--menu-card-bg);
   color: var(--menu-text);
   font-size: 1em;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.searchInput::placeholder {
+  color: var(--menu-text-secondary);
 }
 
 .results {

@@ -36,7 +36,7 @@ export function MenuCategoryPage() {
             <ul role="list" className={styles.grid}>
               {category.products.map((product) => (
                 <li key={product.id}>
-                  <MenuCard product={product} headingLevel="h2" />
+                  <MenuCard product={product} headingLevel="h2" categoryName={category.name} />
                 </li>
               ))}
             </ul>

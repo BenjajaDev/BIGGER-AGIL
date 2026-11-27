@@ -72,7 +72,7 @@ export function BottomBar({ badges }: { badges: NavBadgeCounts }) {
 
   return (
     <>
-      <nav className={styles.bar} aria-label="Navegación principal">
+      <nav className={styles.bar} aria-label="Navegación principal" data-no-print>
         <ul role="list" className={styles.list}>
           {left?.map((module) => (
             <li key={module.path}>

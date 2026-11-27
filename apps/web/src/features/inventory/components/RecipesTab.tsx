@@ -1,7 +1,12 @@
 import type { Recipe, Supply } from '@bigger/shared';
+import { BookOpen, Plus, X } from 'lucide-react';
 import { useState } from 'react';
+import { Field } from '../../../components/form/Field';
+import { controlClassName } from '../../../components/form/control';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { EmptyState } from '../../../components/ui/EmptyState';
+import { SectionHeader } from '../../../components/ui/SectionHeader';
 import { useAdminProducts } from '../../catalog-admin/useCatalogAdmin';
 import { useSetRecipe } from '../useInventory';
 import styles from './Inventory.module.css';
@@ -37,34 +42,40 @@ export function RecipesTab({
 
   return (
     <div className={styles.stack}>
-      <p className={styles.empty}>
-        Define qué insumos usa una unidad de cada producto: al venderlo, el stock baja solo.
-      </p>
-      <Card>
+      <Card as="section" aria-labelledby="receta-titulo" className={styles.formCard}>
+        <SectionHeader
+          id="receta-titulo"
+          title="Receta de un producto"
+          level={3}
+          description="Define qué insumos usa una unidad de cada producto: al venderlo, el stock baja solo."
+        />
         <div className={styles.form}>
-          <div className={styles.field}>
-            <label htmlFor="receta-producto">Producto</label>
-            <select
-              id="receta-producto"
-              value={productId}
-              onChange={(e) => {
-                choose(e.target.value);
-              }}
-            >
-              <option value="">Elige un producto</option>
-              {singles.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.name}
-                  {recipes.some((recipe) => recipe.productId === product.id) ? ' ✓' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Field label="Producto">
+            {(control) => (
+              <select
+                {...control}
+                className={controlClassName}
+                value={productId}
+                onChange={(e) => {
+                  choose(e.target.value);
+                }}
+              >
+                <option value="">Elige un producto</option>
+                {singles.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}
+                    {recipes.some((recipe) => recipe.productId === product.id) ? ' ✓' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
           {productId !== '' && (
             <>
               {lines.map((line, index) => (
                 <div key={`${line.supplyId}-${String(index)}`} className={styles.lineRow}>
                   <select
+                    className={controlClassName}
                     aria-label={`Insumo ${String(index + 1)}`}
                     value={line.supplyId}
                     onChange={(e) => {
@@ -81,6 +92,7 @@ export function RecipesTab({
                     ))}
                   </select>
                   <input
+                    className={controlClassName}
                     aria-label={`Cantidad ${String(index + 1)}`}
                     type="number"
                     min={0}
@@ -94,11 +106,13 @@ export function RecipesTab({
                   />
                   <Button
                     variant="ghost"
+                    iconOnly
+                    aria-label={`Quitar insumo ${String(index + 1)}`}
                     onClick={() => {
                       setLines(lines.filter((_, i) => i !== index));
                     }}
                   >
-                    Quitar<span className="visually-hidden"> insumo {String(index + 1)}</span>
+                    <X size={18} aria-hidden="true" />
                   </Button>
                 </div>
               ))}
@@ -107,13 +121,14 @@ export function RecipesTab({
                   {save.error.message}
                 </p>
               )}
-              <div className={styles.actions}>
+              <div className={styles.formActions}>
                 <Button
                   variant="secondary"
                   onClick={() => {
                     setLines([...lines, { supplyId: '', quantity: '1' }]);
                   }}
                 >
+                  <Plus size={18} aria-hidden="true" />
                   Agregar insumo
                 </Button>
                 <Button
@@ -141,20 +156,26 @@ export function RecipesTab({
           )}
         </div>
       </Card>
-      {recipes.length > 0 && (
-        <ul role="list" className={styles.list}>
+      {recipes.length === 0 ? (
+        <EmptyState
+          icon={BookOpen}
+          title="Todavía no hay recetas"
+          description="Elige un producto arriba y agrega los insumos que usa."
+        />
+      ) : (
+        <ul role="list" className={styles.rows}>
           {recipes.map((recipe) => (
-            <li key={recipe.productId} className={styles.listRow}>
+            <Card as="li" key={recipe.productId} className={styles.recipeRow}>
               <strong>{recipe.productName}</strong>
-              <span className={styles.rowMeta}>
-                {recipe.lines
-                  .map(
-                    (line) =>
-                      `${String(line.quantity)} × ${supplies.find((supply) => supply.id === line.supplyId)?.name ?? '—'}`,
-                  )
-                  .join(', ')}
-              </span>
-            </li>
+              <ul role="list" className={styles.chips}>
+                {recipe.lines.map((line) => (
+                  <li key={line.supplyId} className={styles.chip}>
+                    {String(line.quantity)} ×{' '}
+                    {supplies.find((s) => s.id === line.supplyId)?.name ?? '—'}
+                  </li>
+                ))}
+              </ul>
+            </Card>
           ))}
         </ul>
       )}
