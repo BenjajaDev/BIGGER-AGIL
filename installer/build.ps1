@@ -54,7 +54,13 @@ Invoke-Native 'compilar API' { pnpm --filter '@bigger/api' build }
 
 # --- 2. API con dependencias de producción (módulos nativos de Windows) ---
 $ApiOut = Join-Path $Build 'api'
-Invoke-Native 'pnpm deploy (API)' { pnpm --filter '@bigger/api' deploy --prod --legacy $ApiOut }
+# node-linker=hoisted: node_modules plano, sin enlaces a .pnpm. Inno Setup copia los enlaces como
+# carpetas sueltas y los paquetes dejan de encontrar sus dependencias (p. ej. better-sqlite3 → bindings).
+Invoke-Native 'pnpm deploy (API)' { pnpm --filter '@bigger/api' --config.node-linker=hoisted deploy --prod --legacy $ApiOut }
+$links = @(Get-ChildItem -LiteralPath (Join-Path $ApiOut 'node_modules') -Recurse -Force -Attributes ReparsePoint -ErrorAction SilentlyContinue)
+if ($links.Count -gt 0) {
+  throw "node_modules de la API tiene $($links.Count) enlaces (p. ej. $($links[0].FullName)); el instalador no los copia bien."
+}
 # deploy respeta .gitignore/"files": copiar explícitamente lo que el servicio necesita.
 $ApiSrc = Join-Path $RepoRoot 'apps\api'
 foreach ($dir in 'dist', 'drizzle') {

@@ -17,6 +17,16 @@ foreach ($p in $Node, (Join-Path $ApiDir 'dist\setup.js'), (Join-Path $ApiDir 'd
 }
 
 $Tmp = Join-Path ([IO.Path]::GetTempPath()) ("bigger-smoke-" + [guid]::NewGuid().ToString('N'))
+
+# Igual que el instalador: una COPIA en una carpeta con espacios (Copy-Item, como Inno Setup, no
+# conserva enlaces), para detectar dependencias que solo se resuelven dentro de la carpeta de build.
+$App = Join-Path $Tmp 'Program Files\BIGGER Agil'
+New-Item -ItemType Directory -Force -Path $App | Out-Null
+foreach ($d in 'node', 'api', 'web') { Copy-Item -Recurse -Force (Join-Path $Build $d) (Join-Path $App $d) }
+$Node = Join-Path $App 'node\node.exe'
+$ApiDir = Join-Path $App 'api'
+$WebDir = Join-Path $App 'web'
+
 $Data = Join-Path $Tmp 'datos'
 $Config = Join-Path $Tmp 'config.env'
 $PinFile = Join-Path $Tmp 'pin.txt'

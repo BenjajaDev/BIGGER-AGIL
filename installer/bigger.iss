@@ -316,6 +316,26 @@ begin
   end;
 end;
 
+function SetupLogPath: String;
+begin
+  Result := ExpandConstant('{commonappdata}\BIGGER\logs\configuracion.log');
+end;
+
+{ Últimas líneas de la salida del programa de configuración (UTF-8), para mostrarlas en el aviso. }
+function SetupLogTail: String;
+var
+  Raw: AnsiString;
+begin
+  Result := '(sin detalle)';
+  if not LoadStringFromFile(SetupLogPath, Raw) then
+    Exit;
+  Result := Trim(UTF8Decode(Raw));
+  if Length(Result) > 700 then
+    Result := '...' + Copy(Result, Length(Result) - 699, 700);
+  if Result = '' then
+    Result := '(sin detalle)';
+end;
+
 { Después de copiar los archivos ya no se puede deshacer la instalación: ante un error se avisa
   con instrucciones claras y no se ofrece abrir el sistema. Los datos nunca se tocan. }
 procedure ConfigureAndStart;
@@ -344,18 +364,23 @@ begin
   ConfigOk := False;
   WizardForm.StatusLabel.Caption := 'Preparando la base de datos y la configuración...';
   Failure := '';
-  if not Exec(Node, Params, ExpandConstant('{app}\api'), SW_HIDE, ewWaitUntilTerminated, RC) then
+  DeleteFile(SetupLogPath);
+  { Vía cmd para guardar toda la salida (también errores al cargar módulos, antes de que corra el script). }
+  if not Exec(ExpandConstant('{cmd}'),
+      '/S /C ""' + Node + '" ' + Params + ' > "' + SetupLogPath + '" 2>&1"',
+      ExpandConstant('{app}\api'), SW_HIDE, ewWaitUntilTerminated, RC) then
     Failure := 'No se pudo ejecutar el programa de configuración (' + SysErrorMessage(RC) + ').'
   else if RC <> 0 then
-    Failure := 'El programa de configuración terminó con el código ' + IntToStr(RC) + '.';
+    Failure := 'El programa de configuración terminó con el código ' + IntToStr(RC) + '.' + #13#10#13#10 +
+      'Detalle:' + #13#10 + SetupLogTail;
   DeleteFile(PinFile);
 
   if Failure <> '' then
   begin
     MsgBox('No se pudo terminar la instalación de {#AppName}.' + #13#10#13#10 + Failure + #13#10#13#10 +
       'Sus datos en ' + ExpandConstant('{commonappdata}\BIGGER') + ' no se tocaron. ' +
-      'Vuelva a ejecutar el instalador; si el problema sigue, avise a quien le dio el instalador ' +
-      '(los registros están en ' + ExpandConstant('{commonappdata}\BIGGER\logs') + ').', mbCriticalError, MB_OK);
+      'Vuelva a ejecutar el instalador; si el problema sigue, envíe a quien le dio el instalador el archivo ' +
+      SetupLogPath + '.', mbCriticalError, MB_OK);
     Exit;
   end;
 
